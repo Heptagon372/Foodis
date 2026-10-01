@@ -294,7 +294,7 @@ function frame() {
     for (const l of tail) L.push("  " + C.dim(clip(l, cols() - 4)));
     for (let i = tail.length; i < 8; i++) L.push("");
     L.push("", rule("메뉴"));
-    L.push(...menuRows([key("R", "재시작"), key("S", S.server ? "서버 끄기" : "서버 켜기"), key("O", "앱 열기"), key("D", "발표자"), key("L", "로그"), key("H", "새로고침")]));
+    L.push(...menuRows([key("R", "재시작"), key("S", S.server ? "서버 끄기" : "서버 켜기"), key("O", "앱 열기"), key("D", "발표자"), key("A", "어드민"), key("L", "로그"), key("H", "새로고침")]));
     L.push(...menuRows([key("G", "GitHub"), key("K", "키 설정"), key("T", "테스트"), key("P", "데이터 파이프라인"), key("B", "발표 리허설 빌드"), key("Q", "종료")]));
   } else if (S.screen === "logs") {
     L.push(rule(`서버 로그 (마지막 ${Math.min(S.logs.length, 30)}줄)`));
@@ -456,6 +456,7 @@ async function onKey(k) {
       if (k === "s") S.server ? await stopServer() : await startServer();
       if (k === "o") openUrl(`http://localhost:${S.port}`);
       if (k === "d") openUrl(`http://localhost:${S.port}/demo`);
+      if (k === "a") openUrl(`http://localhost:${S.port}/admin`);
       if (k === "h") (refreshGit(), await refreshHealth(), (S.msg = "상태를 새로 읽었어요"));
       if (k === "l") S.screen = "logs";
       if (k === "g") (refreshGit(), (S.screen = "github"));

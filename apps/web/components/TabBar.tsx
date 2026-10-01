@@ -12,7 +12,7 @@ export function TabBar() {
   const hydrated = useHydrated();
   const introSeen = useLocal((s) => s.introSeen);
   // 인트로가 떠 있는 동안(첫 방문 홈)·온보딩에서는 숨긴다
-  if (path.startsWith("/onboarding") || path.startsWith("/intro") || (path === "/" && hydrated && !introSeen)) return null;
+  if (path.startsWith("/onboarding") || path.startsWith("/intro") || path.startsWith("/admin") || (path === "/" && hydrated && !introSeen)) return null;
   const tab = (href: string, label: string, icon: string) => {
     const active = href === "/" ? path === "/" : path.startsWith(href);
     return (

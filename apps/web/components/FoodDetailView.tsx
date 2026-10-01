@@ -9,6 +9,7 @@ import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
 import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, RelationRow, SourceFooter } from "./bits";
+import { ReportForm } from "./ReportForm";
 import { MicIcon } from "./VoiceButton";
 
 const TABS = ["기본", "문화", "식이", "연결"] as const;
@@ -157,9 +158,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               {food.allergens.length > 0 && <Facts label="알레르기 유발 가능">{food.allergens.map((a) => ALLERGEN_LABEL[a] ?? a).join(" · ")}</Facts>}
               {food.diet_note && <p className="rounded-xl bg-diet-warn/10 px-3 py-2.5 text-sm">⚠️ {food.diet_note}</p>}
               <p className="text-caption text-muted">식이 정보는 대표 조리법 기준이에요. 식당·가정마다 다를 수 있으니 주문할 때 꼭 확인하세요.</p>
-              <button type="button" className="text-caption text-muted underline decoration-line underline-offset-2" onClick={() => alert("신고 기능은 로그인 연동 후 열려요 (F-ADM-03).")}>
-                정보가 틀렸나요? 신고하기
-              </button>
+              <ReportForm foodId={food.id} />
             </>
           )}
 

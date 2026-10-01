@@ -19,9 +19,9 @@ Foodis/
 └─ supabase/migrations/    DB 스키마 (앱·배치 공유, 여기서만 변경)
 ```
 
-설계 기록 (docs/design): [01 UI](docs/design/01_UI_설계_구현_v1.md) · [02 AI 대화·테스트 셋](docs/design/02_AI_대화_설계_v1.md) · [03 식이 태깅 기준](docs/design/03_식이_태깅_가이드.md) · [04 데모 모드·근거 수집](docs/design/04_데모_모드_근거_수집_v1.md)
+설계 기록 (docs/design): [01 UI](docs/design/01_UI_설계_구현_v1.md) · [02 AI 대화·테스트 셋](docs/design/02_AI_대화_설계_v1.md) · [03 식이 태깅 기준](docs/design/03_식이_태깅_가이드.md) · [04 데모 모드·근거 수집](docs/design/04_데모_모드_근거_수집_v1.md) · [05 검수 어드민](docs/design/05_검수_어드민_v1.md)
 
-발표 기기 준비는 `/demo` (발표자 페이지)
+발표 기기 준비는 `/demo` (발표자 페이지) · 콘텐츠 검수는 `/admin`
 
 설계 근거: [11 상세 아키텍처](docs/planning/11_상세_아키텍처_설계_도안.md) · [09 외부 API 선정](docs/planning/09_외부_API_조사_선정.md) · [07 API 명세](docs/planning/07_PRD_보강_플랫폼_구조_KPI_기능_명세_API_수익_모델.md)
 

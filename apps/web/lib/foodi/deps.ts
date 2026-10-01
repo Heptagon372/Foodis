@@ -13,15 +13,16 @@ const offlineLLM: LLMProvider = { structured: async () => Promise.reject(new Pro
 const offlineEmbedder: Embedder = { embed: async () => Promise.reject(new ProviderError("preview", "OPENAI_API_KEY 없음", false)) };
 
 let preview: FoodisRepo | undefined;
-export function getRepo(): FoodisRepo {
-  return isLive() ? supabaseRepo(supabaseAdmin()) : (preview ??= previewRepo());
+export async function getRepo(): Promise<FoodisRepo> {
+  return (await isLive()) ? supabaseRepo(supabaseAdmin()) : (preview ??= previewRepo());
 }
 
-export function getOrchestratorDeps(): OrchestratorDeps {
+export async function getOrchestratorDeps(): Promise<OrchestratorDeps> {
+  const live = await isLive();
   return {
-    repo: getRepo(),
+    repo: live ? supabaseRepo(supabaseAdmin()) : (preview ??= previewRepo()),
     llm: process.env.ANTHROPIC_API_KEY ? getLLM() : offlineLLM,
-    embedder: process.env.OPENAI_API_KEY && isLive() ? getEmbedder() : offlineEmbedder,
+    embedder: process.env.OPENAI_API_KEY && live ? getEmbedder() : offlineEmbedder,
     dailyBudgetUsd: env.dailyBudgetUsd,
   };
 }

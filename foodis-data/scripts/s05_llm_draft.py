@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from common import ALLERGENS, DIET_KEYS, DIET_LEVELS, DRAFT, RAW, SEED, TASTE_TAGS, Http, read_csv, read_json, require_env, write_json
+from common import ALLERGENS, DIET_KEYS, DIET_LEVELS, DRAFT, RAW, SEED, TASTE_TAGS, WIKI_LANGS, Http, read_csv, read_json, require_env, write_json
 
 API = "https://api.anthropic.com/v1/messages"
 MODEL = os.environ.get("LLM_MODEL_DRAFT", "claude-sonnet-5")  # Sonnet 5 계열은 temperature 미지원(400) → 보내지 않음
@@ -48,7 +48,7 @@ TOOL = {
                 "properties": {**{k: {"type": "string", "enum": DIET_LEVELS} for k in DIET_KEYS},
                                "reason": {"type": "string", "description": "판단 근거 한 줄씩. 조리법에 따라 다르면 depends"}}},
             "allergens": {"type": "array", "items": {"type": "string", "enum": ALLERGENS}},
-            "used_evidence": {"type": "array", "items": {"type": "string", "enum": ["wikipedia_en", "wikipedia_ko", "wikidata", "themealdb", "hansik800"]}},
+            "used_evidence": {"type": "array", "items": {"type": "string", "enum": [f"wikipedia_{lang}" for lang in WIKI_LANGS] + ["wikidata", "themealdb", "hansik800"]}},
         },
     },
 }
@@ -66,7 +66,7 @@ def build_evidence(t: dict, wd: dict, wp: dict, mdb: dict, hs: dict) -> str:
     parts = [f"<target name_ko='{t['name_ko']}' name_en='{t['name_en']}' country='{t['country_code']}' origin_note='{t['origin_note']}'/>"]
     if wd:
         parts.append(f"<wikidata qid='{wd.get('qid')}'>origin={wd.get('origin_codes')} materials={wd.get('materials')} instance_of={wd.get('instance_of')}</wikidata>")
-    for lang in ("en", "ko"):
+    for lang in WIKI_LANGS:
         s = (wp or {}).get(lang)
         if s and s.get("extract"):
             parts.append(f"<wikipedia_{lang} url='{s['url']}'>{s['extract']}</wikipedia_{lang}>")

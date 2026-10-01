@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sys
 
-from common import DIET_KEYS, DRAFT, FINAL, RAW, SEED, read_csv, read_json, write_csv, write_json
+from common import DIET_KEYS, DRAFT, FINAL, RAW, SEED, WIKI_LANGS, read_csv, read_json, write_csv, write_json
 
 REVIEW_FIELDS = ["slug", "country_code", "name_ko", "name_en", "origin_note", "demo_required", "auto_flags", "summary", "history",
                  "culture_story", "taste_tags", "ingredients_main", "allergens",
@@ -112,7 +112,7 @@ def do_import() -> None:
             **{k: row.get(k) for k in ("slug", "name_ko", "name_en", "country_code", "origin_note")},
             **d, "diet_note": row.get("diet_note") or None, "diet_sources": row.get("diet_sources"),
             "wikidata_qid": (wd.get(row["slug"]) or {}).get("qid"),
-            "wikipedia": {lang: ((wp.get(row["slug"]) or {}).get(lang) or {}).get("url") for lang in ("en", "ko")},
+            "wikipedia": {lang: url for lang in WIKI_LANGS if (url := ((wp.get(row["slug"]) or {}).get(lang) or {}).get("url"))},
             "image_url": img.get("url"), "image_credit": f"{img.get('artist') or '작자 미상'} / {img.get('license') or '라이선스 확인 필요'} / {img.get('page') or ''}" if img else None,
             "reviewer": row.get("reviewer"),
         }

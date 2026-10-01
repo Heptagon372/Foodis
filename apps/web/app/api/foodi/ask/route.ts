@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (!rl.ok) return tooMany(rl.retryAfterSec);
 
   try {
-    const res = await ask(getOrchestratorDeps(), body.data, userId);
+    const res = await ask(await getOrchestratorDeps(), body.data, userId);
     return NextResponse.json(res);
   } catch (e) {
     console.error("[foodi/ask]", e);

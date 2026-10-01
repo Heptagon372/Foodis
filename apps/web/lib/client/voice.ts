@@ -106,17 +106,22 @@ export function stopSpeaking() {
 }
 
 /** 서버 TTS 를 먼저 시도하고, 실패하면 브라우저 음성으로. onEnd 는 어느 경로든 한 번 호출된다. */
-export async function speak(text: string, onEnd: () => void): Promise<"server" | "browser" | "none"> {
+export async function speak(text: string, onEnd: () => void, prefetched?: Blob | null): Promise<"cached" | "server" | "browser" | "none"> {
   stopSpeaking();
   try {
-    const res = await fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
-    if (!res.ok) throw new Error(String(res.status));
-    const url = URL.createObjectURL(await res.blob());
+    // 데모 팩에 미리 만들어 둔 음성이 있으면 네트워크 없이 바로
+    let blob = prefetched ?? null;
+    if (!blob) {
+      const res = await fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+      if (!res.ok) throw new Error(String(res.status));
+      blob = await res.blob();
+    }
+    const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     current = audio;
     audio.onended = audio.onerror = () => (URL.revokeObjectURL(url), onEnd());
     await audio.play();
-    return "server";
+    return prefetched ? "cached" : "server";
   } catch {
     const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
     if (!synth) {

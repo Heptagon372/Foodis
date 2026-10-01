@@ -19,11 +19,18 @@ Foodis/
 └─ supabase/migrations/    DB 스키마 (앱·배치 공유, 여기서만 변경)
 ```
 
-UI 설계: [UI 설계 · 구현 v1](docs/design/01_UI_설계_구현_v1.md) — 화면·토큰·컴포넌트·남은 결정 사항
+설계 기록 (docs/design): [01 UI](docs/design/01_UI_설계_구현_v1.md) · [02 AI 대화·테스트 셋](docs/design/02_AI_대화_설계_v1.md) · [03 식이 태깅 기준](docs/design/03_식이_태깅_가이드.md) · [04 데모 모드·근거 수집](docs/design/04_데모_모드_근거_수집_v1.md)
+
+발표 기기 준비는 `/demo` (발표자 페이지)
 
 설계 근거: [11 상세 아키텍처](docs/planning/11_상세_아키텍처_설계_도안.md) · [09 외부 API 선정](docs/planning/09_외부_API_조사_선정.md) · [07 API 명세](docs/planning/07_PRD_보강_플랫폼_구조_KPI_기능_명세_API_수익_모델.md)
 
 ## 시작하기
+
+**가장 쉬운 방법: `FOODIS.bat` 더블클릭** (또는 `pnpm foodis`) → FOODIS 콘솔이 뜨고 개발 서버가 자동으로 켜진다.
+키 하나로 재시작(R) · 앱 열기(O) · 발표자 페이지(D) · GitHub 커밋/push/pull(G) · 키 설정 확인(K) · 테스트(T) · 데이터 파이프라인(P) · 발표 리허설 빌드(B).
+
+직접 실행하려면:
 
 필요: Node 22, pnpm 10, Python 3.12+
 

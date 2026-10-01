@@ -10,6 +10,7 @@ foodis-data/                         (스키마는 루트 ../supabase/migrations
 ├─ data/seed/
 │   ├─ countries.csv          30개국 (ISO 코드, 국기, 대륙 그룹, Accent 컬러)
 │   ├─ dish_targets.csv       180개 음식 목표 리스트 (위키백과 제목 힌트, 기원 메모, 데모 필수 16개 표시)
+│   │                         제목 힌트는 영어 위키 기준. 영어 문서가 없거나 엉뚱하면 "es:Majadito" 처럼 언어를 붙인다 (en·ko·es·pt·fr)
 │   └─ relation_themes.csv    역사·조리법 테마 (만두 로드, 커피 하우스, 필라프 계열 …)
 ├─ data/raw/    ← s01~s04 수집 결과 (git 제외)
 ├─ data/draft/  ← s05~s07 초안·검수 시트

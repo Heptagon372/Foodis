@@ -6,17 +6,18 @@
 """
 from __future__ import annotations
 
-from common import RAW, SEED, Http, chunks, read_csv, write_json
+from common import RAW, SEED, Http, chunks, parse_wiki_hint, read_csv, write_json
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
+wiki_api = lambda lang: f"https://{lang}.wikipedia.org/w/api.php"  # noqa: E731
 SPARQL = "https://query.wikidata.org/sparql"
 
 
-def resolve_titles(http: Http, titles: list[str]) -> dict[str, dict]:
-    """en 위키 제목 50개씩 → {원래 제목: {qid, en_title, ko_title}} (리다이렉트·정규화 추적)."""
+def resolve_titles(http: Http, titles: list[str], lang: str = "en") -> dict[str, dict]:
+    """위키 제목 50개씩 → {원래 제목: {qid, en_title, ko_title, src_lang, src_title}} (리다이렉트·정규화 추적)."""
     out: dict[str, dict] = {}
     for batch in chunks(titles, 50):
-        res = http.get(WIKI_API, params={
+        res = http.get(wiki_api(lang), params={
             "action": "query", "format": "json", "formatversion": 2, "redirects": 1,
             "prop": "pageprops|langlinks", "ppprop": "wikibase_item", "lllang": "ko",
             "titles": "|".join(batch),
@@ -34,7 +35,8 @@ def resolve_titles(http: Http, titles: list[str]) -> dict[str, dict]:
             if p.get("missing") or "pageprops" not in p:
                 continue
             ko = (p.get("langlinks") or [{}])[0].get("title")
-            out[orig] = {"qid": p["pageprops"]["wikibase_item"], "en_title": final, "ko_title": ko}
+            out[orig] = {"qid": p["pageprops"]["wikibase_item"], "en_title": final if lang == "en" else None, "ko_title": ko,
+                         "src_lang": lang, "src_title": final}
     return out
 
 
@@ -89,12 +91,17 @@ def parse_sparql(res: dict) -> dict[str, dict]:
 def main() -> None:
     http = Http(min_interval=0.5)
     targets = read_csv(SEED / "dish_targets.csv")
-    resolved = resolve_titles(http, [t["wiki_en_title"] for t in targets])
+    hints = {t["slug"]: parse_wiki_hint(t["wiki_en_title"]) for t in targets}
+    resolved: dict[tuple[str, str], dict] = {}
+    for lang in sorted({lang for lang, _ in hints.values()}):
+        titles = [title for l, title in hints.values() if l == lang]
+        resolved.update({(lang, k): v for k, v in resolve_titles(http, titles, lang).items()})
 
     result, unresolved = {}, []
     for t in targets:
-        r = resolved.get(t["wiki_en_title"])
-        if not r:
+        lang, title = hints[t["slug"]]
+        r = resolved.get((lang, title))
+        if not r and lang == "en":  # 다른 언어 제목은 사람이 직접 고른 것이라 검색으로 바꾸지 않는다
             alt = search_title(http, t["name_en"])
             r = resolve_titles(http, [alt]).get(alt) if alt else None
             if r:
@@ -112,6 +119,8 @@ def main() -> None:
         wd.update(parse_sparql(res))
     for slug, r in result.items():
         r.update(wd.get(r["qid"], {}))
+        if "Wikimedia disambiguation page" in r.get("instance_of", []):
+            r["needs_review"] = f"'{r.get('src_title')}' 는 동음이의어 문서 → dish_targets.csv 제목 힌트 수정 필요"
         if r.get("origin_codes") and r["target_country"] not in r["origin_codes"]:
             r["origin_mismatch"] = True  # Wikidata 원산지와 우리 국가 배정이 다름 → 검수 시 origin_note 확인
 
@@ -119,6 +128,9 @@ def main() -> None:
     print(f"✔ {len(result)}/{len(targets)} 해석 완료 → data/raw/wikidata.json")
     if unresolved:
         print(f"⚠ 미해석 {len(unresolved)}개 (dish_targets.csv 의 wiki_en_title 수정 필요): {', '.join(unresolved)}")
+    review = [s for s, r in result.items() if r.get("needs_review")]
+    if review:
+        print(f"⚠ 검수 필요 {len(review)}개: " + "; ".join(f"{s} — {result[s]['needs_review']}" for s in review))
     mism = [s for s, r in result.items() if r.get("origin_mismatch")]
     if mism:
         print(f"ℹ 원산지 불일치 {len(mism)}개 (검수 대상): {', '.join(mism)}")

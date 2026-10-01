@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     try {
       const { audio, usage } = await tts.synthesize(body.data.text);
       void Promise.resolve()
-        .then(() => getRepo().recordUsage([usage], null))
+        .then(async () => (await getRepo()).recordUsage([usage], null))
         .catch(() => {});
       return new Response(audio, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store", "X-TTS-Provider": usage.provider } });
     } catch (e) {

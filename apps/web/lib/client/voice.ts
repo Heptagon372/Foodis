@@ -98,16 +98,23 @@ function recordAndTranscribe(h: { onInterim(t: string): void; onFinal(t: string)
 }
 
 let current: HTMLAudioElement | null = null;
+let ownUtterance: SpeechSynthesisUtterance | null = null;
 
+/** 푸디가 말하기 시작할 때 다른 소리(라디오)를 멈추게 하는 훅 — lib/client/radio.ts 가 등록한다 */
+export const beforeSpeak = new Set<() => void>();
+
+/** 푸디 자신이 낸 소리만 멈춘다. 브라우저 음성은 전역이라, 내가 시작한 게 아니면(라디오) 건드리지 않는다 */
 export function stopSpeaking() {
   current?.pause();
   current = null;
-  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+  if (ownUtterance && typeof window !== "undefined") window.speechSynthesis?.cancel();
+  ownUtterance = null;
 }
 
 /** 서버 TTS 를 먼저 시도하고, 실패하면 브라우저 음성으로. onEnd 는 어느 경로든 한 번 호출된다. */
 export async function speak(text: string, onEnd: () => void, prefetched?: Blob | null): Promise<"cached" | "server" | "browser" | "none"> {
   stopSpeaking();
+  beforeSpeak.forEach((f) => f());
   try {
     // 데모 팩에 미리 만들어 둔 음성이 있으면 네트워크 없이 바로
     let blob = prefetched ?? null;
@@ -131,7 +138,11 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "ko-KR";
     u.rate = 1.05;
-    u.onend = u.onerror = () => onEnd();
+    u.onend = u.onerror = () => {
+      if (ownUtterance === u) ownUtterance = null;
+      onEnd();
+    };
+    ownUtterance = u;
     synth.speak(u);
     return "browser";
   }

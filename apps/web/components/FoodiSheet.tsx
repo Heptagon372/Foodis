@@ -8,6 +8,7 @@ import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
 import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
 import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
+import { pauseRadio } from "@/lib/client/radio";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
@@ -58,6 +59,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setHint(null);
       setMicHelp(null);
       setInterim("");
+      pauseRadio(); // 푸디가 답하는 동안 라디오는 잠시 멈춤
       const id = ++seq.current;
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);
       setVoice("thinking");
@@ -112,6 +114,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   const startListening = useCallback(
     (contextFoodId?: string) => {
       stopSpeaking();
+      pauseRadio();
       setHint(null);
       setMicHelp(null);
       setVoice("listening");

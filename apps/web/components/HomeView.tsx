@@ -9,6 +9,7 @@ import { FoodCard } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
 import { PreviewBanner, Section, Wordmark } from "./bits";
+import { startRadio } from "@/lib/client/radio";
 import { VoiceButton } from "./VoiceButton";
 
 /** 날짜로 고정되는 '오늘의 탐험' — 같은 날엔 모두 같은 음식 (공유·대화 소재) */
@@ -102,6 +103,28 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
           />
         </Section>
       )}
+
+      <section className="relative overflow-hidden rounded-3xl bg-green-800 p-5 text-ivory">
+        <div className="pointer-events-none absolute -right-4 -top-4 flex h-28 items-end gap-1.5 opacity-25" aria-hidden>
+          {[0.5, 0.9, 0.65, 1, 0.75, 0.45].map((h, i) => (
+            <span key={i} className="w-2.5 rounded-full bg-mint-500" style={{ height: `${h * 100}%` }} />
+          ))}
+        </div>
+        <p className="text-caption font-medium tracking-wide text-mint-500">FOOD CULTURE RADIO</p>
+        <p className="mt-1 font-display text-h2 font-semibold leading-snug">
+          1분 음식 이야기,
+          <br />
+          연결을 따라 다음 나라로
+        </p>
+        <div className="mt-4 flex items-center gap-3">
+          <button type="button" onClick={() => void startRadio({ channel: "today" })} className="rounded-full bg-mint-500 px-4 py-2 text-sm font-semibold text-green-800 transition active:scale-95">
+            ▶ 오늘의 라디오
+          </button>
+          <Link href="/radio" className="text-sm text-ivory/75 underline-offset-4 hover:underline">
+            채널 보기
+          </Link>
+        </div>
+      </section>
 
       {picks.length > 0 && (
         <Section title="나를 위한 추천" more={diet.length > 0 ? <span className="text-caption text-muted">식이 조건 반영</span> : undefined}>

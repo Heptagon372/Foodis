@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from "@/lib/content/types";
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
+import { startRadio } from "@/lib/client/radio";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
 import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
@@ -57,10 +58,15 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
       <div className="-mt-6 space-y-5 rounded-t-[28px] bg-ivory px-5 pt-6">
         {preview && <PreviewBanner />}
         <div className="space-y-1">
-          <Link href={`/country/${food.country_code}`} className="text-sm font-medium text-muted">
-            {food.flag} {food.country.name_ko}
-            {food.region_in_country ? ` · ${food.region_in_country}` : ""} ›
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href={`/country/${food.country_code}`} className="text-sm font-medium text-muted">
+              {food.flag} {food.country.name_ko}
+              {food.region_in_country ? ` · ${food.region_in_country}` : ""} ›
+            </Link>
+            <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className="shrink-0 rounded-full border border-line bg-surface px-3 py-1 text-caption font-semibold text-green-800 transition active:scale-95" aria-label={`${food.name_ko} 이야기부터 라디오로 듣기`}>
+              🎧 라디오로 듣기
+            </button>
+          </div>
           <h1 className="font-display text-[2rem] font-semibold leading-tight">{food.name_ko}</h1>
           <p className="text-muted">
             {food.name_en}

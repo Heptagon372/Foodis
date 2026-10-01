@@ -1,0 +1,33 @@
+# PR마다 세션 리포트(만든 것 · 완료한 로드맵 작업 · 전체 진행률)를 댓글 하나로 달고, 푸시할 때마다 갱신한다.
+name: session-report
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: session-report-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test scripts/session-report.test.mjs
+      - name: 리포트 댓글
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/session-report.mjs --base "origin/$BASE_REF" --github-comment --pr "$PR_NUMBER"

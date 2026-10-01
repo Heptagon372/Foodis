@@ -20,8 +20,8 @@ export async function GET(req: Request) {
   const rl = rateLimit(clientKey(req, null) + ":demo-pack", 3);
   if (!rl.ok) return tooMany(rl.retryAfterSec);
 
-  const content = getContent();
-  const deps = getOrchestratorDeps();
+  const content = await getContent();
+  const deps = await getOrchestratorDeps();
   const [countries, foodNames] = await Promise.all([deps.repo.countries(), deps.repo.allFoodNames()]);
   const idOf = async (slug: string) => (await content.getFood(slug))?.id;
 

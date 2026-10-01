@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // 국가 페이지 (F-EXP-03): Passport 국기 그리드·상세의 국가 링크에서 진입
 export default async function CountryPage({ params }: { params: Promise<{ code: string }> }) {
-  const content = getContent();
+  const content = await getContent();
   const data = await content.getCountry((await params).code.toUpperCase());
   if (!data) notFound();
   const { country, foods } = data;

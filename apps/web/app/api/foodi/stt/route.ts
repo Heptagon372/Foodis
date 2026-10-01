@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (audio.size > MAX_BYTES) return jsonError(413, "audio_too_large", "녹음이 너무 깁니다.");
 
   try {
-    const repo = getRepo();
+    const repo = await getRepo();
     // 외국 음식 이름 인식 보강: DB 음식명을 키워드 힌트로 (09 문서 §5.3)
     const keywords = await repo
       .allFoodNames()

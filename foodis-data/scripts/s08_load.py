@@ -1,6 +1,6 @@
 """⑧ Supabase 적재 (PostgREST upsert, service_role 키 사용 — 서버/로컬에서만 실행).
 
-순서: countries → foods(verified=true, 승인분) → ingredients → food_ingredients → sources → food_relations(검수 승인분)
+순서: data_sources → countries → foods(verified=true, 승인분) → ingredients → food_ingredients → sources → food_relations(검수 승인분)
 입력: data/seed/countries.csv, data/final/foods_final.json, data/final/relations_final.csv(선택)
 옵션: --dry-run  (전송 없이 페이로드 개수만 출력)
 """
@@ -54,17 +54,36 @@ def build_payloads(countries: list[dict], final: dict) -> dict[str, list[dict]]:
             ings.setdefault(key, {"slug": key, "name_ko": i["name_ko"], "name_en": i["name_en"], "category": i["category"],
                                   "allergen": i.get("allergen"), "animal_origin": i["animal_origin"], "pork": i["pork"]})
             links.append({"food_slug": s, "ingredient_slug": key, "role": i["role"]})
+        def src(field, url, title, data_source_id, license_):
+            # PostgREST 일괄 upsert는 모든 행의 키가 같아야 하므로 항상 같은 필드 구성으로 만든다
+            srcs.append({"food_slug": s, "field": field, "url": url, "title": title,
+                         "source_type": data_source_id, "license": license_, "data_source_id": data_source_id})
+
         for lang, url in f["wikipedia"].items():
             if url:
-                srcs.append({"food_slug": s, "field": "summary,history,culture_story", "url": url, "title": f"Wikipedia ({lang})",
-                             "source_type": "wikipedia", "license": "CC BY-SA 4.0"})
+                src("summary,history,culture_story", url, f"Wikipedia ({lang})", "wikipedia", "CC BY-SA 4.0")
         if f.get("wikidata_qid"):
-            srcs.append({"food_slug": s, "field": "origin,ingredients", "url": f"https://www.wikidata.org/wiki/{f['wikidata_qid']}",
-                         "title": "Wikidata", "source_type": "wikidata", "license": "CC0"})
+            src("origin,ingredients", f"https://www.wikidata.org/wiki/{f['wikidata_qid']}", "Wikidata", "wikidata", "CC0")
+        if f.get("image_page"):
+            src("image", f["image_page"], "Wikimedia Commons", "wikimedia_commons", (f.get("image_credit") or "").split(" / ")[1] if " / " in (f.get("image_credit") or "") else None)
+        if "hansik800" in f.get("evidence_used", []):
+            src("name_en,summary", "https://www.data.go.kr/data/15129784/fileData.do", "한식진흥원 한식메뉴 외국어표기 800선", "hansik800", "공공데이터")
+        if "themealdb" in f.get("evidence_used", []):
+            src("ingredients", "https://www.themealdb.com", "TheMealDB (재료 교차검증)", "themealdb", "reference")
+        src("summary,history,culture_story", f"foodis://draft/{s}", "FOODIS AI 초안 (근거 기반, 검수 완료)", "foodis_llm_draft", "자체 작성")
         for url in (f.get("diet_sources") or "").replace(",", " ").split():
             if url.startswith("http"):
-                srcs.append({"food_slug": s, "field": "diet", "url": url, "source_type": "reviewer", "license": None})
+                src("diet", url, "검수자 첨부 출처", "foodis_review", None)
     return {"countries": countries, "foods": foods, "ingredients": list(ings.values()), "links": links, "sources": srcs}
+
+
+def read_csv_policy() -> list[dict]:
+    """data/seed/data_sources.csv → data_sources 행 (0002 마이그레이션 시드와 동일, CSV 수정분 동기화용)."""
+    out = []
+    for r in read_csv(SEED / "data_sources.csv"):
+        out.append({k: (None if v in ("", "—") else v) for k, v in r.items()})
+        out[-1]["commercial_use"] = {"Y": True, "N": False}.get(r["commercial_use"])
+    return out
 
 
 def main() -> None:
@@ -73,6 +92,7 @@ def main() -> None:
         raise SystemExit("data/final/foods_final.json 이 비어 있습니다. s07_review.py import 먼저 실행")
     p = build_payloads(read_csv(SEED / "countries.csv"), final)
     rest = Rest()
+    rest.upsert("data_sources", read_csv_policy(), "id")
     rest.upsert("countries", p["countries"], "code")
     food_ids = {r["slug"]: r["id"] for r in rest.upsert("foods", p["foods"], "slug")}
     ing_ids = {r["slug"]: r["id"] for r in rest.upsert("ingredients", p["ingredients"], "slug")}

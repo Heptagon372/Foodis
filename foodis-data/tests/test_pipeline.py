@@ -73,7 +73,15 @@ def test_full_pipeline(tmp_path):
     assert final["injera"]["image_credit"].startswith("Someone / CC BY-SA 4.0")
 
     out = run(tmp, "s08_load.py", "--dry-run"); print(out); assert f"foods: {len(final)}행" in out and "lechon" not in final  # 돼지고기+halal≠no 도 차단
-    out = run(tmp, "s08_load.py"); print(out); assert "food_relations" in out
+    out = run(tmp, "s08_load.py"); print(out); assert "food_relations" in out and "data_sources: 33행" in out
+    sys.path.insert(0, str(tmp / "scripts"))
+    from s08_load import build_payloads
+    from common import read_csv as _rc
+    p = build_payloads(_rc(tmp / "data/seed/countries.csv"), final)
+    assert all(src["data_source_id"] for src in p["sources"])
+    assert len({tuple(sorted(src)) for src in p["sources"]}) == 1          # PostgREST 일괄 upsert: 모든 행 키 동일
+    assert {"wikipedia", "wikidata", "wikimedia_commons", "foodis_llm_draft", "foodis_review"} <= {x["data_source_id"] for x in p["sources"]}
+    (tmp_path / "payload.json").write_text(json.dumps(p, ensure_ascii=False), encoding="utf-8")
     out = run(tmp, "s09_embed.py"); print(out); assert f"임베딩 {len(final)}건 완료" in out
     txt = json.loads((tmp / "data/final/embedding_texts.json").read_text(encoding="utf-8"))["injera"]
     assert "에티오피아 음식" in txt and "발효" in txt

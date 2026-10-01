@@ -6,8 +6,9 @@
 ## 폴더
 
 ```
-foodis-data/                         (스키마는 루트 ../supabase/migrations/ 에서 앱과 공유)
+foodis-data/                         (스키마는 루트 ../supabase/migrations/ 에서 앱과 공유: 0001_init · 0002_data_sources)
 ├─ data/seed/
+│   ├─ data_sources.csv       데이터 소스 33개 (판정·저장 정책·라이선스·표기 문구) = DB data_sources
 │   ├─ countries.csv          30개국 (ISO 코드, 국기, 대륙 그룹, Accent 컬러)
 │   ├─ dish_targets.csv       180개 음식 목표 리스트 (위키백과 제목 힌트, 기원 메모, 데모 필수 16개 표시)
 │   │                         제목 힌트는 영어 위키 기준. 영어 문서가 없거나 엉뚱하면 "es:Majadito" 처럼 언어를 붙인다 (en·ko·es·pt·fr)
@@ -25,7 +26,7 @@ foodis-data/                         (스키마는 루트 ../supabase/migrations
 pip install -r requirements.txt
 cp .env.example .env            # 키 입력
 
-# 0) Supabase 프로젝트 생성 → SQL Editor 에 ../supabase/migrations/0001_init.sql 실행
+# 0) Supabase 프로젝트 생성 → SQL Editor 에 ../supabase/migrations/0001_init.sql, 0002_data_sources.sql 순서로 실행
 
 # 1) 근거 수집 (API 키 불필요)
 python scripts/s01_wikidata.py      # 위키백과 제목 → Wikidata QID, 원산지·재료·이미지
@@ -58,6 +59,9 @@ python -m pytest tests -q   # 오프라인 E2E: s01→s09 전 구간, 검수 규
 ```
 
 ## 라이선스 메모
+
+전체 33개 소스 판정은 `data/seed/data_sources.csv` (= DB `data_sources`, ../supabase/migrations/0002). 모든 `sources` 레코드는 `data_source_id`로 연결되고, 실시간 전용·저장 금지 소스(카카오 로컬 등)는 트리거가 저장을 막는다. s08 실행 시 CSV 내용으로 data_sources 를 동기화한다.
+
 
 | 출처 | 라이선스 | 우리 쓰임 |
 |---|---|---|

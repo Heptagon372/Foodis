@@ -2,7 +2,7 @@
 // 게스트 Passport · 온보딩 상태 (브라우저 저장). 로그인 연동 후에는 /api/me/passport 로 동기화한다.
 // localStorage 는 사파리 비공개 모드 등에서 막힐 수 있어 모든 접근을 try/catch 로 감싼다.
 import { useRef, useSyncExternalStore } from "react";
-import type { DietKey } from "@/lib/foodi/schema";
+import type { Allergen, DietKey } from "@/lib/foodi/schema";
 
 export type PassportStatus = "explored" | "tried" | "liked" | "saved";
 export type PassportEntry = { slug: string; name_ko: string; flag: string; cc: string; tags: string[]; statuses: PassportStatus[]; at: number };
@@ -11,12 +11,13 @@ export type LocalState = {
   introSeen: boolean;
   onboarded: boolean;
   diet: DietKey[];
+  allergens: Allergen[];
   tastes: string[];
   entries: Record<string, PassportEntry>;
 };
 
 const KEY = "foodis:v1";
-const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], tastes: [], entries: {} };
+const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], allergens: [], tastes: [], entries: {} };
 
 let state: LocalState = INITIAL;
 let loaded = false;
@@ -94,6 +95,9 @@ export function toggle(food: FoodRef, status: Exclude<PassportStatus, "explored"
     return { ...s, entries: { ...s.entries, [food.id]: { ...e, statuses: e.statuses.filter((x) => x !== status) } } };
   });
 }
+
+/** /api/foodi/ask 로 보내는 게스트 프로필 */
+export const guestProfile = (s: LocalState) => ({ diet: s.diet, allergens: s.allergens, explored_countries: exploredCountries(s), explored_foods: Object.keys(s.entries).slice(-300) });
 
 export const exploredCountries = (s: LocalState) => [...new Set(Object.values(s.entries).map((e) => e.cc))];
 

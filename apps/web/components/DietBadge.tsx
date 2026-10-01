@@ -1,5 +1,7 @@
 import type { DietKey, DietLevel } from "@/lib/foodi/schema";
 
+export const ALLERGEN_LABEL: Record<string, string> = { nuts: "견과류", peanut: "땅콩", shellfish: "갑각류", fish: "생선", egg: "달걀", soy: "대두", wheat: "밀", dairy: "유제품", sesame: "참깨" };
+
 export const DIET_LABEL: Record<DietKey, string> = { vegan: "비건", vegetarian: "채식", halal: "할랄", gluten_free: "글루텐 프리", dairy_free: "유제품 없음" };
 
 // 식이 배지 3단계 (05 문서 §7): 확실 ✅ / 조리법에 따라 다름 ⚠️ / 미확인 ❓. 'no' 는 배지 대신 표에서만 보여준다.

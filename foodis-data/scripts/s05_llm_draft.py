@@ -27,9 +27,9 @@ TOOL = {
         "required": ["summary", "history", "culture_story", "cooking_method", "taste_tags", "course_type",
                      "name_local", "ingredients", "diet_draft", "allergens", "used_evidence"],
         "properties": {
-            "summary": {"type": "string", "description": "한국어 1~2문장, 음성으로 읽기 좋게. 해요체 금지, 평서문"},
-            "history": {"type": ["string", "null"], "description": "한국어 2~4문장. 근거에 없으면 null. 기원 논쟁은 '여러 설' 로"},
-            "culture_story": {"type": ["string", "null"], "description": "언제·어떻게·누구와 먹는지. 한국어 250~400자. 근거 없으면 null"},
+            "summary": {"type": "string", "description": "한국어 1~2문장. 푸디가 그대로 소리 내 읽는다 → 해요체, 괄호·영문 철자 없이"},
+            "history": {"type": ["string", "null"], "description": "한국어 2~4문장, 해요체. 근거에 없으면 null. 기원 논쟁은 '여러 설이 있어요'로"},
+            "culture_story": {"type": ["string", "null"], "description": "언제·어떻게·누구와 먹는지. 한국어 250~400자, 해요체(60초 음성). 근거 없으면 null"},
             "cooking_method": {"type": "string", "enum": ["fermented", "grilled", "steamed", "stewed", "raw", "fried", "baked", "boiled", "stir_fried", "mixed"]},
             "taste_tags": {"type": "array", "items": {"type": "string", "enum": TASTE_TAGS}, "minItems": 2, "maxItems": 6},
             "course_type": {"type": "string", "enum": ["main", "side", "soup", "street", "dessert", "drink", "bread", "condiment"]},
@@ -58,7 +58,7 @@ SYSTEM = """너는 세계 음식 문화 데이터베이스의 편집자다. 사�
 1. evidence에 없는 연도·인물·수치·지명은 절대 쓰지 않는다. 확신이 없으면 해당 필드를 null 로 둔다.
 2. 국가·문화 간 우열 표현, 고정관념, 기원 논쟁의 단정 금지. 여러 설이 있으면 '여러 설이 있다'고 쓴다.
 3. 식이 판단은 대표 조리법 기준. 지역·식당마다 다르면 depends, 근거 부족하면 unknown. 할랄은 돼지고기·알코올 외에 도축 방식도 관련되므로 육류가 들어가면 최소 depends.
-4. 한국어는 자연스러운 평서문. 음식 이름은 한국에서 통용되는 표기를 쓴다.
+4. summary·history·culture_story 는 앱의 안내자 푸디가 그대로 읽어주는 문장이다(DB 스키마 "음성용", 03 문서 §5). 해요체로 쓰고 괄호·영문 철자·목록을 넣지 않는다. 음식 이름은 한국에서 통용되는 표기를 쓴다.
 반드시 save_food_draft 도구로만 답한다."""
 
 

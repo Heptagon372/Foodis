@@ -28,7 +28,8 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
   const dna = useLocal(foodDna);
   const recent = useLocal((s) => Object.entries(s.entries).sort((a, b) => b[1].at - a[1].at).slice(0, 8));
 
-  const fits = (f: FoodSummary) => diet.every((k) => f.diet[k] === "yes" || f.diet[k] === "depends");
+  const allergens = useLocal((s) => s.allergens ?? []);
+  const fits = (f: FoodSummary) => diet.every((k) => f.diet[k] === "yes" || f.diet[k] === "depends") && !f.allergens.some((a) => (allergens as string[]).includes(a));
   const pool = foods.filter(fits);
   const today = pool[todayIndex(pool.length)] ?? foods[0];
   // 나를 위한 추천: 안 가본 나라 우선 → Food DNA 태그 점수 (match_foods 와 같은 취지의 클라이언트 근사)

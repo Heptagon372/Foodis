@@ -5,7 +5,7 @@ import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from 
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
-import { DIET_LABEL, DietBadge } from "./DietBadge";
+import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
 import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, RelationRow, SourceFooter } from "./bits";
@@ -17,7 +17,6 @@ type Tab = (typeof TABS)[number];
 const METHOD_LABEL: Record<string, string> = {
   fermented: "발효", grilled: "구이", steamed: "찜", stewed: "스튜·조림", raw: "날것", fried: "튀김", baked: "굽기(오븐)", boiled: "삶기·끓이기", stir_fried: "볶음", mixed: "섞기",
 };
-const ALLERGEN_LABEL: Record<string, string> = { nuts: "견과류", peanut: "땅콩", shellfish: "갑각류", fish: "생선", egg: "달걀", soy: "대두", wheat: "밀", dairy: "유제품", sesame: "참깨" };
 const LEVEL_TEXT = { yes: "가능", depends: "조리법에 따라 다름", no: "해당 안 됨", unknown: "확인 필요" } as const;
 
 export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: boolean }) {

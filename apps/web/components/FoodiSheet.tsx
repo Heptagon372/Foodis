@@ -1,9 +1,10 @@
 "use client";
 // S3 푸디 대화 시트 (05 문서 §4): 홈·상세 위에 겹치는 바텀 시트 → 맥락 유지.
 // 채팅 UI 가 아니라 "말하는 카드 피드": 인식 텍스트(탭해서 수정) → 자막 → 카드 1~3 → 추천 질문 → 🎙 재질문
+import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { AskResponse } from "@/lib/foodi/schema";
-import { exploredCountries, getState, record } from "@/lib/client/passport";
+import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
+import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
@@ -39,6 +40,9 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [typeFirst, setTypeFirst] = useState(false);
   const listenRef = useRef<ListenHandle | null>(null);
+  // 이번 대화에서 카드로 보여준 음식 — "다른 거 추천"이 같은 음식을 반복하지 않게 서버에 알려준다. 시트를 닫으면 새 대화
+  const seen = useRef<string[]>([]);
+  const router = useRouter();
   const seq = useRef(0);
   const feedEnd = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,12 +61,13 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         const res = await fetch("/api/foodi/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text, input_mode: mode, context_food_id: contextFoodId, guest: { diet: s.diet, explored_countries: exploredCountries(s) } }),
+          body: JSON.stringify({ text, input_mode: mode, context_food_id: contextFoodId, seen_food_ids: seen.current.slice(-30), guest: guestProfile(s) }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error?.message ?? "푸디가 잠시 쉬고 있어요.");
         const r = data as AskResponse;
         setTurns((t) => t.map((x) => (x.id === id ? { ...x, res: r } : x)));
+        seen.current = [...seen.current, ...r.cards.map((c) => c.food_id)];
         // 카드로 보여준 음식은 '탐험함'으로 Passport 에 기록 (F-REC-02)
         for (const c of r.cards) record({ id: c.food_id, slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, country_code: c.country.code, taste_tags: [] }, "explored");
         if (muted) setVoice("idle");
@@ -118,6 +123,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   );
 
   const close = () => {
+    seen.current = [];
     listenRef.current?.cancel();
     stopSpeaking();
     setVoice("idle");
@@ -178,7 +184,15 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
                 </div>
               )}
               {turns.map((t) => (
-                <TurnView key={t.id} t={t} onEdit={() => editTurn(t)} onFollowUp={(q) => void ask(q, "text", t.res?.cards[0]?.food_id ?? t.contextFoodId)} />
+                <TurnView
+                  key={t.id}
+                  t={t}
+                  onEdit={() => editTurn(t)}
+                  onFollowUp={(q) => {
+                    if (q.includes("패스포트")) return (close(), router.push("/passport"));
+                    void ask(q, "text", t.res?.cards[0]?.food_id ?? t.contextFoodId);
+                  }}
+                />
               ))}
               {voice === "listening" && <p className="text-right text-subtitle text-charcoal/70">{interim || "듣고 있어요…"}</p>}
               {hint && <p className="rounded-xl bg-surface px-3 py-2 text-sm text-charcoal/80">{hint}</p>}
@@ -222,7 +236,9 @@ function TurnView({ t, onEdit, onFollowUp }: { t: Turn; onEdit: () => void; onFo
       {t.error && <p className="rounded-xl bg-surface px-3 py-2 text-sm">{t.error}</p>}
       {t.res && (
         <>
+          {t.res.not_in_map && <p className="w-fit rounded-full bg-line/60 px-3 py-1 text-caption text-charcoal/70">🗺 ‘{t.res.not_in_map}’ — 아직 FOODIS 지도에 없어요</p>}
           <p className="text-subtitle font-medium">{t.res.speech}</p>
+          {t.res.passport && <PassportCard p={t.res.passport} />}
           {t.res.cards.length > 0 && (
             <div className="snap-row -mx-5 px-5">
               {t.res.cards.map((c) => (
@@ -256,6 +272,28 @@ function TurnView({ t, onEdit, onFollowUp }: { t: Turn; onEdit: () => void; onFo
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/** passport_status 답에 붙는 요약 카드 (03 문서 #7) */
+function PassportCard({ p }: { p: PassportSummary }) {
+  return (
+    <div className="space-y-2 rounded-2xl bg-green-800 p-4 text-ivory">
+      <p className="font-display text-xl font-semibold">
+        📕 {p.countries}개국 · {p.foods}개 음식
+      </p>
+      {p.by_continent.map((c) => (
+        <div key={c.key} className="flex items-center gap-2 text-caption">
+          <span className="w-24 shrink-0">{c.label}</span>
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ivory/20">
+            <span className="block h-full rounded-full bg-mint-500" style={{ width: `${c.total ? (c.done / c.total) * 100 : 0}%` }} />
+          </span>
+          <span className="w-9 text-right tabular-nums">
+            {c.done}/{c.total}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

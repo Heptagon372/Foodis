@@ -24,6 +24,7 @@ export type FoodSummary = {
   taste_tags: string[];
   image_url: string | null;
   diet: Record<DietKey, DietLevel>;
+  allergens: string[];
 };
 
 export type RelationType = "similar_taste" | "shares_ingredient" | "same_technique" | "historical_link" | "regional_variant";
@@ -38,7 +39,6 @@ export type FoodDetail = FoodSummary & {
   cooking_method: string | null;
   course_type: string | null;
   image_credit: string | null;
-  allergens: string[];
   diet_note: string | null;
   ingredients: { slug: string; name_ko: string; role: string }[];
   sources: { field: string; url: string; title: string | null; license: string | null }[];

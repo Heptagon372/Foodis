@@ -1,15 +1,16 @@
 // FoodisRepo 의 Supabase 구현. 컬럼·RPC 는 supabase/migrations/0001_init.sql 기준.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { emptyDiet, type FoodisRepo, type FoodRow, type MatchParams, type UserContext } from "@/lib/foodi/repo";
+import { emptyDiet, type CountryRow, type FoodisRepo, type FoodRow, type MatchParams, type UserContext } from "@/lib/foodi/repo";
+import { rankByKeywords } from "@/lib/foodi/keywords";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 
 const FOOD_SELECT =
-  "id, slug, name_ko, name_en, country_code, summary, culture_story, taste_tags, image_url, allergens, " +
+  "id, slug, name_ko, name_en, country_code, origin_note, summary, history, culture_story, taste_tags, image_url, allergens, diet_note, " +
   "diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, " +
   "countries(name_ko, flag_emoji, accent_color), sources(title, url)";
 
-type LiteFood = { id: string; name_ko: string; name_en: string; country_code: string; allergens: string[] } & Record<`diet_${DietKey}`, DietLevel>;
+type LiteFood = { id: string; name_ko: string; name_en: string; country_code: string; allergens: string[]; taste_tags: string[] } & Record<`diet_${DietKey}`, DietLevel>;
 
 const dietOf = (r: Record<string, unknown>) => Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`] as DietLevel])) as Record<DietKey, DietLevel>;
 const passesDiet = (f: LiteFood, need: DietKey[], avoid: string[]) =>
@@ -18,11 +19,12 @@ const passesDiet = (f: LiteFood, need: DietKey[], avoid: string[]) =>
 export function supabaseRepo(db: SupabaseClient): FoodisRepo {
   // 검수된 음식은 200건 남짓 → 이름 목록은 메모리에 5분 캐시 (검증·키워드 대체 검색용)
   let lite: { at: number; rows: LiteFood[] } | null = null;
+  let countryCache: { at: number; rows: CountryRow[] } | null = null;
   const liteFoods = async (): Promise<LiteFood[]> => {
     if (lite && Date.now() - lite.at < 300_000) return lite.rows;
     const { data, error } = await db
       .from("foods")
-      .select("id, name_ko, name_en, country_code, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free")
+      .select("id, name_ko, name_en, country_code, allergens, taste_tags, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free")
       .eq("verified", true);
     if (error) throw error;
     lite = { at: Date.now(), rows: data as unknown as LiteFood[] };
@@ -54,11 +56,7 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
       const all = (await liteFoods()).filter(
         (f) => passesDiet(f, p.needDiet, p.ctx.allergens) && !p.excludeFoodIds.includes(f.id) && (!p.countryCode || f.country_code === p.countryCode),
       );
-      const q = text.toLowerCase();
-      const named = all.filter((f) => q.includes(f.name_ko) || q.includes(f.name_en.toLowerCase()));
-      // 이름이 안 걸리면 아직 안 가본 나라 우선 (match_foods 의 미탐험 가산과 같은 취지)
-      const rest = all.filter((f) => !named.includes(f)).sort((a, b) => Number(p.ctx.exploredCountries.includes(a.country_code)) - Number(p.ctx.exploredCountries.includes(b.country_code)));
-      return [...named, ...rest].slice(0, p.count).map((f) => f.id);
+      return rankByKeywords(all, text, p.ctx.exploredCountries).slice(0, p.count).map((f) => f.id);
     },
 
     async getFoods(ids) {
@@ -72,12 +70,15 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
           name_ko: r.name_ko as string,
           name_en: r.name_en as string,
           country_code: r.country_code as string,
+          origin_note: r.origin_note as string | null,
           summary: r.summary as string | null,
+          history: r.history as string | null,
           culture_story: r.culture_story as string | null,
           taste_tags: r.taste_tags as string[],
           image_url: r.image_url as string | null,
           allergens: r.allergens as string[],
           diet: dietOf(r),
+          diet_note: r.diet_note as string | null,
           country: r.countries as FoodRow["country"],
           sources: (r.sources as FoodRow["sources"]) ?? [],
         }),
@@ -86,16 +87,20 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
       return rows.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
     },
 
-    async getRelatedFoodIds(foodId, limit) {
-      const { data, error } = await db
-        .from("food_relations")
-        .select("to_food_id")
-        .eq("from_food_id", foodId)
-        .eq("verified", true)
-        .order("strength", { ascending: false })
-        .limit(limit);
+    async getRelatedFoodIds(foodId, limit, type) {
+      let q = db.from("food_relations").select("to_food_id").eq("from_food_id", foodId).eq("verified", true);
+      if (type) q = q.eq("relation_type", type);
+      const { data, error } = await q.order("strength", { ascending: false }).limit(limit);
       if (error) throw error;
       return data.map((r) => r.to_food_id as string);
+    },
+
+    async countries() {
+      if (countryCache && Date.now() - countryCache.at < 300_000) return countryCache.rows;
+      const { data, error } = await db.from("countries").select("code, name_ko, name_en, continent_group");
+      if (error) throw error;
+      countryCache = { at: Date.now(), rows: data as CountryRow[] };
+      return countryCache.rows;
     },
 
     async allFoodNames() {

@@ -14,6 +14,7 @@ export type PreviewFood = {
   cc: string;
   summary: string;
   culture?: string;
+  history?: string;
   tags: string[];
   method?: string;
   course?: string;
@@ -38,6 +39,7 @@ export const PREVIEW_FOODS: PreviewFood[] = [
   {
     n: 2, slug: "kimchi", name_ko: "김치", name_en: "Kimchi", name_local: "김치", cc: "KR",
     summary: "배추 같은 채소를 소금에 절여 고춧가루·마늘 양념과 함께 발효시킨 한국의 대표 반찬이에요.",
+    history: "채소를 소금에 절여 오래 먹는 방식은 오래전부터 있었고, 고춧가루를 넣은 지금의 모습은 18세기 무렵 이후로 알려져 있어요. 정확한 시점은 자료마다 조금 달라요.",
     culture: "늦가을에 이웃과 가족이 모여 겨울 동안 먹을 김치를 한꺼번에 담그는 김장 문화가 있어요.",
     tags: ["spicy", "fermented", "vegetable"], method: "fermented", course: "side",
     ingredients: ["배추", "고춧가루", "마늘", "젓갈"], diet: { vegan: "depends", vegetarian: "depends", halal: "yes", gluten_free: "yes", dairy_free: "yes" },
@@ -98,7 +100,7 @@ export const PREVIEW_FOODS: PreviewFood[] = [
     summary: "병아리콩을 토마토·양파와 여러 향신료로 걸쭉하게 끓인 인도 북부 커리예요.",
     tags: ["legume", "spicy", "rich"], method: "stewed", course: "main",
     ingredients: ["병아리콩", "토마토", "양파", "가람 마살라"], diet: { vegan: "depends", vegetarian: "yes", halal: "yes", gluten_free: "yes", dairy_free: "depends" },
-    diet_note: "기(버터 기름)를 쓰는 식당이 있어요.",
+    diet_note: "버터 기름인 기를 쓰는 식당이 있어요.",
   },
   {
     n: 11, slug: "ceviche", name_ko: "세비체", name_en: "Ceviche", cc: "PE",
@@ -109,7 +111,7 @@ export const PREVIEW_FOODS: PreviewFood[] = [
   },
   {
     n: 12, slug: "turkish-coffee", name_ko: "튀르키예 커피", name_en: "Turkish coffee", cc: "TR",
-    summary: "곱게 간 원두를 작은 주전자(제즈베)에 물과 함께 끓여 가루째 따라 마시는 커피예요.",
+    summary: "곱게 간 원두를 제즈베라는 작은 주전자에 물과 함께 끓여 가루째 따라 마시는 커피예요.",
     culture: "커피를 마신 뒤 잔에 남은 가루 모양으로 운세를 보는 놀이가 있고, 손님 접대의 중요한 의식이에요.",
     tags: ["rich"], method: "boiled", course: "drink",
     ingredients: ["커피 원두", "물", "설탕"], diet: { vegan: "yes", vegetarian: "yes", halal: "yes", gluten_free: "yes", dairy_free: "yes" },
@@ -117,6 +119,7 @@ export const PREVIEW_FOODS: PreviewFood[] = [
   {
     n: 13, slug: "viennese-coffee", name_ko: "비엔나 커피하우스 커피", name_en: "Viennese coffee", cc: "AT",
     summary: "빈의 커피하우스에서 물 한 잔과 함께 내오는 커피예요. 오래 머물며 신문을 읽는 문화로 유명해요.",
+    culture: "빈의 커피하우스는 커피 한 잔을 시켜 두고 오래 머물며 신문을 읽고, 글을 쓰고, 대화를 나누는 곳이에요. 커피와 함께 물 한 잔이 나오는 것도 이곳의 오랜 습관이에요.",
     tags: ["creamy", "sweet"], method: "mixed", course: "drink",
     ingredients: ["커피", "우유", "휘핑크림"], diet: { vegan: "depends", vegetarian: "yes", halal: "yes", gluten_free: "yes", dairy_free: "depends" },
     allergens: ["dairy"],
@@ -127,6 +130,41 @@ export const PREVIEW_FOODS: PreviewFood[] = [
     tags: ["meat", "sweet", "street_food"], method: "baked", course: "street",
     ingredients: ["밀가루", "소고기", "감자", "완두콩"], diet: { vegan: "no", vegetarian: "no", halal: "depends", gluten_free: "no", dairy_free: "depends" },
     allergens: ["wheat", "egg"],
+  },
+  {
+    n: 15, slug: "aloo-gobi", name_ko: "알루 고비", name_en: "Aloo gobi", cc: "IN",
+    summary: "감자와 콜리플라워를 강황·큐민 같은 향신료로 볶아 만든 인도 채소 요리예요.",
+    tags: ["vegetable", "spicy"], method: "stir_fried", course: "main",
+    ingredients: ["감자", "콜리플라워", "강황", "큐민"], diet: { vegan: "depends", vegetarian: "yes", halal: "yes", gluten_free: "yes", dairy_free: "depends" },
+    diet_note: "버터 기름인 기로 볶는 식당이 있어요.",
+  },
+  {
+    n: 16, slug: "palak-paneer", name_ko: "팔락 파니르", name_en: "Palak paneer", cc: "IN",
+    summary: "시금치 퓌레에 인도식 생치즈 파니르를 넣어 끓인 북인도 커리예요.",
+    tags: ["creamy", "vegetable", "dairy"], method: "stewed", course: "main",
+    ingredients: ["시금치", "파니르", "양파", "향신료"], diet: { vegan: "no", vegetarian: "yes", halal: "yes", gluten_free: "yes", dairy_free: "no" },
+    allergens: ["dairy"],
+  },
+  {
+    n: 17, slug: "butter-chicken", name_ko: "버터 치킨", name_en: "Butter chicken", cc: "IN",
+    summary: "구운 닭고기를 토마토·버터·크림 소스에 넣어 부드럽게 끓인 인도 커리예요.",
+    tags: ["creamy", "meat", "rich"], method: "stewed", course: "main",
+    ingredients: ["닭고기", "토마토", "버터", "크림"], diet: { vegan: "no", vegetarian: "no", halal: "depends", gluten_free: "yes", dairy_free: "no" },
+    allergens: ["dairy"],
+  },
+  {
+    n: 18, slug: "satay", name_ko: "사테", name_en: "Satay", cc: "ID",
+    summary: "양념한 고기를 꼬치에 꿰어 숯불에 굽고 땅콩 소스를 곁들이는 동남아시아 꼬치구이예요.",
+    tags: ["grilled", "meat", "street_food", "nutty"], method: "grilled", course: "street",
+    ingredients: ["닭고기", "땅콩 소스", "간장", "향신료"], diet: { vegan: "no", vegetarian: "no", halal: "depends", gluten_free: "depends", dairy_free: "yes" },
+    allergens: ["peanut", "soy"], origin_note: "말레이시아·싱가포르 등과 공유",
+  },
+  {
+    n: 19, slug: "lechon", name_ko: "레촌", name_en: "Lechon", cc: "PH",
+    summary: "돼지 한 마리를 통째로 오래 구워 껍질을 바삭하게 만든 필리핀의 잔치 음식이에요.",
+    tags: ["grilled", "meat", "crispy"], method: "grilled", course: "main",
+    ingredients: ["돼지고기", "레몬그라스", "마늘"], diet: { vegan: "no", vegetarian: "no", halal: "no", gluten_free: "yes", dairy_free: "yes" },
+    origin_note: "스페인어권과 공유",
   },
 ];
 
@@ -139,6 +177,9 @@ export const PREVIEW_RELATIONS: { from: string; to: string; type: RelationType; 
   { from: "manti", to: "khinkali", type: "similar_taste", description: "큼직한 고기 만두" },
   { from: "turkish-coffee", to: "viennese-coffee", type: "historical_link", description: "오스만 제국과 빈의 커피하우스 문화 — 전래 이야기에는 여러 설이 있어요" },
   { from: "falafel", to: "chana-masala", type: "shares_ingredient", description: "병아리콩" },
+  { from: "chana-masala", to: "aloo-gobi", type: "similar_taste", description: "향신료로 맛을 낸 북인도 채소 요리" },
+  { from: "palak-paneer", to: "butter-chicken", type: "similar_taste", description: "크리미한 북인도 커리" },
+  { from: "lechon", to: "satay", type: "same_technique", description: "불에 오래 구운 고기" },
   { from: "kimchi", to: "injera", type: "same_technique", description: "발효로 새콤한 맛을 내요" },
   { from: "ceviche", to: "kimchi", type: "similar_taste", description: "산뜻하고 새콤한 맛" },
 ];

@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { Country } from "@/lib/content/types";
 import { TASTE_LABEL } from "@/lib/content/types";
 import { exploredCountries, foodDna, update, useLocal, type PassportStatus } from "@/lib/client/passport";
-import { DIET_KEYS } from "@/lib/foodi/schema";
-import { DIET_LABEL } from "./DietBadge";
+import { ALLERGENS, DIET_KEYS } from "@/lib/foodi/schema";
+import { ALLERGEN_LABEL, DIET_LABEL } from "./DietBadge";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section, Wordmark } from "./bits";
 
@@ -16,6 +16,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
   const entries = useLocal((s) => Object.entries(s.entries));
   const dna = useLocal(foodDna);
   const diet = useLocal((s) => s.diet);
+  const allergens = useLocal((s) => s.allergens ?? []);
 
   const listOf = (st: PassportStatus) => entries.filter(([, e]) => e.statuses.includes(st));
   const continents = Object.entries(CONTINENTS).map(([k, label]) => {
@@ -94,7 +95,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
         );
       })}
 
-      <Section title="식이 조건">
+      <Section title="식이 조건 · 알레르기">
         <div className="flex flex-wrap gap-2">
           {DIET_KEYS.map((k) => {
             const on = diet.includes(k);
@@ -112,7 +113,24 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
             );
           })}
         </div>
-        <p className="text-caption text-muted">추천 필터에만 쓰이고 이 기기에만 저장돼요.</p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {ALLERGENS.map((a) => {
+            const on = allergens.includes(a);
+            return (
+              <button
+                key={a}
+                type="button"
+                aria-pressed={on}
+                onClick={() => update((s) => ({ ...s, allergens: on ? (s.allergens ?? []).filter((x) => x !== a) : [...(s.allergens ?? []), a] }))}
+                className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-diet-no bg-diet-no/10 font-medium text-diet-no" : "border-line bg-surface text-charcoal/70"}`}
+              >
+                {on ? "✕ " : ""}
+                {ALLERGEN_LABEL[a]}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-caption text-muted">추천 필터에만 쓰이고 이 기기에만 저장돼요. 빨간 재료가 든 음식은 추천하지 않아요.</p>
       </Section>
 
       <button type="button" onClick={() => open({ listen: true })} className="w-full rounded-full bg-mint-500 py-4 font-semibold text-green-800">

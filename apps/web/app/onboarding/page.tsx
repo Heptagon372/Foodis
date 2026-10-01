@@ -6,7 +6,8 @@ import { DIET_LABEL } from "@/components/DietBadge";
 import { Wordmark } from "@/components/bits";
 import { TASTE_LABEL } from "@/lib/content/types";
 import { getState, update, useHydrated } from "@/lib/client/passport";
-import { DIET_KEYS, type DietKey } from "@/lib/foodi/schema";
+import { DIET_KEYS, type Allergen, type DietKey } from "@/lib/foodi/schema";
+import { ALLERGEN_LABEL } from "@/components/DietBadge";
 
 const TASTES = ["spicy", "fermented", "sour", "sweet", "umami", "creamy", "fresh", "herbal", "dumpling", "noodle", "bread", "seafood", "legume", "street_food"];
 const DIET_HINT: Record<DietKey, string> = {
@@ -26,10 +27,11 @@ function OnboardingForm() {
   const router = useRouter();
   const [diet, setDiet] = useState<DietKey[]>(() => getState().diet);
   const [tastes, setTastes] = useState<string[]>(() => getState().tastes);
+  const [allergens, setAllergens] = useState<Allergen[]>(() => getState().allergens ?? []);
   const flip = <T,>(list: T[], v: T, max = 99) => (list.includes(v) ? list.filter((x) => x !== v) : list.length < max ? [...list, v] : list);
 
   const finish = (save: boolean) => {
-    update((s) => ({ ...s, introSeen: true, onboarded: true, ...(save ? { diet, tastes } : {}) }));
+    update((s) => ({ ...s, introSeen: true, onboarded: true, ...(save ? { diet, tastes, allergens } : {}) }));
     router.push("/");
   };
 
@@ -61,6 +63,30 @@ function OnboardingForm() {
                 >
                   <span className="block font-semibold">{on ? "✓ " : ""}{DIET_LABEL[k]}</span>
                   <span className="text-caption text-muted">{DIET_HINT[k]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-h2 font-semibold">피해야 할 재료</h2>
+            <p className="mt-1 text-sm text-muted">이 재료가 들어간 음식은 추천하지 않아요. 다른 알레르기는 Passport에서 더 고를 수 있어요.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["nuts", "shellfish", "peanut"] as Allergen[]).map((a) => {
+              const on = allergens.includes(a);
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setAllergens((x) => flip(x, a))}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition active:scale-95 ${on ? "border-diet-no bg-diet-no/10 text-diet-no" : "border-line bg-surface"}`}
+                >
+                  {on ? "✕ " : ""}
+                  {ALLERGEN_LABEL[a]}
                 </button>
               );
             })}

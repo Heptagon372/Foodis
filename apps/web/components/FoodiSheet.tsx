@@ -11,6 +11,7 @@ import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voi
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
+import { InAppNotice, MicHelp } from "./MicHelp";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
 type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean };
@@ -38,6 +39,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   const [voice, setVoice] = useState<VoiceState>("idle");
   const [interim, setInterim] = useState("");
   const [hint, setHint] = useState<string | null>(null);
+  const [micHelp, setMicHelp] = useState<"mic_denied" | "unsupported" | null>(null);
   const [draft, setDraft] = useState("");
   const [muted, setMuted] = useState(false);
   const [typeFirst, setTypeFirst] = useState(false);
@@ -54,6 +56,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       const text = q.trim();
       if (!text) return;
       setHint(null);
+      setMicHelp(null);
       setInterim("");
       const id = ++seq.current;
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);
@@ -110,6 +113,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
     (contextFoodId?: string) => {
       stopSpeaking();
       setHint(null);
+      setMicHelp(null);
       setVoice("listening");
       setInterim("");
       listenRef.current = listen({
@@ -118,6 +122,8 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         onError: (reason) => {
           setVoice("idle");
           setInterim("");
+          // 권한·지원 문제는 한 줄 안내 대신 "어디서 뭘 누르면 되는지" 카드로
+          if (reason === "mic_denied" || reason === "unsupported") return setMicHelp(reason);
           setHint(ERRORS[reason] ?? ERRORS.recognition_failed);
           if (reason !== "no_speech") inputRef.current?.focus();
         },
@@ -197,6 +203,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
               {turns.length === 0 && voice !== "listening" && (
                 <div className="space-y-3 pt-2">
                   <p className="font-display text-h2 font-semibold">무엇이든 물어보세요</p>
+                  {!micHelp && <InAppNotice />}
                   <div className="flex flex-wrap gap-2">
                     {(context.id ? ["문화 이야기 들려줘", "비슷한 음식 있어?", "비건으로 먹을 수 있어?"] : STARTERS).map((s) => (
                       <FollowUpChip key={s} onClick={() => void ask(s, "text", context.id)}>
@@ -219,6 +226,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
                 />
               ))}
               {voice === "listening" && <p className="text-right text-subtitle text-charcoal/70">{interim || "듣고 있어요…"}</p>}
+              {micHelp && <MicHelp reason={micHelp} onType={() => (setMicHelp(null), inputRef.current?.focus())} />}
               {hint && <p className="rounded-xl bg-surface px-3 py-2 text-sm text-charcoal/80">{hint}</p>}
               <div ref={feedEnd} />
             </div>

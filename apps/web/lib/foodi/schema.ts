@@ -20,6 +20,13 @@ export const AskRequest = z.object({
   text: z.string().trim().min(1).max(300),
   context_food_id: z.uuid().optional(),
   input_mode: z.enum(["voice", "text"]).default("voice"),
+  /** 게스트 전용: 온보딩에서 고른 식이 조건·탐험 국가 (로그인 사용자는 DB 프로필을 쓰고 이 값은 무시) */
+  guest: z
+    .object({
+      diet: z.array(z.enum(DIET_KEYS)).max(5).default([]),
+      explored_countries: z.array(z.string().regex(/^[A-Z]{2}$/)).max(60).default([]),
+    })
+    .optional(),
 });
 export type AskRequest = z.infer<typeof AskRequest>;
 

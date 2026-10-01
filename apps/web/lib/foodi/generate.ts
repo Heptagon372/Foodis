@@ -90,10 +90,17 @@ export function templateAnswer(intent: Intent, foods: FoodRow[]): GenerateOutput
       follow_ups: ["다른 나라 추천", "조건 바꾸기"],
     };
   }
-  const body = intent === "culture_story" && f.culture_story ? f.culture_story : (f.summary ?? "");
-  return {
-    speech: `${f.country.name_ko}의 ${f.name_ko}, 어때요? ${body}`.trim(),
-    picks: [{ food_id: f.id, reason: "추천 1순위" }],
-    follow_ups: ["문화 이야기 들려줘", "비슷한 음식", "다른 거 추천"],
+  const summary = f.summary ?? "";
+  // 의도마다 문장 틀만 바꾼다. 내용은 언제나 DB 필드 그대로
+  const byIntent: Partial<Record<Intent, { speech: string; reason: string; follow: string[] }>> = {
+    culture_story: {
+      speech: f.culture_story ? `${f.name_ko} 이야기를 들려줄게요. ${f.culture_story}` : `${f.name_ko}의 문화 이야기는 아직 준비 중이에요. 대신 이런 음식이에요. ${summary}`,
+      reason: "지금 보는 음식",
+      follow: ["비슷한 음식", "다른 거 추천"],
+    },
+    explain_food: { speech: `${f.name_ko}는 ${f.country.name_ko} 음식이에요. ${summary}`, reason: "지금 보는 음식", follow: ["문화 이야기 들려줘", "비슷한 음식"] },
+    compare_similar: { speech: `${f.country.name_ko}의 ${f.name_ko}도 한번 볼까요? ${summary}`, reason: "비슷한 음식", follow: ["문화 이야기 들려줘", "다른 거 추천"] },
   };
+  const t = byIntent[intent] ?? { speech: `${f.country.name_ko}의 ${f.name_ko}, 어때요? ${summary}`, reason: "추천 1순위", follow: ["문화 이야기 들려줘", "비슷한 음식", "다른 거 추천"] };
+  return { speech: t.speech.trim(), picks: [{ food_id: f.id, reason: t.reason }], follow_ups: t.follow };
 }

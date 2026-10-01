@@ -1,8 +1,8 @@
 // POST /api/foodi/stt — 녹음 업로드(multipart "audio") → 텍스트. Web Speech 실패 시 fallback 전용 (F-VOI-01)
 import { NextResponse } from "next/server";
 import { jsonError, tooMany } from "@/lib/api/http";
-import { supabaseRepo } from "@/lib/db/foodis-repo";
-import { currentUserId, supabaseAdmin } from "@/lib/db/supabase-server";
+import { currentUserId } from "@/lib/db/supabase-server";
+import { getRepo } from "@/lib/foodi/deps";
 import { clientKey, rateLimit } from "@/lib/guard/ratelimit";
 import { getSTT } from "@/lib/providers";
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (audio.size > MAX_BYTES) return jsonError(413, "audio_too_large", "녹음이 너무 깁니다.");
 
   try {
-    const repo = supabaseRepo(supabaseAdmin());
+    const repo = getRepo();
     // 외국 음식 이름 인식 보강: DB 음식명을 키워드 힌트로 (09 문서 §5.3)
     const keywords = await repo
       .allFoodNames()

@@ -2,8 +2,8 @@
 // 1순위 TTS 실패 → 2순위 TTS → 둘 다 실패하면 503 (클라이언트가 브라우저 speechSynthesis 로 대체, 11 문서 §6)
 import { z } from "zod";
 import { jsonError, parseBody, tooMany } from "@/lib/api/http";
-import { supabaseRepo } from "@/lib/db/foodis-repo";
-import { currentUserId, supabaseAdmin } from "@/lib/db/supabase-server";
+import { currentUserId } from "@/lib/db/supabase-server";
+import { getRepo } from "@/lib/foodi/deps";
 import { clientKey, rateLimit } from "@/lib/guard/ratelimit";
 import { getTTSChain } from "@/lib/providers";
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     try {
       const { audio, usage } = await tts.synthesize(body.data.text);
       void Promise.resolve()
-        .then(() => supabaseRepo(supabaseAdmin()).recordUsage([usage], null))
+        .then(() => getRepo().recordUsage([usage], null))
         .catch(() => {});
       return new Response(audio, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store", "X-TTS-Provider": usage.provider } });
     } catch (e) {

@@ -19,6 +19,8 @@ Foodis/
 └─ supabase/migrations/    DB 스키마 (앱·배치 공유, 여기서만 변경)
 ```
 
+UI 설계: [UI 설계 · 구현 v1](docs/design/01_UI_설계_구현_v1.md) — 화면·토큰·컴포넌트·남은 결정 사항
+
 설계 근거: [11 상세 아키텍처](docs/planning/11_상세_아키텍처_설계_도안.md) · [09 외부 API 선정](docs/planning/09_외부_API_조사_선정.md) · [07 API 명세](docs/planning/07_PRD_보강_플랫폼_구조_KPI_기능_명세_API_수익_모델.md)
 
 ## 시작하기
@@ -51,3 +53,7 @@ pnpm data:test     # 배치: s01~s09 E2E (가짜 HTTP)
 - **DB가 사실, AI는 해설.** 카드의 식이 배지·출처는 LLM이 아니라 DB에서 채운다. 후보 밖 음식을 말하면 재생성 → 템플릿.
 - **Voice First, Card Always.** 외부 서비스가 죽어도 카드가 있는 답은 나간다.
 - 키는 서버 환경변수에만. `.env*` 는 커밋 금지 (`.env.example` 만).
+
+## 라이선스 고지
+
+- 국기 글꼴 `apps/web/public/fonts/TwemojiCountryFlags.woff2` — [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill) (MIT), 그래픽은 [Twemoji](https://github.com/jdecked/twemoji) © Twitter, Inc and other contributors, [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)

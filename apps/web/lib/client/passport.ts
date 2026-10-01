@@ -1,0 +1,109 @@
+"use client";
+// 게스트 Passport · 온보딩 상태 (브라우저 저장). 로그인 연동 후에는 /api/me/passport 로 동기화한다.
+// localStorage 는 사파리 비공개 모드 등에서 막힐 수 있어 모든 접근을 try/catch 로 감싼다.
+import { useRef, useSyncExternalStore } from "react";
+import type { DietKey } from "@/lib/foodi/schema";
+
+export type PassportStatus = "explored" | "tried" | "liked" | "saved";
+export type PassportEntry = { slug: string; name_ko: string; flag: string; cc: string; tags: string[]; statuses: PassportStatus[]; at: number };
+export type LocalState = {
+  v: 1;
+  introSeen: boolean;
+  onboarded: boolean;
+  diet: DietKey[];
+  tastes: string[];
+  entries: Record<string, PassportEntry>;
+};
+
+const KEY = "foodis:v1";
+const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], tastes: [], entries: {} };
+
+let state: LocalState = INITIAL;
+let loaded = false;
+const listeners = new Set<() => void>();
+
+function load() {
+  if (loaded || typeof window === "undefined") return;
+  loaded = true;
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    if (raw) state = { ...INITIAL, ...JSON.parse(raw) };
+  } catch {
+    /* 저장소 사용 불가 → 메모리 상태로만 동작 */
+  }
+}
+
+export function update(fn: (s: LocalState) => LocalState) {
+  load();
+  state = fn(state);
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(state));
+  } catch {
+    /* 무시 */
+  }
+  listeners.forEach((l) => l());
+}
+
+export function getState(): LocalState {
+  load();
+  return state;
+}
+
+const subscribe = (cb: () => void) => (listeners.add(cb), () => void listeners.delete(cb));
+
+/** 서버 렌더에서는 INITIAL, 하이드레이션 후 실제 값 → SSR 안전.
+ *  selector 가 새 배열을 만들어도 무한 렌더가 나지 않도록 상태 객체 단위로 결과를 캐시한다. */
+export function useLocal<T>(select: (s: LocalState) => T): T {
+  const memo = useRef<{ s?: LocalState; v?: T }>({});
+  const snap = (s: LocalState) => {
+    if (memo.current.s !== s) memo.current = { s, v: select(s) };
+    return memo.current.v as T;
+  };
+  return useSyncExternalStore(subscribe, () => snap(getState()), () => snap(INITIAL));
+}
+
+/** 하이드레이션 이후에만 true — 저장된 상태를 보고 화면을 바꿔야 할 때(인트로 노출 등) 깜빡임 방지 */
+export const useHydrated = () =>
+  useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+export type FoodRef ={ id: string; slug: string; name_ko: string; flag: string; country_code: string; taste_tags: string[] };
+
+export function record(food: FoodRef, status: PassportStatus) {
+  update((s) => {
+    const prev = s.entries[food.id];
+    const statuses = prev?.statuses.includes(status) ? prev.statuses : [...(prev?.statuses ?? []), status];
+    return {
+      ...s,
+      entries: {
+        ...s.entries,
+        [food.id]: { slug: food.slug, name_ko: food.name_ko, flag: food.flag, cc: food.country_code, tags: food.taste_tags, statuses, at: prev?.at ?? Date.now() },
+      },
+    };
+  });
+}
+
+export function toggle(food: FoodRef, status: Exclude<PassportStatus, "explored">) {
+  const has = getState().entries[food.id]?.statuses.includes(status);
+  if (!has) return record(food, status);
+  update((s) => {
+    const e = s.entries[food.id];
+    return { ...s, entries: { ...s.entries, [food.id]: { ...e, statuses: e.statuses.filter((x) => x !== status) } } };
+  });
+}
+
+export const exploredCountries = (s: LocalState) => [...new Set(Object.values(s.entries).map((e) => e.cc))];
+
+/** Food DNA: 탐험한 음식의 맛 태그 가중합 (좋아요 ×2, 먹어봤어요 ×1.5). 온보딩 취향은 시작값 */
+export function foodDna(s: LocalState): Record<string, number> {
+  const w: Record<string, number> = {};
+  for (const t of s.tastes) w[t] = (w[t] ?? 0) + 1;
+  for (const e of Object.values(s.entries)) {
+    const k = e.statuses.includes("liked") ? 2 : e.statuses.includes("tried") ? 1.5 : 1;
+    for (const t of e.tags) w[t] = (w[t] ?? 0) + k;
+  }
+  return w;
+}

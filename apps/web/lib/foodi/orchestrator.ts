@@ -25,6 +25,10 @@ export async function ask(deps: OrchestratorDeps, req: AskRequest, userId: strin
   const usages: Usage[] = [];
 
   const ctx = await repo.getUserContext(userId);
+  if (!userId && req.guest) {
+    for (const k of req.guest.diet) ctx.diet[k] = true;
+    ctx.exploredCountries = [...new Set([...ctx.exploredCountries, ...req.guest.explored_countries])];
+  }
   const cacheKey = answerCacheKey(req.text, ctx, req.context_food_id);
   const cached = await repo.cacheGet<AskResponse>(cacheKey).catch(() => null);
   if (cached) {

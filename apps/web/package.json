@@ -16,6 +16,7 @@
     "@google-cloud/text-to-speech": "^7.1.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "country-flag-emoji-polyfill": "^0.1.10",
     "next": "15.5.27",
     "openai": "^7.25.0",
     "react": "19.1.0",

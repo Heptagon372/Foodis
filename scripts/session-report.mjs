@@ -108,7 +108,7 @@ export function areaOf(path) {
   if (path.startsWith("foodis-data/")) return "데이터 배치";
   if (path.startsWith("supabase/")) return "DB 스키마";
   if (path.startsWith("docs/") || /(^|\/)README\.md$/.test(path)) return "문서";
-  if (path.startsWith(".github/") || path.startsWith("scripts/") || path.startsWith(".claude/")) return "도구 · 자동화";
+  if (/^(\.github|scripts|tools|\.claude)\//.test(path) || /\.(bat|cmd|ps1|sh)$/.test(path)) return "도구 · 자동화";
   if (/(^|\/)(package\.json|pnpm-lock\.yaml|\.gitignore|[^/]+\.config\.\w+)$/.test(path)) return "설정 · 의존성";
   return "기타";
 }

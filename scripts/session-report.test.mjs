@@ -65,6 +65,9 @@ test("areaOf: 경로를 영역으로", () => {
   assert.equal(areaOf("docs/design/01_UI_설계_구현_v1.md"), "문서");
   assert.equal(areaOf("apps/web/vitest.config.mts"), "설정 · 의존성");
   assert.equal(areaOf("pnpm-lock.yaml"), "설정 · 의존성");
+  assert.equal(areaOf("tools/cli/foodis.mjs"), "도구 · 자동화");
+  assert.equal(areaOf("FOODIS.bat"), "도구 · 자동화");
+  assert.equal(areaOf("README.md"), "문서");
 });
 
 test("renderMarkdown: 마커로 시작하고 진행률 변화·완료 작업을 담는다", () => {

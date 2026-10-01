@@ -106,6 +106,16 @@ describe("LLM 경로의 방어선", () => {
     expect(res.cards.map((c) => c.slug)).toEqual(["viennese-coffee"]);
   });
 
+  it("Food DNA: 같은 질문이라도 취향이 다르면 다른 음식 (02 문서 M6)", async () => {
+    const { llm } = fakeLLM([new Error("offline")]);
+    const repo = previewRepo(); // 같은 저장소 = 같은 캐시: 취향이 다르면 캐시를 공유하지 않아야 한다
+    const ask1 = (w: Record<string, number>) => ask(deps(llm, repo), { text: "뭐 먹지?", guest: { tag_weights: w } }, null);
+    const sweet = await ask1({ sweet: 5, creamy: 4 });
+    const seafood = await ask1({ seafood: 5, sour: 4, fresh: 3 });
+    expect(sweet.cards[0].slug).not.toBe(seafood.cards[0].slug);
+    expect(seafood.cards[0].slug).toBe("ceviche");
+  });
+
   it("예산 초과면 LLM 없이 템플릿", async () => {
     const repo = previewRepo();
     vi.spyOn(repo, "usageTodayUsd").mockResolvedValue(99);

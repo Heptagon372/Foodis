@@ -6,6 +6,7 @@ import { rankByKeywords } from "@/lib/foodi/keywords";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import { PREVIEW_COUNTRIES } from "./countries";
 import { PREVIEW_FOODS, PREVIEW_RELATIONS, previewId, type PreviewFood } from "./foods";
+import { PREVIEW_IMAGES } from "./images";
 
 const countryOf = (cc: string): Country => PREVIEW_COUNTRIES.find((c) => c.code === cc)!;
 const fullDiet = (d: PreviewFood["diet"]) => Object.fromEntries(DIET_KEYS.map((k) => [k, d[k] ?? "unknown"])) as Record<DietKey, DietLevel>;
@@ -16,7 +17,7 @@ function summaryOf(f: PreviewFood): FoodSummary {
   return {
     id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc,
     flag: c.flag_emoji, accent: c.accent_color, country_name: c.name_ko,
-    summary: f.summary, taste_tags: f.tags, image_url: null, diet: fullDiet(f.diet), allergens: f.allergens ?? [],
+    summary: f.summary, taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? null, diet: fullDiet(f.diet), allergens: f.allergens ?? [],
   };
 }
 
@@ -44,7 +45,6 @@ export const previewContent: ContentSource = {
       culture_story: f.culture ?? null,
       cooking_method: f.method ?? null,
       course_type: f.course ?? null,
-      image_credit: null,
       diet_note: f.diet_note ?? null,
       ingredients: f.ingredients.map((name, i) => ({ slug: `${f.slug}-${i}`, name_ko: name, role: i < 2 ? "main" : "seasoning" })),
       sources: [{ field: "summary", url: wiki(f), title: `Wikipedia — ${f.name_en}`, license: "CC BY-SA 4.0" }],
@@ -64,7 +64,7 @@ function rowOf(f: PreviewFood): FoodRow {
   return {
     id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc,
     origin_note: f.origin_note ?? null, summary: f.summary, history: f.history ?? null, culture_story: f.culture ?? null,
-    taste_tags: f.tags, image_url: null, allergens: f.allergens ?? [], diet: fullDiet(f.diet), diet_note: f.diet_note ?? null, country: { name_ko: c.name_ko, flag_emoji: c.flag_emoji, accent_color: c.accent_color },
+    taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? null, allergens: f.allergens ?? [], diet: fullDiet(f.diet), diet_note: f.diet_note ?? null, country: { name_ko: c.name_ko, flag_emoji: c.flag_emoji, accent_color: c.accent_color },
     sources: [{ title: `Wikipedia — ${f.name_en}`, url: wiki(f) }],
   };
 }
@@ -74,12 +74,12 @@ const okFor = (f: PreviewFood, need: DietKey[], avoid: string[]) => fitsProfile(
 /** 메모리 FoodisRepo. 기록·캐시는 프로세스 메모리에만 (서버 재시작 시 사라짐). */
 export function previewRepo(): FoodisRepo {
   const cache = new Map<string, { payload: unknown; exp: number }>();
-  const pick = (text: string, p: { needDiet: DietKey[]; ctx: { allergens: string[]; exploredCountries: string[] }; excludeFoodIds: string[]; countryCode: string | null; count: number }) => {
+  const pick = (text: string, p: { needDiet: DietKey[]; ctx: { allergens: string[]; exploredCountries: string[]; tagWeights: Record<string, number> }; excludeFoodIds: string[]; countryCode: string | null; count: number }) => {
     const all = PREVIEW_FOODS.filter((f) => okFor(f, p.needDiet, p.ctx.allergens) && !p.excludeFoodIds.includes(previewId(f.n)) && (!p.countryCode || f.cc === p.countryCode));
     // 미리보기는 임베딩이 없어 실서비스의 키워드 대체 검색과 같은 순위 규칙을 쓴다. 동점은 질문마다 조금씩 섞이도록 고정 셔플
     const shuffled = [...all].sort((a, b) => ((a.n * 7919 + text.length) % 13) - ((b.n * 7919 + text.length) % 13));
     const rows = shuffled.map((f) => ({ f, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc, taste_tags: f.tags }));
-    return rankByKeywords(rows, text, p.ctx.exploredCountries).slice(0, p.count).map((x) => previewId(x.f.n));
+    return rankByKeywords(rows, text, p.ctx.exploredCountries, p.ctx.tagWeights).slice(0, p.count).map((x) => previewId(x.f.n));
   };
   return {
     matchFoods: async (p) => pick("", p),

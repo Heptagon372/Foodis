@@ -1,6 +1,7 @@
 "use client";
 // S3 푸디 대화 시트 (05 문서 §4): 홈·상세 위에 겹치는 바텀 시트 → 맥락 유지.
 // 채팅 UI 가 아니라 "말하는 카드 피드": 인식 텍스트(탭해서 수정) → 자막 → 카드 1~3 → 추천 질문 → 🎙 재질문
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
@@ -214,6 +215,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
                     if (q.includes("패스포트")) return (close(), router.push("/passport"));
                     void ask(q, "text", t.res?.cards[0]?.food_id ?? t.contextFoodId);
                   }}
+                  onKnown={(foodId) => void ask("다른 거 추천", "text", foodId)}
                 />
               ))}
               {voice === "listening" && <p className="text-right text-subtitle text-charcoal/70">{interim || "듣고 있어요…"}</p>}
@@ -248,7 +250,10 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function TurnView({ t, onEdit, onFollowUp }: { t: Turn; onEdit: () => void; onFollowUp: (q: string) => void }) {
+// 추천 계열 답의 카드에는 "이미 알아요" — 아는 음식이 나오면 바로 다른 추천 (07 문서 사용자 여정의 이탈 대응)
+const KNOWN_INTENTS = new Set(["recommend", "filter_by_diet", "compare_similar", "out_of_scope"]);
+
+function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => void; onFollowUp: (q: string) => void; onKnown: (foodId: string) => void }) {
   return (
     <div className="animate-rise space-y-3">
       <button type="button" onClick={onEdit} className="ml-auto block max-w-[85%] text-right text-subtitle text-charcoal/70" title="탭해서 고치기">
@@ -269,7 +274,19 @@ function TurnView({ t, onEdit, onFollowUp }: { t: Turn; onEdit: () => void; onFo
                   <FoodCard
                     size="L"
                     reason={c.reason}
-                    food={{ slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, accent: c.country.accent, summary: c.summary, image_url: c.image_url, diet: Object.fromEntries(c.diet_badges.map((b) => [b.key, b.level])) as never }}
+                    food={{ slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, accent: c.country.accent, summary: c.summary, image_url: c.image_url, image_credit: c.image_credit, diet: Object.fromEntries(c.diet_badges.map((b) => [b.key, b.level])) as never }}
+                    action={
+                      KNOWN_INTENTS.has(t.res!.intent) ? (
+                        <>
+                          <Link href={`/food/${c.slug}`} className="rounded-full bg-mint-100 px-3 py-1.5 text-sm font-semibold text-green-800">
+                            자세히
+                          </Link>
+                          <button type="button" onClick={() => onKnown(c.food_id)} className="rounded-full px-3 py-1.5 text-sm text-muted hover:bg-line/50">
+                            이미 알아요 · 다른 거
+                          </button>
+                        </>
+                      ) : undefined
+                    }
                   />
                 </div>
               ))}

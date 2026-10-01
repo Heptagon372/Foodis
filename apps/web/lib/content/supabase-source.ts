@@ -4,7 +4,7 @@ import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import type { ContentSource, Country, FoodDetail, FoodSummary, RelationType } from "./types";
 
 const SUMMARY_COLS =
-  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, countries(name_ko, flag_emoji, accent_color)";
+  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, countries(name_ko, flag_emoji, accent_color)";
 
 type Row = Record<string, unknown>;
 const toSummary = (r: Row): FoodSummary => {
@@ -12,7 +12,7 @@ const toSummary = (r: Row): FoodSummary => {
   return {
     id: r.id as string, slug: r.slug as string, name_ko: r.name_ko as string, name_en: r.name_en as string,
     country_code: r.country_code as string, flag: c.flag_emoji, accent: c.accent_color, country_name: c.name_ko,
-    summary: r.summary as string | null, taste_tags: r.taste_tags as string[], image_url: r.image_url as string | null,
+    summary: r.summary as string | null, taste_tags: r.taste_tags as string[], image_url: r.image_url as string | null, image_credit: r.image_credit as string | null,
     diet: Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`]])) as Record<DietKey, DietLevel>,
     allergens: (r.allergens as string[]) ?? [],
   };
@@ -37,7 +37,7 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
         .from("foods")
         .select(
           `${SUMMARY_COLS.replace("countries(name_ko, flag_emoji, accent_color)", "countries(code, name_ko, name_en, region, continent_group, flag_emoji, accent_color)")}, ` +
-            "name_local, region_in_country, origin_note, history, culture_story, cooking_method, course_type, image_credit, diet_note, " +
+            "name_local, region_in_country, origin_note, history, culture_story, cooking_method, course_type, diet_note, " +
             "food_ingredients(role, ingredients(slug, name_ko)), sources(field, url, title, license)",
         )
         .eq("slug", slug)
@@ -59,7 +59,6 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
         culture_story: r.culture_story as string | null,
         cooking_method: r.cooking_method as string | null,
         course_type: r.course_type as string | null,
-        image_credit: r.image_credit as string | null,
         diet_note: r.diet_note as string | null,
         ingredients: ((r.food_ingredients as Row[]) ?? []).map((fi) => ({ ...(fi.ingredients as { slug: string; name_ko: string }), role: fi.role as string })),
         sources: (r.sources as FoodDetail["sources"]) ?? [],

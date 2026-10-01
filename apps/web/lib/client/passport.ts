@@ -97,7 +97,7 @@ export function toggle(food: FoodRef, status: Exclude<PassportStatus, "explored"
 }
 
 /** /api/foodi/ask 로 보내는 게스트 프로필 */
-export const guestProfile = (s: LocalState) => ({ diet: s.diet, allergens: s.allergens, explored_countries: exploredCountries(s), explored_foods: Object.keys(s.entries).slice(-300) });
+export const guestProfile = (s: LocalState) => ({ diet: s.diet, allergens: s.allergens, explored_countries: exploredCountries(s), explored_foods: Object.keys(s.entries).slice(-300), tag_weights: foodDna(s) });
 
 export const exploredCountries = (s: LocalState) => [...new Set(Object.values(s.entries).map((e) => e.cc))];
 

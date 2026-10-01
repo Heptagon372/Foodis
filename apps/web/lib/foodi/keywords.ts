@@ -31,14 +31,16 @@ const KO_TAGS: [RegExp, string][] = [
 
 export const tagsFromText = (text: string): string[] => KO_TAGS.filter(([re]) => re.test(text)).map(([, tag]) => tag);
 
-/** 키워드 대체 검색의 순위: 이름이 불린 음식 → 맛 태그 겹침 → 안 가본 나라 → 입력 순서 */
-export function rankByKeywords<T extends { name_ko: string; name_en: string; country_code: string; taste_tags: string[] }>(rows: T[], text: string, explored: string[]): T[] {
+/** 키워드 대체 검색의 순위: 이름이 불린 음식 → 맛 태그 겹침 → 안 가본 나라·Food DNA → 입력 순서 */
+export function rankByKeywords<T extends { name_ko: string; name_en: string; country_code: string; taste_tags: string[] }>(rows: T[], text: string, explored: string[], tagWeights: Record<string, number> = {}): T[] {
   const q = text.toLowerCase();
   const tags = tagsFromText(text);
   const score = (f: T) =>
     (q.includes(f.name_ko) || q.includes(f.name_en.toLowerCase()) ? 100 : 0) +
     f.taste_tags.filter((t) => tags.includes(t)).length * 10 +
-    (explored.includes(f.country_code) ? 0 : 3);
+    (explored.includes(f.country_code) ? 0 : 3) +
+    // Food DNA (0~1 정규화) — 태그 평균 × 6: 미탐험 가산(3)과 비슷한 무게
+    (f.taste_tags.length ? (f.taste_tags.reduce((a, t) => a + (tagWeights[t] ?? 0), 0) / f.taste_tags.length) * 6 : 0);
   return rows
     .map((f, i) => ({ f, s: score(f), i }))
     .sort((a, b) => b.s - a.s || a.i - b.i)

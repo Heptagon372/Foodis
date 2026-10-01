@@ -32,6 +32,9 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
     ctx.allergens = [...new Set([...ctx.allergens, ...req.guest.allergens])];
     ctx.exploredCountries = [...new Set([...ctx.exploredCountries, ...req.guest.explored_countries])];
     ctx.exploredFoodIds = [...new Set([...ctx.exploredFoodIds, ...req.guest.explored_foods])];
+    // 가중치는 0~1 로 정규화해서 넘긴다 (match_foods: 0.55 유사도 + 0.30 취향 + 미탐험 가산)
+    const max = Math.max(0, ...Object.values(req.guest.tag_weights));
+    if (max > 0) ctx.tagWeights = Object.fromEntries(Object.entries(req.guest.tag_weights).slice(0, 30).map(([t, w]) => [t, w / max]));
   }
 
   // 캐시는 대화 첫 질문만 (데모 질문 10개가 여기 해당). "다른 거 추천" 같은 이어지는 질문은 매번 새로
@@ -206,6 +209,7 @@ export function toCard(f: FoodRow, reason: string): FoodCard {
     country: { code: f.country_code, flag: f.country.flag_emoji, accent: f.country.accent_color },
     summary: f.summary,
     image_url: f.image_url,
+    image_credit: f.image_credit,
     // 식이 배지는 LLM 출력이 아니라 DB 값 (07 문서 §6.3)
     diet_badges: DIET_KEYS.filter((k) => f.diet[k] !== "unknown").map((k) => ({ key: k, level: f.diet[k] })),
     reason,

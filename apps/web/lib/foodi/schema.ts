@@ -35,6 +35,8 @@ export const AskRequest = z.object({
       allergens: z.array(z.enum(ALLERGENS)).max(9).default([]),
       explored_countries: z.array(z.string().regex(/^[A-Z]{2}$/)).max(60).default([]),
       explored_foods: uuidList(300),
+      /** Food DNA: 맛 태그 가중치 (좋아요 ×2 · 먹어봤어요 ×1.5 · 탐험 ×1) — match_foods 의 취향 점수 (02 문서 M6) */
+      tag_weights: z.record(z.string().max(30), z.number().min(0).max(1000)).default({}),
     })
     .optional(),
 });
@@ -68,6 +70,7 @@ export type FoodCard = {
   country: { code: string; flag: string; accent: string };
   summary: string | null;
   image_url: string | null;
+  image_credit: string | null;
   diet_badges: { key: DietKey; level: DietLevel }[];
   reason: string;
 };

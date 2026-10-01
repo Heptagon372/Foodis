@@ -18,6 +18,13 @@ export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: s
     .sort()
     .join(",");
   const bucket = Math.min(Math.floor(ctx.exploredCountries.length / 5), 6);
-  const raw = [normalizeQuestion(text), diet, ctx.allergens.slice().sort().join(","), bucket, contextFoodId ?? ""].join("|");
+  // Food DNA 상위 3개 태그 — 취향이 다른 사람에게 남의 추천을 재사용하지 않게
+  const dna = Object.entries(ctx.tagWeights)
+    .filter(([, w]) => w > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3)
+    .map(([t]) => t)
+    .join(",");
+  const raw = [normalizeQuestion(text), diet, ctx.allergens.slice().sort().join(","), bucket, dna, contextFoodId ?? ""].join("|");
   return "answer:" + createHash("sha256").update(raw).digest("hex");
 }

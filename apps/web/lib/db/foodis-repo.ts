@@ -6,7 +6,7 @@ import { rankByKeywords } from "@/lib/foodi/keywords";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 
 const FOOD_SELECT =
-  "id, slug, name_ko, name_en, country_code, origin_note, summary, history, culture_story, taste_tags, image_url, allergens, diet_note, " +
+  "id, slug, name_ko, name_en, country_code, origin_note, summary, history, culture_story, taste_tags, image_url, image_credit, allergens, diet_note, " +
   "diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, " +
   "countries(name_ko, flag_emoji, accent_color), sources(title, url)";
 
@@ -56,7 +56,7 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
       const all = (await liteFoods()).filter(
         (f) => passesDiet(f, p.needDiet, p.ctx.allergens) && !p.excludeFoodIds.includes(f.id) && (!p.countryCode || f.country_code === p.countryCode),
       );
-      return rankByKeywords(all, text, p.ctx.exploredCountries).slice(0, p.count).map((f) => f.id);
+      return rankByKeywords(all, text, p.ctx.exploredCountries, p.ctx.tagWeights).slice(0, p.count).map((f) => f.id);
     },
 
     async getFoods(ids) {
@@ -76,6 +76,7 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
           culture_story: r.culture_story as string | null,
           taste_tags: r.taste_tags as string[],
           image_url: r.image_url as string | null,
+          image_credit: r.image_credit as string | null,
           allergens: r.allergens as string[],
           diet: dietOf(r),
           diet_note: r.diet_note as string | null,

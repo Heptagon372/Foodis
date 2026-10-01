@@ -9,6 +9,7 @@ import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
 import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, RelationRow, SourceFooter } from "./bits";
+import { ImageCredit } from "./ImageCredit";
 import { ReportForm } from "./ReportForm";
 import { MicIcon } from "./VoiceButton";
 
@@ -45,12 +46,12 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
 
   return (
     <main>
-      <header className="relative flex h-60 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))]" style={accentBg(food.accent, food.image_url)}>
+      <header className="relative flex h-72 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))]" style={accentBg(food.accent, food.image_url)}>
         <Link href="/" className="w-fit rounded-full bg-surface/80 px-3 py-1.5 text-sm backdrop-blur" aria-label="뒤로">
           ← 홈
         </Link>
         <span className="text-7xl drop-shadow" aria-hidden>{food.flag}</span>
-        {food.image_credit && <span className="absolute bottom-2 right-3 text-[10px] text-white/80">{food.image_credit}</span>}
+        <ImageCredit credit={food.image_credit} className="absolute bottom-9 right-4" />
       </header>
 
       <div className="-mt-6 space-y-5 rounded-t-[28px] bg-ivory px-5 pt-6">

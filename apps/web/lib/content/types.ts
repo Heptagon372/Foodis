@@ -23,6 +23,7 @@ export type FoodSummary = {
   summary: string | null;
   taste_tags: string[];
   image_url: string | null;
+  image_credit: string | null;
   diet: Record<DietKey, DietLevel>;
   allergens: string[];
 };
@@ -38,7 +39,6 @@ export type FoodDetail = FoodSummary & {
   culture_story: string | null;
   cooking_method: string | null;
   course_type: string | null;
-  image_credit: string | null;
   diet_note: string | null;
   ingredients: { slug: string; name_ko: string; role: string }[];
   sources: { field: string; url: string; title: string | null; license: string | null }[];

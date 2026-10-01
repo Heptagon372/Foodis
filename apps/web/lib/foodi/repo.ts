@@ -15,6 +15,7 @@ export type FoodRow = {
   culture_story: string | null;
   taste_tags: string[];
   image_url: string | null;
+  image_credit: string | null;
   allergens: string[];
   diet: Record<DietKey, DietLevel>;
   diet_note: string | null;

@@ -13,7 +13,8 @@ const isStatic = (url) =>
   url.pathname.startsWith("/_next/static/") ||
   url.pathname.startsWith("/fonts/") ||
   /\.(png|jpg|jpeg|svg|ico|webp|woff2?)$/.test(url.pathname) ||
-  url.hostname === "cdn.jsdelivr.net";
+  url.hostname === "cdn.jsdelivr.net" ||
+  url.hostname.endsWith("wikimedia.org"); // 음식 사진 (위키미디어 공용)
 
 self.addEventListener("fetch", (e) => {
   const req = e.request;

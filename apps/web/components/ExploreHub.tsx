@@ -72,7 +72,15 @@ export function ExploreHub(p: {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">{p.emptyText}</p>
+          <div className="flex items-start gap-3 rounded-3xl border border-dashed border-line bg-surface/60 p-5">
+            <span className="text-2xl" aria-hidden>
+              🧭
+            </span>
+            <div className="space-y-1">
+              <p className="font-semibold">아직 지도를 그리는 중</p>
+              <p className="text-sm text-muted">{p.emptyText}</p>
+            </div>
+          </div>
         )}
         {p.footer}
       </div>

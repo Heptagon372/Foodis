@@ -11,7 +11,7 @@ import { ShareCardButton } from "./ShareCardButton";
 import { AccountCard, AccountNudge } from "./AccountCard";
 import { useAccount } from "@/lib/client/account";
 
-const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카" };
+const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카", oceania: "오세아니아" };
 
 export function PassportView({ countries, preview }: { countries: Country[]; preview: boolean }) {
   const { open } = useFoodi();
@@ -25,7 +25,9 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
   const listOf = (st: PassportStatus) => entries.filter(([, e]) => e.statuses.includes(st));
   const continents = Object.entries(CONTINENTS).map(([k, label]) => {
     const all = countries.filter((c) => c.continent_group === k);
-    return { label, total: all.length, done: all.filter((c) => explored.includes(c.code)).length };
+    // 탐험한 나라를 앞에, 나머지는 가나다순 — 130개국이라 대륙별로 나눠 보여 준다
+    const sorted = [...all].sort((a, b) => Number(explored.includes(b.code)) - Number(explored.includes(a.code)) || a.name_ko.localeCompare(b.name_ko, "ko"));
+    return { key: k, label, total: all.length, done: all.filter((c) => explored.includes(c.code)).length, countries: sorted };
   });
 
   return (
@@ -58,25 +60,37 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
       </section>
       <AccountNudge foods={entries.length} />
 
-      <Section title="국기 그리드">
-        <div className="grid grid-cols-6 gap-2">
-          {countries.map((c) => {
-            const on = explored.includes(c.code);
-            return (
-              <Link
-                key={c.code}
-                href={`/country/${c.code}`}
-                title={c.name_ko}
-                className={`grid aspect-square place-items-center rounded-xl text-2xl transition active:scale-95 ${on ? "bg-surface shadow-sm" : "bg-line/50 opacity-45 grayscale"}`}
-                style={on ? { boxShadow: `inset 0 0 0 2px ${c.accent_color}55` } : undefined}
-              >
-                <span aria-hidden>{c.flag_emoji}</span>
-                <span className="sr-only">
-                  {c.name_ko} {on ? "탐험함" : "미탐험"}
+      <Section title="국기 그리드" more={<span className="text-caption text-muted">{explored.length}/{countries.length}개국</span>}>
+        <div className="space-y-5">
+          {continents.map((ct) => (
+            <div key={ct.key} className="space-y-2">
+              <p className="flex items-baseline justify-between text-sm font-semibold text-charcoal/80">
+                {ct.label}
+                <span className="text-caption font-medium tabular-nums text-muted">
+                  {ct.done}/{ct.total}
                 </span>
-              </Link>
-            );
-          })}
+              </p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {ct.countries.map((c) => {
+                  const on = explored.includes(c.code);
+                  return (
+                    <Link
+                      key={c.code}
+                      href={`/country/${c.code}`}
+                      title={c.name_ko}
+                      className={`grid aspect-square place-items-center rounded-xl text-[1.6rem] transition active:scale-95 ${on ? "bg-surface shadow-sm" : "bg-line/50 opacity-45 grayscale"}`}
+                      style={on ? { boxShadow: `inset 0 0 0 2px ${c.accent_color}55` } : undefined}
+                    >
+                      <span aria-hidden>{c.flag_emoji}</span>
+                      <span className="sr-only">
+                        {c.name_ko} {on ? "탐험함" : "미탐험"}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </Section>
 

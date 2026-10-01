@@ -33,7 +33,8 @@ export const CONTINENT_WORDS: [RegExp, string, string][] = [
   [/아시아/, "asia", "아시아"],
   [/유럽/, "europe", "유럽"],
   [/아프리카|중동/, "mena_africa", "중동·아프리카"],
-  [/아메리카|남미|북미|중남미/, "americas", "아메리카"],
+  [/아메리카|남미|북미|중남미|카리브/, "americas", "아메리카"],
+  [/오세아니아|대양주|남태평양|태평양\s*섬/, "oceania", "오세아니아"],
 ];
 
 /** 음성 인식·표기 차이 흡수: 사람들이 실제로 부르는 이름 → DB 표기 */
@@ -46,14 +47,46 @@ const ALIASES: [RegExp, string][] = [
   [/차나\s*마사라/g, "차나 마살라"],
   [/팔락\s*파니어/g, "팔락 파니르"],
   [/교자/g, "자오쯔"],
+  // 국가 별칭 (seed countries.csv 의 name_ko 로)
+  [/오스트레일리아/g, "호주"],
+  [/타이완/g, "대만"],
+  [/버마/g, "미얀마"],
+  [/아이보리\s*코스트/g, "코트디부아르"],
+  [/콩고(?!\s*민주\s*공화국)/g, "콩고민주공화국"],
+  [/아랍\s*에미리트|UAE/gi, "아랍에미리트"],
+  [/사우디(?!아라비아)/g, "사우디아라비아"],
+  [/체코\s*공화국/g, "체코"],
+  [/보스니아(?!\s*헤르체고비나)/g, "보스니아 헤르체고비나"],
+  [/트리니다드(?!\s*토바고)/g, "트리니다드 토바고"],
+  [/도미니카\s*공화국|도미니카(?!공화국)/g, "도미니카공화국"],
+  [/파푸아(?!뉴기니)/g, "파푸아뉴기니"],
+  [/카자흐(?!스탄)/g, "카자흐스탄"],
+  [/잉글랜드|스코틀랜드|웨일스/g, "영국"],
+  [/홀란드/g, "네덜란드"],
 ];
 export const normalizeAliases = (text: string) => ALIASES.reduce((t, [re, to]) => t.replace(re, to), text);
+
+// 짧은 나라 이름은 일반 단어와 겹친다 ("가나다"·"말리다"·"다른 수단"·"woman"→Oman).
+// 두 글자 이하 한국어 이름은 앞이 글자가 아니고, 뒤가 끝·공백·조사·음식 관련 말일 때만 나라로 본다.
+const KO_AFTER = /^(?:$|[\s,.?!·]|의|에서|에|은|는|이|가|을|를|도|만|로|으로|랑|이랑|하고|과|와|까지|부터|사람|음식|요리|전통|대표|가정식|길거리|여행|식|풍)/;
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export function mentionsName(t: string, name_ko: string, name_en: string): boolean {
+  if (new RegExp(`(?<![a-z])${escapeRe(name_en.toLowerCase())}(?![a-z])`).test(t)) return true;
+  if (name_ko.length >= 3) return t.includes(name_ko);
+  for (let i = t.indexOf(name_ko); i >= 0; i = t.indexOf(name_ko, i + 1)) {
+    const before = t[i - 1];
+    if (before && /[가-힣a-z]/.test(before)) continue;
+    if (KO_AFTER.test(t.slice(i + name_ko.length))) return true;
+  }
+  return false;
+}
 
 /** 긴 이름부터 찾는다 → "인도네시아"가 "인도"보다 먼저 */
 export function findCountry(text: string, countries: CountryRow[]): string | null {
   const t = normalizeAliases(text).toLowerCase();
   const byLen = [...countries].sort((a, b) => b.name_ko.length - a.name_ko.length);
-  return byLen.find((c) => t.includes(c.name_ko) || t.includes(c.name_en.toLowerCase()))?.code ?? null;
+  return byLen.find((c) => mentionsName(t, c.name_ko, c.name_en))?.code ?? null;
 }
 
 export function findFood(text: string, foods: FoodName[]): string | null {

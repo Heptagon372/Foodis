@@ -7,7 +7,7 @@ import { sentences, type Episode } from "@/lib/radio/script";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner, Wordmark } from "./bits";
 
-export type ChannelInfo = { id: string; title: string; emoji: string };
+export type ChannelInfo = { id: string; title: string; emoji: string; ready: boolean };
 type Props = { channels: ChannelInfo[]; preview: boolean; startFood: { slug: string; name_ko: string; flag: string } | null };
 
 export function RadioView({ channels, preview, startFood }: Props) {
@@ -48,13 +48,17 @@ export function RadioView({ channels, preview, startFood }: Props) {
               key={c.id}
               type="button"
               onClick={() => void startRadio({ channel: c.id })}
+              disabled={!c.ready}
               aria-pressed={on}
-              className={`flex w-36 shrink-0 snap-start flex-col items-start gap-6 rounded-3xl p-4 text-left transition active:scale-[0.98] ${on ? "bg-green-800 text-ivory" : "bg-surface text-charcoal shadow-sm"}`}
+              className={`flex w-36 shrink-0 snap-start flex-col items-start gap-6 rounded-3xl p-4 text-left transition active:scale-[0.98] disabled:opacity-50 ${on ? "bg-green-800 text-ivory" : "bg-surface text-charcoal shadow-sm"}`}
             >
               <span className="text-3xl" aria-hidden>
                 {c.emoji}
               </span>
-              <span className="text-sm font-semibold leading-snug">{c.title}</span>
+              <span className="text-sm font-semibold leading-snug">
+                {c.title}
+                {!c.ready && <span className="mt-0.5 block text-caption font-normal text-muted">준비 중</span>}
+              </span>
             </button>
           );
         })}

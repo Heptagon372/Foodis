@@ -9,6 +9,7 @@ export const CHANNELS = {
   europe: { title: "유럽 카페 골목", emoji: "☕", continent: "europe" },
   mena_africa: { title: "중동·아프리카 시장", emoji: "🫓", continent: "mena_africa" },
   americas: { title: "아메리카 대륙", emoji: "🌽", continent: "americas" },
+  oceania: { title: "오세아니아 섬 식탁", emoji: "🥥", continent: "oceania" },
 } as const;
 export type ChannelId = keyof typeof CHANNELS;
 export const isChannel = (v: string | null): v is ChannelId => !!v && v in CHANNELS;

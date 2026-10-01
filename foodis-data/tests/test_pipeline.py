@@ -25,9 +25,10 @@ def test_full_pipeline(tmp_path):
     shutil.copytree(KIT, tmp, ignore=shutil.ignore_patterns("tests", "__pycache__", "*.json", ".env"))
     (tmp / "data/raw").mkdir(parents=True, exist_ok=True); make_xlsx(tmp / "data/raw/hansik800.xlsx")
 
+    n = sum(1 for _ in csv.DictReader(open(KIT / "data/seed/dish_targets.csv", encoding="utf-8")))  # 시드 음식 수 (국가를 늘리면 같이 늘어난다)
     out = run(tmp, "s01_wikidata.py"); print(out)
     wd = json.loads((tmp / "data/raw/wikidata.json").read_text(encoding="utf-8"))
-    assert len(wd) == 180 and "needs_review" in wd["pique-a-lo-macho"]
+    assert len(wd) == n and "needs_review" in wd["pique-a-lo-macho"]
     assert all(v.get("origin_mismatch") for v in wd.values())  # 가짜 원산지 XX → 모두 불일치 경고
 
     run(tmp, "s02_wikipedia.py"); wp = json.loads((tmp / "data/raw/wikipedia.json").read_text(encoding="utf-8"))
@@ -37,7 +38,7 @@ def test_full_pipeline(tmp_path):
     run(tmp, "s04_hansik800.py"); hs = json.loads((tmp / "data/raw/hansik800.json").read_text(encoding="utf-8"))
     assert hs["kimchi"]["name_en_std"] == "Kimchi" and hs["bibimbap"]["desc_en"] == "Mixed rice"
 
-    out = run(tmp, "s05_llm_draft.py"); assert "초안 180건" in out
+    out = run(tmp, "s05_llm_draft.py"); assert f"초안 {n}건" in out
     out = run(tmp, "s06_relations.py"); print(out)
     rels = json.loads((tmp / "data/draft/relations_draft.json").read_text(encoding="utf-8"))
     assert any(r["type"] == "historical_link" and {r["from"], r["to"]} == {"mandu", "pierogi"} for r in rels)

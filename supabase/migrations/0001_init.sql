@@ -23,7 +23,7 @@ create table if not exists countries (
   name_ko         text not null,
   name_en         text not null,
   region          text not null,                 -- East Asia, Horn of Africa ...
-  continent_group text not null,                 -- asia / europe / mena_africa / americas
+  continent_group text not null,                 -- asia / europe / mena_africa / americas / oceania
   flag_emoji      text not null,
   accent_color    text not null,                 -- hex, 국기 주색 채도 낮춤
   culture_summary text,

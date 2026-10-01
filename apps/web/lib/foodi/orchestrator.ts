@@ -3,7 +3,7 @@
 import type { Embedder, LLMProvider, Usage } from "@/lib/providers/types";
 import { answerCacheKey } from "@/lib/guard/cache";
 import { DIET_LABEL, generate, josa, templateAnswer, type GenContext } from "./generate";
-import { classify, fallbackIntent, ruleClassify, type IntentResult, type Vocab } from "./intent";
+import { classify, CONTINENT_WORDS, fallbackIntent, ruleClassify, type IntentResult, type Vocab } from "./intent";
 import type { FoodisRepo, FoodRow } from "./repo";
 import { retrieve } from "./retrieve";
 import { passportAnswer, passportSummary } from "./passport";
@@ -124,8 +124,24 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
       text: req.text,
     });
     foods = r.foods;
+    // 지도에 있는 나라지만 검수된 음식이 아직 없을 때 (130개국 중 일부): 같은 대륙에서 대신 고른다
+    const emptyCountry = !foods.length && intentRes.countryCode && !targetId && (intent === "recommend" || intent === "filter_by_diet") ? countries.find((c) => c.code === intentRes.countryCode) : undefined;
+    const near = emptyCountry
+      ? (await retrieve(repo, { intent, diet: intentRes.diet, countryCode: null, continent: emptyCountry.continent_group, targetId: null, ctx, seen: req.seen_food_ids, embedding, text: req.text })).foods
+      : [];
     const g = baseGen(foods, r.needDiet);
-    if (r.similarBlocked && foods[0]) {
+    if (emptyCountry) {
+      foods = near;
+      const f = near[0];
+      const area = CONTINENT_WORDS.find(([, k]) => k === emptyCountry.continent_group)?.[2] ?? "다른 나라";
+      out = {
+        speech: f
+          ? `${emptyCountry.name_ko} 음식은 아직 검수 중이라 제 지도에 없어요. 대신 가까운 ${area}의 ${f.name_ko.includes(f.country.name_ko) ? f.name_ko : `${f.country.name_ko} ${f.name_ko}`}, 어떠세요? ${f.summary ?? ""}`.trim()
+          : `${emptyCountry.name_ko} 음식은 아직 검수 중이라 제 지도에 없어요. 다른 나라로 떠나볼까요?`,
+        picks: f ? [{ food_id: f.id, reason: `${area}에서 대신` }] : [],
+        follow_ups: ["다른 거 추천", "문화 이야기 들려줘"],
+      };
+    } else if (r.similarBlocked && foods[0]) {
       // 비슷한 음식은 있지만 전부 조건 밖: 엉뚱한 음식을 '비슷하다'고 내놓는 대신 정직하게 말한다
       const conds = [...r.needDiet.map((k) => DIET_LABEL[k]), ...(ctx.allergens.length ? ["알레르기"] : [])].join("·");
       out = {

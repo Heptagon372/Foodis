@@ -80,6 +80,15 @@ describe("LLM 경로의 방어선", () => {
     expect(res.cards.map((c) => c.slug)).toEqual(["chana-masala"]);
   });
 
+  it("지도에 있지만 음식이 아직 없는 나라: 같은 대륙에서 대신 (LLM 0회)", async () => {
+    const { llm, calls } = fakeLLM([]);
+    const res = await ask(deps(llm), { text: "몽골 음식 추천해줘" }, null);
+    expect(calls).toEqual([]);
+    expect(res.speech).toMatch(/^몽골 음식은 아직 검수 중이라 제 지도에 없어요\. 대신 가까운 아시아의/);
+    expect(res.cards).toHaveLength(1);
+    expect(["KR", "JP", "CN", "TH", "VN", "ID", "PH", "IN", "NP", "UZ"]).toContain(PREVIEW_FOODS.find((f) => f.slug === res.cards[0].slug)?.cc);
+  });
+
   it("LLM 이 뽑은 음식 이름도 DB 와 대조: 없으면 '지도에 없음' + 대안", async () => {
     const { llm } = fakeLLM([], { intent: "explain_food", diet: [], country_code: null, mentioned_food: "부리토", mentioned_place: null });
     const res = await ask(deps(llm), { text: "부리토 어떤 음식이야" }, null);

@@ -7,6 +7,7 @@ import { ALLERGENS, DIET_KEYS } from "@/lib/foodi/schema";
 import { ALLERGEN_LABEL, DIET_LABEL } from "./DietBadge";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section, Wordmark } from "./bits";
+import { ShareCardButton } from "./ShareCardButton";
 
 const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카" };
 
@@ -50,6 +51,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
             </div>
           ))}
         </div>
+        <ShareCardButton explored={explored} countries={countries} foodCount={entries.length} dna={dna} />
       </section>
 
       <Section title="국기 그리드">

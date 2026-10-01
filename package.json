@@ -8,6 +8,8 @@
     "lint": "pnpm --filter web lint",
     "typecheck": "pnpm --filter web typecheck",
     "test": "pnpm --filter web test",
-    "data:test": "cd foodis-data && .venv/Scripts/python -m pytest tests -q"
+    "data:test": "cd foodis-data && .venv/Scripts/python -m pytest tests -q",
+    "report": "node scripts/session-report.mjs",
+    "report:test": "node --test scripts/session-report.test.mjs"
   }
 }

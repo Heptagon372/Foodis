@@ -48,6 +48,18 @@ pnpm lint
 pnpm data:test     # 배치: s01~s09 E2E (가짜 HTTP)
 ```
 
+## 세션 리포트 · 진행률
+
+세션을 마칠 때 Claude Code 에서 `/session-report` — 로드맵 상태를 갱신하고, 만든 것 · 완료한 기능 · 전체 진행률을 PR 댓글과 Notion(로드맵 DB · 세션 기록 DB · 허브 진행 현황)에 남긴다. PR 댓글은 push 마다 `.github/workflows/session-report.yml` 이 갱신한다.
+
+```bash
+pnpm report                    # 현재 브랜치 리포트 (base = origin/main 과의 merge-base)
+pnpm report -- --base 49911e5  # 범위 지정 · --json · --notion · --github-comment
+pnpm report:test
+```
+
+진행률 = [로드맵 CSV](docs/planning/08_기획단계_로드맵.csv) 작업별 예상 기간 가중 (완료 1 · 진행 중 0.5 · 시작 전 0).
+
 ## 원칙
 
 - **DB가 사실, AI는 해설.** 카드의 식이 배지·출처는 LLM이 아니라 DB에서 채운다. 후보 밖 음식을 말하면 재생성 → 템플릿.

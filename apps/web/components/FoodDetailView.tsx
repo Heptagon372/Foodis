@@ -108,12 +108,12 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
           {tab === "기본" && (
             <>
               {food.summary && <p className="text-[17px] leading-relaxed">{food.summary}</p>}
-              <Facts label="주요 재료">
+              <Facts label="주요 재료 · 눌러서 같은 재료 음식 보기">
                 <div className="flex flex-wrap gap-1.5">
                   {food.ingredients.map((i) => (
-                    <span key={i.slug} className={`rounded-full px-3 py-1 text-sm ${i.role === "main" ? "bg-surface font-medium shadow-sm" : "bg-line/50 text-charcoal/75"}`}>
-                      {i.name_ko}
-                    </span>
+                    <Link key={i.slug} href={`/ingredient/${encodeURIComponent(i.slug)}`} className={`rounded-full px-3 py-1 text-sm transition active:scale-95 ${i.role === "main" ? "bg-surface font-medium shadow-sm" : "bg-line/50 text-charcoal/75"}`}>
+                      {i.name_ko} <span className="text-muted">›</span>
+                    </Link>
                   ))}
                 </div>
               </Facts>

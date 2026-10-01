@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { exploredCountries, foodDna, update, useHydrated, useLocal } from "@/lib/client/passport";
 import { speak } from "@/lib/client/voice";
@@ -21,6 +22,22 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
   const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
+  // 재방문: 세션당 한 번 1초 단축 인트로 (05 문서 §2)
+  // 초기값은 읽기만 (StrictMode 가 두 번 불러도 같은 값), 기록은 마운트 뒤에
+  const [splash, setSplash] = useState(() => {
+    try {
+      return typeof window !== "undefined" && !sessionStorage.getItem("foodis:splash");
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("foodis:splash", "1");
+    } catch {
+      /* 저장소 막힘 → 매번 보여도 1초 */
+    }
+  }, []);
   const introSeen = useLocal((s) => s.introSeen);
   const onboarded = useLocal((s) => s.onboarded);
   const diet = useLocal((s) => s.diet);
@@ -48,6 +65,7 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
   return (
     <main className="space-y-8 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
       {hydrated && !introSeen && <Intro onDone={finishIntro} />}
+      {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
 
       <header className="flex items-center justify-between">
         <Wordmark />

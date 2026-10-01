@@ -52,6 +52,8 @@ export interface ContentSource {
   listFoods(): Promise<FoodSummary[]>;
   getFood(slug: string): Promise<FoodDetail | null>;
   getCountry(code: string): Promise<{ country: Country; foods: FoodSummary[] } | null>;
+  /** 재료 탐색 (F-EXP-04): 이 재료를 쓰는 검수된 음식 */
+  getIngredient(slug: string): Promise<{ ingredient: { slug: string; name_ko: string; name_en: string | null; category: string | null }; foods: FoodSummary[] } | null>;
 }
 
 export const RELATION_LABEL: Record<RelationType, string> = {

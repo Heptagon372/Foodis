@@ -69,6 +69,13 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       };
       return detail;
     },
+    async getIngredient(slug) {
+      const { data: ing } = await db.from("ingredients").select("id, slug, name_ko, name_en, category").eq("slug", decodeURIComponent(slug)).maybeSingle();
+      if (!ing) return null;
+      const { data } = await db.from("food_ingredients").select(`foods(${SUMMARY_COLS})`).eq("ingredient_id", ing.id);
+      const foods = ((data as unknown as { foods: Row | null }[]) ?? []).flatMap((x) => (x.foods ? [toSummary(x.foods)] : []));
+      return { ingredient: { slug: ing.slug, name_ko: ing.name_ko, name_en: ing.name_en, category: ing.category }, foods };
+    },
     async getCountry(code) {
       const { data: country } = await db.from("countries").select("code, name_ko, name_en, region, continent_group, flag_emoji, accent_color").eq("code", code).maybeSingle();
       if (!country) return null;

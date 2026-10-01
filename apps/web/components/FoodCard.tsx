@@ -28,7 +28,7 @@ export const accentBg = (accent: string, image?: string | null): CSSProperties =
  * - M: 가로 스크롤 추천 — 국기 + 이름 + 한 줄
  * - S: 연결 행·최근 탐험 칩 — 국기 + 이름
  */
-export function FoodCard({ food, size = "M", reason, action }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode }) {
+export function FoodCard({ food, size = "M", reason, action, fluid = false, badge }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode }) {
   const href = `/food/${food.slug}`;
   if (size === "S") {
     return (
@@ -40,9 +40,10 @@ export function FoodCard({ food, size = "M", reason, action }: { food: CardFood;
   }
   if (size === "M") {
     return (
-      <Link href={href} className="block w-40 overflow-hidden rounded-2xl bg-surface shadow-[0_1px_0_#0000000a,0_6px_16px_-10px_#00000040] active:scale-[0.98] transition">
-        <div className={`flex items-end p-3 ${food.image_url ? "h-24" : "h-20"}`} style={accentBg(food.accent, food.image_url)}>
+      <Link href={href} className={`block overflow-hidden rounded-2xl bg-surface shadow-[0_1px_0_#0000000a,0_6px_16px_-10px_#00000040] active:scale-[0.98] transition ${fluid ? "w-full" : "w-40"}`}>
+        <div className={`relative flex items-end justify-between p-3 ${food.image_url ? (fluid ? "h-28" : "h-24") : "h-20"}`} style={accentBg(food.accent, food.image_url)}>
           <span className="text-3xl drop-shadow-sm" aria-hidden>{food.flag}</span>
+          {badge}
         </div>
         <div className="p-3">
           <p className="font-semibold leading-tight">{food.name_ko}</p>

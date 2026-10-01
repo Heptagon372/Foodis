@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 const FLAGS = ["🇰🇷", "🇯🇵", "🇨🇳", "🇹🇭", "🇻🇳", "🇮🇳", "🇳🇵", "🇺🇿", "🇹🇷", "🇱🇧", "🇮🇷", "🇪🇬", "🇲🇦", "🇪🇹", "🇿🇦", "🇮🇹", "🇫🇷", "🇪🇸", "🇬🇷", "🇦🇹", "🇵🇱", "🇬🇪", "🇲🇽", "🇺🇸", "🇵🇪", "🇧🇷", "🇦🇷", "🇧🇴"];
 const T = { gather: 1200, converge: 2200, reveal: 2800, end: 3200 };
+// 재방문 1초 단축판 (05 문서 §2): 가장자리 등장 생략, 바로 모여 FOOD → 사라짐
+const T_SHORT = { gather: 150, converge: 550, reveal: 750, end: 1000 };
 
 const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -27,8 +29,13 @@ function sampleTargets(w: number, h: number, n: number, font: string): { x: numb
   return Array.from({ length: n }, (_, i) => pts[Math.floor(((i + 0.5) / n) * pts.length)] ?? { x: w / 2, y: h / 2 });
 }
 
-export function Intro({ onDone }: { onDone: () => void }) {
+export function Intro({ onDone, short = false }: { onDone: () => void; short?: boolean }) {
   const stage = useRef<HTMLDivElement>(null);
+  const done = useRef(onDone);
+  useEffect(() => {
+    done.current = onDone;
+  });
+  const [leaving, setLeaving] = useState(false);
   const flagEls = useRef<(HTMLSpanElement | null)[]>([]);
   const [phase, setPhase] = useState<"flags" | "mark" | "cta">("flags");
 
@@ -56,38 +63,45 @@ export function Intro({ onDone }: { onDone: () => void }) {
     const hover = starts.map((s, i) => ({ x: s.x * 0.82 + W * 0.09 + Math.sin(i) * 12, y: s.y * 0.82 + H * 0.09 + Math.cos(i * 1.3) * 12 }));
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const t0 = performance.now() - (reduce ? T.reveal : 0);
+    const TT = short ? T_SHORT : T;
+    const t0 = performance.now() - (reduce ? TT.reveal : 0);
     let raf = 0;
     const tick = (now: number) => {
       const t = now - t0;
       flagEls.current.forEach((el, i) => {
         if (!el) return;
-        const a = clamp01(t / T.gather);
-        const sway = Math.sin(t / 260 + i) * 6 * (1 - clamp01((t - T.gather) / 600));
+        const a = short ? 1 : clamp01(t / TT.gather);
+        const sway = Math.sin(t / 260 + i) * 6 * (1 - clamp01((t - TT.gather) / 600));
         let x = starts[i].x + (hover[i].x - starts[i].x) * ease(a);
         let y = starts[i].y + (hover[i].y - starts[i].y) * ease(a) + sway;
-        const b = ease(clamp01((t - T.gather) / (T.converge - T.gather)));
+        const b = ease(clamp01((t - TT.gather) / (TT.converge - TT.gather)));
         const tg = targets[i] ?? { x: markW / 2, y: markH / 2 };
         x += (ox + tg.x - x) * b;
         y += (oy + tg.y - y) * b;
-        const fade = 1 - clamp01((t - T.converge) / (T.reveal - T.converge));
+        const fade = 1 - clamp01((t - TT.converge) / (TT.reveal - TT.converge));
         el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${1 - 0.55 * b}) rotate(${sway * 2}deg)`;
         el.style.filter = `blur(${b * 1.6}px)`;
         el.style.opacity = String(Math.min(a * 2, 1) * fade);
       });
-      if (t >= T.converge) setPhase((p) => (p === "flags" ? "mark" : p));
-      if (t >= T.reveal) setPhase("cta");
-      if (t < T.end) raf = requestAnimationFrame(tick);
+      if (t >= TT.converge) setPhase((p) => (p === "flags" ? "mark" : p));
+      if (t >= TT.reveal && !short) setPhase("cta");
+      if (t < TT.end) raf = requestAnimationFrame(tick);
+      else if (short) {
+        setLeaving(true);
+        setTimeout(() => done.current(), 220);
+      }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [short]);
 
   return (
-    <div ref={stage} className="fixed inset-0 z-[60] overflow-hidden bg-ivory">
+    <div ref={stage} className={`fixed inset-0 z-[60] overflow-hidden bg-ivory transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}>
+      {!short && (
       <button type="button" onClick={onDone} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 rounded-full px-3 py-1.5 text-sm text-muted hover:bg-line/60">
         건너뛰기
       </button>
+      )}
       {FLAGS.map((f, i) => (
         <span key={f} ref={(el) => void (flagEls.current[i] = el)} className="absolute left-0 top-0 text-3xl opacity-0 will-change-transform" aria-hidden>
           {f}
@@ -102,7 +116,7 @@ export function Intro({ onDone }: { onDone: () => void }) {
           FOOD
         </p>
       </div>
-      <div className={`absolute inset-x-0 top-[58%] space-y-8 px-8 text-center transition-all duration-300 ${phase === "cta" ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
+      <div hidden={short} className={`absolute inset-x-0 top-[58%] space-y-8 px-8 text-center transition-all duration-300 ${phase === "cta" ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
         <p className="font-display text-xl italic text-charcoal/80">Different Cultures, One Table.</p>
         <button type="button" onClick={onDone} className="w-full max-w-xs rounded-full bg-green-800 px-6 py-4 text-[17px] font-semibold text-ivory shadow-lg transition active:scale-[0.98]">
           세계 음식 탐험하기

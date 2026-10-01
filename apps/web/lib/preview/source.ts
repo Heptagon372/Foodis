@@ -46,12 +46,17 @@ export const previewContent: ContentSource = {
       cooking_method: f.method ?? null,
       course_type: f.course ?? null,
       diet_note: f.diet_note ?? null,
-      ingredients: f.ingredients.map((name, i) => ({ slug: `${f.slug}-${i}`, name_ko: name, role: i < 2 ? "main" : "seasoning" })),
+      ingredients: f.ingredients.map((name, i) => ({ slug: name, name_ko: name, role: i < 2 ? "main" : "seasoning" })),
       sources: [{ field: "summary", url: wiki(f), title: `Wikipedia — ${f.name_en}`, license: "CC BY-SA 4.0" }],
       relations: relationsOf(slug).map((r) => ({ type: r.type, description: r.description, food: summaryOf(bySlug.get(r.other)!) })),
       sameCountry: PREVIEW_FOODS.filter((o) => o.cc === f.cc && o.slug !== slug).map(summaryOf),
     };
     return detail;
+  },
+  async getIngredient(slug) {
+    const name = decodeURIComponent(slug);
+    const foods = PREVIEW_FOODS.filter((f) => f.ingredients.includes(name));
+    return foods.length ? { ingredient: { slug: name, name_ko: name, name_en: null, category: null }, foods: foods.map(summaryOf) } : null;
   },
   async getCountry(code) {
     const country = PREVIEW_COUNTRIES.find((c) => c.code === code);

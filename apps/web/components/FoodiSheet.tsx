@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
+import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
 import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { FoodCard } from "./FoodCard";
@@ -11,7 +12,7 @@ import { FollowUpChip } from "./bits";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
-type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string };
+type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean };
 
 const Ctx = createContext<{ open(o?: OpenOpts): void } | null>(null);
 export const useFoodi = () => {
@@ -57,7 +58,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);
       setVoice("thinking");
       const s = getState();
-      try {
+      const fromServer = async (): Promise<AskResponse> => {
         const res = await fetch("/api/foodi/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -65,18 +66,39 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error?.message ?? "푸디가 잠시 쉬고 있어요.");
-        const r = data as AskResponse;
-        setTurns((t) => t.map((x) => (x.id === id ? { ...x, res: r } : x)));
+        return data as AskResponse;
+      };
+      try {
+        // 데모 모드: 발표 기기에 저장한 팩에서 먼저 (네트워크 0). 평소: 서버가 안 되면 팩이 대신 (06 문서 §6)
+        let r: AskResponse;
+        let packItem: string | null = null;
+        let offline = false;
+        const demo = isDemoMode() ? await answerFromPack(text, contextFoodId) : null;
+        if (demo) ({ response: r, itemId: packItem } = demo);
+        else {
+          try {
+            r = await fromServer();
+          } catch (e) {
+            const fb = await answerFromPack(text, contextFoodId).catch(() => null);
+            if (!fb) throw e;
+            ({ response: r, itemId: packItem } = fb);
+            offline = true;
+          }
+        }
+        setTurns((t) => t.map((x) => (x.id === id ? { ...x, res: r, offline } : x)));
         seen.current = [...seen.current, ...r.cards.map((c) => c.food_id)];
         // 카드로 보여준 음식은 '탐험함'으로 Passport 에 기록 (F-REC-02)
         for (const c of r.cards) record({ id: c.food_id, slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, country_code: c.country.code, taste_tags: [] }, "explored");
         if (muted) setVoice("idle");
         else {
           setVoice("speaking");
-          await speak(r.speech, () => setVoice((v) => (v === "speaking" ? "idle" : v)));
+          const audio = packItem ? await cachedAudio(packItem).catch(() => null) : null;
+          await speak(r.speech, () => setVoice((v) => (v === "speaking" ? "idle" : v)), audio);
         }
       } catch (e) {
-        setTurns((t) => t.map((x) => (x.id === id ? { ...x, error: (e as Error).message } : x)));
+        // fetch 의 TypeError = 네트워크 끊김. 브라우저 원문("Failed to fetch") 대신 사람 말로
+        const message = e instanceof TypeError ? "인터넷 연결이 끊겼어요. 연결되면 다시 물어봐 주세요." : (e as Error).message;
+        setTurns((t) => t.map((x) => (x.id === id ? { ...x, error: message } : x)));
         setVoice("idle");
       }
     },
@@ -236,6 +258,7 @@ function TurnView({ t, onEdit, onFollowUp }: { t: Turn; onEdit: () => void; onFo
       {t.error && <p className="rounded-xl bg-surface px-3 py-2 text-sm">{t.error}</p>}
       {t.res && (
         <>
+          {t.offline && <p className="w-fit rounded-full bg-diet-warn/15 px-3 py-1 text-caption text-[#7a5a10]">📦 연결이 불안정해 저장된 답으로 보여드려요</p>}
           {t.res.not_in_map && <p className="w-fit rounded-full bg-line/60 px-3 py-1 text-caption text-charcoal/70">🗺 ‘{t.res.not_in_map}’ — 아직 FOODIS 지도에 없어요</p>}
           <p className="text-subtitle font-medium">{t.res.speech}</p>
           {t.res.passport && <PassportCard p={t.res.passport} />}

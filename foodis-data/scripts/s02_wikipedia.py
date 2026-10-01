@@ -1,4 +1,4 @@
-"""② 위키백과 요약(ko/en) + 위키미디어 공용 이미지 출처 수집.
+"""② 위키백과 요약(ko/en, 힌트가 다른 언어면 그 언어도) + 위키미디어 공용 이미지 출처 수집.
 
 입력: data/raw/wikidata.json
 출력: data/raw/wikipedia.json  {slug: {en:{extract,url}, ko:{...}, image:{url,artist,license,source}}}
@@ -58,8 +58,11 @@ def main() -> None:
         raise SystemExit("먼저 s01_wikidata.py 를 실행하세요")
     out = {}
     for slug, r in wd.items():
-        out[slug] = {"en": summary(http, "en", r["en_title"]),
+        out[slug] = {"en": summary(http, "en", r["en_title"]) if r.get("en_title") else None,
                      "ko": summary(http, "ko", r["ko_title"]) if r.get("ko_title") else None}
+        src = r.get("src_lang", "en")
+        if src not in ("en", "ko"):  # "es:제목" 힌트 → 스페인어 문서가 주 근거
+            out[slug][src] = summary(http, src, r["src_title"])
     files = sorted({r["image_file"].replace("%20", " ") for r in wd.values() if r.get("image_file")})
     from urllib.parse import unquote
     creds = image_credits(http, [unquote(f) for f in files])

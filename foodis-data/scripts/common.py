@@ -52,6 +52,14 @@ TASTE_TAGS = [
 DIET_KEYS = ["vegan", "vegetarian", "halal", "gluten_free", "dairy_free"]
 DIET_LEVELS = ["yes", "depends", "no", "unknown"]
 ALLERGENS = ["nuts", "peanut", "shellfish", "fish", "egg", "soy", "wheat", "dairy", "sesame"]
+# 근거로 쓰는 위키백과 언어. 영어 문서가 없거나 부실한 음식(볼리비아·페루 등)은 dish_targets 에 "es:제목" 처럼 적는다
+WIKI_LANGS = ["en", "ko", "es", "pt", "fr"]
+
+
+def parse_wiki_hint(hint: str) -> tuple[str, str]:
+    """"es:Majadito" → ("es", "Majadito"), "Kimchi" → ("en", "Kimchi")"""
+    m = re.match(r"^([a-z]{2}):(.+)$", hint.strip())
+    return (m.group(1), m.group(2)) if m and m.group(1) in WIKI_LANGS else ("en", hint.strip())
 
 
 class Http:

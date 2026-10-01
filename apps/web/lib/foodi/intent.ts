@@ -93,6 +93,29 @@ export function findUnknownDish(text: string, vocab: Vocab): string | null {
   return w;
 }
 
+/** 질문의 핵심어(식이·대륙·국가·음식·지도 밖 이름) 원문 — 데모 답 매칭에서 "화성"과 "목성"을 구분하는 데 쓴다 */
+export function keyTerms(text: string, vocab: Vocab): string[] {
+  const t = normalizeAliases(text);
+  const terms: string[] = [];
+  for (const [re] of DIET_WORDS) {
+    const m = t.match(re);
+    if (m) terms.push(m[0]);
+  }
+  for (const [re] of CONTINENT_WORDS) {
+    const m = t.match(re);
+    if (m) terms.push(m[0]);
+  }
+  const food = findFood(t, vocab.foods);
+  const f = food ? vocab.foods.find((x) => x.id === food) : undefined;
+  if (f) terms.push(t.includes(f.name_ko) ? f.name_ko : f.name_en);
+  const cc = f ? null : findCountry(t, vocab.countries);
+  const c = cc ? vocab.countries.find((x) => x.code === cc) : undefined;
+  if (c) terms.push(t.includes(c.name_ko) ? c.name_ko : c.name_en);
+  const unknown = findUnknownDish(t, vocab) ?? findUnknownPlace(t, vocab);
+  if (unknown) terms.push(unknown);
+  return [...new Set(terms)];
+}
+
 type Rule = [RegExp, Intent, "target" | "optional"];
 const RULES: Rule[] = [
   [/몇\s*(개|곳|나라|국가|가지)|패스포트|여권|탐험\s*(기록|현황|했)/, "passport_status", "optional"],

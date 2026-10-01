@@ -1,0 +1,31 @@
+code,name_ko,name_en,region,continent_group,flag_emoji,accent_color
+KR,대한민국,South Korea,East Asia,asia,🇰🇷,#C8384A
+JP,일본,Japan,East Asia,asia,🇯🇵,#C2453F
+CN,중국,China,East Asia,asia,🇨🇳,#C9473A
+TH,태국,Thailand,Southeast Asia,asia,🇹🇭,#3D4F8C
+VN,베트남,Vietnam,Southeast Asia,asia,🇻🇳,#C7402E
+ID,인도네시아,Indonesia,Southeast Asia,asia,🇮🇩,#C0392B
+PH,필리핀,Philippines,Southeast Asia,asia,🇵🇭,#2F55A4
+IN,인도,India,South Asia,asia,🇮🇳,#E08A3C
+NP,네팔,Nepal,South Asia,asia,🇳🇵,#B53A46
+UZ,우즈베키스탄,Uzbekistan,Central Asia,asia,🇺🇿,#2F8FB3
+IT,이탈리아,Italy,Southern Europe,europe,🇮🇹,#3E8E5A
+FR,프랑스,France,Western Europe,europe,🇫🇷,#3A5BA0
+ES,스페인,Spain,Southern Europe,europe,🇪🇸,#C9A227
+GR,그리스,Greece,Southern Europe,europe,🇬🇷,#3F6FB5
+AT,오스트리아,Austria,Central Europe,europe,🇦🇹,#B8424A
+PL,폴란드,Poland,Central Europe,europe,🇵🇱,#C24A5A
+GE,조지아,Georgia,Caucasus,europe,🇬🇪,#B8393F
+TR,튀르키예,Türkiye,Western Asia,mena_africa,🇹🇷,#C13A3A
+LB,레바논,Lebanon,Middle East,mena_africa,🇱🇧,#3C8A55
+IR,이란,Iran,Middle East,mena_africa,🇮🇷,#3F8F5C
+EG,이집트,Egypt,North Africa,mena_africa,🇪🇬,#B5484A
+MA,모로코,Morocco,North Africa,mena_africa,🇲🇦,#B83B3B
+ET,에티오피아,Ethiopia,Horn of Africa,mena_africa,🇪🇹,#3A7D44
+ZA,남아프리카공화국,South Africa,Southern Africa,mena_africa,🇿🇦,#2E7D5B
+MX,멕시코,Mexico,North America,americas,🇲🇽,#2E7D52
+US,미국,United States,North America,americas,🇺🇸,#3B4E8C
+PE,페루,Peru,South America,americas,🇵🇪,#C2414B
+BO,볼리비아,Bolivia,South America,americas,🇧🇴,#3E8A4E
+BR,브라질,Brazil,South America,americas,🇧🇷,#3E9A5A
+AR,아르헨티나,Argentina,South America,americas,🇦🇷,#5DA3D5

@@ -1,0 +1,5 @@
+.env
+data/raw/
+data/draft/
+data/final/
+__pycache__/

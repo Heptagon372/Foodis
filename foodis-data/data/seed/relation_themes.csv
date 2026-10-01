@@ -1,0 +1,45 @@
+theme,type,slug,note
+만두 로드,historical_link,mandu,밀가루 반죽에 소를 싸서 익히는 만두 계열 음식은 유라시아 곳곳에 퍼져 있으며 전파 경로에 대해서는 여러 설이 있음
+만두 로드,historical_link,jiaozi,
+만두 로드,historical_link,xiaolongbao,
+만두 로드,historical_link,momo,
+만두 로드,historical_link,manti,
+만두 로드,historical_link,khinkali,
+만두 로드,historical_link,pierogi,
+커피 하우스,historical_link,turkish-coffee,오스만 제국의 커피 문화와 유럽 카페 문화의 연결 (전파 경로는 여러 설)
+커피 하우스,historical_link,viennese-coffee,
+필라프 계열,historical_link,plov,쌀을 기름·육수와 함께 짓는 필라프 계열 쌀 요리
+필라프 계열,historical_link,biryani,
+필라프 계열,historical_link,paella,
+꼬치 구이,same_technique,shashlik,고기를 꼬치에 꿰어 불에 굽는 조리법
+꼬치 구이,same_technique,souvlaki,
+꼬치 구이,same_technique,satay,
+꼬치 구이,same_technique,anticuchos,
+꼬치 구이,same_technique,kabab-koobideh,
+회전 꼬치,historical_link,doner-kebab,세로 회전 꼬치에 고기를 구워 얇게 썰어 내는 방식
+회전 꼬치,historical_link,gyros,
+회전 꼬치,historical_link,iskender-kebap,
+발효의 세계,same_technique,kimchi,재료를 발효시켜 맛과 보존성을 얻는 음식
+발효의 세계,same_technique,injera,
+발효의 세계,same_technique,tempeh,
+발효의 세계,same_technique,gundruk,
+발효의 세계,same_technique,miso-soup,
+납작빵,same_technique,injera,곡물 반죽을 얇고 넓게 구워 다른 음식과 함께 먹는 빵
+납작빵,same_technique,lahmacun,
+납작빵,same_technique,manakish,
+납작빵,same_technique,msemen,
+납작빵,same_technique,khachapuri,
+납작빵,same_technique,taco,
+스페인어권 영향,historical_link,lechon,스페인 식민 시기를 거치며 이어진 요리 전통
+스페인어권 영향,historical_link,empanada,
+스페인어권 영향,historical_link,saltena,
+스페인어권 영향,historical_link,adobo,
+프랑스 제빵 영향,historical_link,banh-mi,프랑스식 빵 문화가 현지 식문화와 결합
+프랑스 제빵 영향,historical_link,croissant,
+중국계 이민 요리,historical_link,lomo-saltado,중국계 이민자의 볶음 조리법이 현지 재료와 결합 (페루 치파 요리 등)
+중국계 이민 요리,historical_link,kung-pao-chicken,
+중국계 이민 요리,historical_link,pancit,
+병아리콩,shares_ingredient,chana-masala,병아리콩을 주재료로 하는 음식
+병아리콩,shares_ingredient,hummus,
+병아리콩,shares_ingredient,falafel,
+병아리콩,shares_ingredient,koshary,

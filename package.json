@@ -1,0 +1,13 @@
+{
+  "name": "foodis",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint",
+    "typecheck": "pnpm --filter web typecheck",
+    "test": "pnpm --filter web test",
+    "data:test": "cd foodis-data && .venv/Scripts/python -m pytest tests -q"
+  }
+}

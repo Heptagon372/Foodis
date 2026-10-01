@@ -261,6 +261,10 @@ function postGithubComment(body, pr) {
     ? ["PATCH", `repos/{owner}/{repo}/issues/comments/${ids.at(-1)}`]
     : ["POST", `repos/{owner}/{repo}/issues/${number}/comments`];
   const url = JSON.parse(run("gh", ["api", "-X", method, path, "--input", file])).html_url;
+  // 동시에 올라간 중복 리포트(로컬 · Action 경합)는 정리한다. 권한이 없으면 남겨 둔다.
+  for (const id of ids.slice(0, -1)) {
+    try { run("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/issues/comments/${id}`]); } catch {}
+  }
   return { number, url, updated: ids.length > 0 };
 }
 

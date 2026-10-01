@@ -40,7 +40,7 @@ JSON 의 `progress.after.percent` · `progress.before.percent` · `changes.compl
 ### 3. GitHub
 
 - 브랜치를 push 한다.
-- PR 이 있으면: `node scripts/session-report.mjs --github-comment` — 마커(`<!-- foodis-session-report -->`) 댓글을 갱신하거나 새로 단다. 이후 push 마다 `.github/workflows/session-report.yml` 이 자동 갱신한다.
+- PR 이 있으면: push 만 한다. `.github/workflows/session-report.yml` 이 마커(`<!-- foodis-session-report -->`) 댓글을 달거나 갱신한다. 로컬에서 `--github-comment` 를 같이 돌리면 Action 과 경합해 댓글이 둘 생길 수 있으니, Action 이 돌지 않을 때만 쓴다 (중복은 다음 실행에서 정리된다).
 - PR 이 없으면: 사용자에게 PR 을 열지 묻는다 (열면 Action 이 댓글을 단다). 묻지 않고 열지 않는다.
 
 ### 4. Notion

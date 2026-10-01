@@ -1,5 +1,5 @@
 "use client";
-// 게스트 Passport · 온보딩 상태 (브라우저 저장). 로그인 연동 후에는 /api/me/passport 로 동기화한다.
+// 게스트 Passport · 온보딩 상태 (브라우저 저장). 로그인하면 lib/client/account.ts 가 /api/me/sync 로 계정과 맞춘다.
 // localStorage 는 사파리 비공개 모드 등에서 막힐 수 있어 모든 접근을 try/catch 로 감싼다.
 import { useRef, useSyncExternalStore } from "react";
 import type { Allergen, DietKey } from "@/lib/foodi/schema";
@@ -50,7 +50,7 @@ export function getState(): LocalState {
   return state;
 }
 
-const subscribe = (cb: () => void) => (listeners.add(cb), () => void listeners.delete(cb));
+export const subscribe = (cb: () => void) => (listeners.add(cb), () => void listeners.delete(cb));
 
 /** 서버 렌더에서는 INITIAL, 하이드레이션 후 실제 값 → SSR 안전.
  *  selector 가 새 배열을 만들어도 무한 렌더가 나지 않도록 상태 객체 단위로 결과를 캐시한다. */

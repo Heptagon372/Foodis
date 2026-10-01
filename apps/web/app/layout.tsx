@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { AccountSync } from "@/components/AccountSync";
 import { AppFrame } from "@/components/AppFrame";
 import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased">
         <FlagPolyfill />
         <SWRegister />
+        <AccountSync />
         <FoodiProvider>
           <AppFrame>{children}</AppFrame>
           <TabBar />

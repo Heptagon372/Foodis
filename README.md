@@ -44,7 +44,9 @@ python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # (macOS
 cp .env.example .env
 ```
 
-DB: Supabase 프로젝트 생성 → SQL Editor 에 `supabase/migrations/0001_init.sql` 실행 (또는 `pnpm --filter web exec supabase db push`).
+DB: Supabase 프로젝트 생성 → SQL Editor 에 `supabase/migrations/` 의 `0001` → `0002` → `0003` 순서로 실행 (또는 `pnpm --filter web exec supabase db push`).
+
+사용자 로그인 (선택, [docs/design/06](docs/design/06_회원_로그인_동기화_v1.md)): Supabase → Authentication → URL Configuration 의 Redirect URLs 에 `http://localhost:3000/auth/callback` (배포 주소도) 추가. 카카오·Google 은 Authentication → Providers 에서 켜면 로그인 화면에 버튼이 자동으로 나타난다 — 꺼져 있으면 이메일 로그인만 보인다.
 
 ## 검증
 

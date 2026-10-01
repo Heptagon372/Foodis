@@ -8,6 +8,8 @@ import { ALLERGEN_LABEL, DIET_LABEL } from "./DietBadge";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section, Wordmark } from "./bits";
 import { ShareCardButton } from "./ShareCardButton";
+import { AccountCard, AccountNudge } from "./AccountCard";
+import { useAccount } from "@/lib/client/account";
 
 const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카" };
 
@@ -18,6 +20,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
   const dna = useLocal(foodDna);
   const diet = useLocal((s) => s.diet);
   const allergens = useLocal((s) => s.allergens ?? []);
+  const signedIn = useAccount().status === "user";
 
   const listOf = (st: PassportStatus) => entries.filter(([, e]) => e.statuses.includes(st));
   const continents = Object.entries(CONTINENTS).map(([k, label]) => {
@@ -53,6 +56,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
         </div>
         <ShareCardButton explored={explored} countries={countries} foodCount={entries.length} dna={dna} />
       </section>
+      <AccountNudge foods={entries.length} />
 
       <Section title="국기 그리드">
         <div className="grid grid-cols-6 gap-2">
@@ -132,7 +136,11 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
             );
           })}
         </div>
-        <p className="text-caption text-muted">추천 필터에만 쓰이고 이 기기에만 저장돼요. 빨간 재료가 든 음식은 추천하지 않아요.</p>
+        <p className="text-caption text-muted">추천 필터에만 쓰이고 {signedIn ? "내 계정에만" : "이 기기에만"} 저장돼요. 빨간 재료가 든 음식은 추천하지 않아요.</p>
+      </Section>
+
+      <Section title="계정">
+        <AccountCard />
       </Section>
 
       <button type="button" onClick={() => open({ listen: true })} className="w-full rounded-full bg-mint-500 py-4 font-semibold text-green-800">
@@ -147,7 +155,7 @@ function DnaRadar({ weights }: { weights: Record<string, number> }) {
   const top = Object.entries(weights)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-  if (top.length < 3) return <p className="text-sm text-muted">음식을 3가지 이상 탐험하면 나의 맛 지도가 그려져요.</p>;
+  if (top.length < 3) return <p className="text-sm text-muted">맛이 다른 음식을 몇 가지 더 탐험하면 나의 맛 지도가 그려져요.</p>;
   const max = top[0][1];
   const R = 80;
   const C = 110;

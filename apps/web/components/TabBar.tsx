@@ -11,8 +11,8 @@ export function TabBar() {
   const { open } = useFoodi();
   const hydrated = useHydrated();
   const introSeen = useLocal((s) => s.introSeen);
-  // 인트로가 떠 있는 동안(첫 방문 홈)·온보딩에서는 숨긴다
-  if (path.startsWith("/onboarding") || path.startsWith("/intro") || path.startsWith("/admin") || (path === "/" && hydrated && !introSeen)) return null;
+  // 인트로가 떠 있는 동안(첫 방문 홈)·온보딩·로그인에서는 숨긴다
+  if (path.startsWith("/onboarding") || path.startsWith("/intro") || path.startsWith("/admin") || path.startsWith("/login") || (path === "/" && hydrated && !introSeen)) return null;
   const tab = (href: string, label: string, icon: string) => {
     const active = href === "/" ? path === "/" : path.startsWith(href);
     return (

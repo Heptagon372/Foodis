@@ -13,9 +13,10 @@ import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
 import { InAppNotice, MicHelp } from "./MicHelp";
+import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
-type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean };
+type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean; photo?: PhotoTurn };
 
 const Ctx = createContext<{ open(o?: OpenOpts): void } | null>(null);
 export const useFoodi = () => {
@@ -173,6 +174,13 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // 사진 질문(F-VIS-01)도 같은 피드의 한 턴: 같은 key 면 갱신. 첫 카드를 맥락으로 남겨 이어지는 질문이 그 음식을 가리키게
+  const photoTurn = (p: PhotoTurn) =>
+    setTurns((t) => {
+      const next = { q: "사진으로 물어봤어요", mode: "text" as const, photo: p, contextFoodId: p.res?.cards[0]?.food_id };
+      return t.some((x) => x.photo?.key === p.key) ? t.map((x) => (x.photo?.key === p.key ? { ...x, ...next } : x)) : [...t, { id: ++seq.current, ...next }];
+    });
+
   const editTurn = (t: Turn) => {
     setDraft(t.q);
     inputRef.current?.focus();
@@ -244,6 +252,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
                     setDraft("");
                   }}
                 >
+                  <PhotoAskButton onTurn={photoTurn} disabled={voice === "listening"} />
                   <input ref={inputRef} autoFocus={typeFirst} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="글로 물어보기" maxLength={300} className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted" enterKeyHint="send" />
                   {draft && (
                     <button type="submit" className="text-sm font-semibold text-green-800">
@@ -265,6 +274,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
 const KNOWN_INTENTS = new Set(["recommend", "filter_by_diet", "compare_similar", "out_of_scope"]);
 
 function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => void; onFollowUp: (q: string) => void; onKnown: (foodId: string) => void }) {
+  if (t.photo) return <PhotoTurnView p={t.photo} onFollowUp={onFollowUp} />;
   return (
     <div className="animate-rise space-y-3">
       <button type="button" onClick={onEdit} className="ml-auto block max-w-[85%] text-right text-subtitle text-charcoal/70" title="탭해서 고치기">

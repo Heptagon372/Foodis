@@ -105,7 +105,7 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
     },
 
     async allFoodNames() {
-      return (await liteFoods()).map(({ id, name_ko, name_en }) => ({ id, name_ko, name_en }));
+      return (await liteFoods()).map(({ id, name_ko, name_en, country_code }) => ({ id, name_ko, name_en, country_code }));
     },
 
     async getUserContext(userId): Promise<UserContext> {

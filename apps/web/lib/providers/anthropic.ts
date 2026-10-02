@@ -12,19 +12,27 @@ const PRICES: Record<string, [number, number]> = {
 
 export function anthropicLLM(client = new Anthropic({ timeout: 4_000, maxRetries: 1 })): LLMProvider {
   return {
-    async structured({ system, user, schema, model, maxTokens, operation }) {
-      const modelId = model === "fast" ? env.llmModelFast : env.llmModelSmart;
+    async structured({ system, user, schema, model, maxTokens, operation, image }) {
+      const tierModel = model === "fast" ? env.llmModelFast : env.llmModelSmart;
+      const modelId = image ? (env.llmModelVision ?? tierModel) : tierModel;
+      // 이미지는 텍스트보다 앞에 둔다 (Vision 권장 순서). 이미지 입력은 처리 시간이 길어 요청 타임아웃만 늘린다
+      const content: Anthropic.ContentBlockParam[] | string = image
+        ? [{ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } }, { type: "text", text: user }]
+        : user;
       try {
-        const res = await client.messages.parse({
-          model: modelId,
-          max_tokens: maxTokens,
-          system,
-          messages: [{ role: "user", content: user }],
-          output_config: {
-            format: zodOutputFormat(schema),
-            ...(model === "smart" ? { effort: env.llmSmartEffort } : {}),
+        const res = await client.messages.parse(
+          {
+            model: modelId,
+            max_tokens: maxTokens,
+            system,
+            messages: [{ role: "user", content }],
+            output_config: {
+              format: zodOutputFormat(schema),
+              ...(model === "smart" ? { effort: env.llmSmartEffort } : {}),
+            },
           },
-        });
+          image ? { timeout: 12_000 } : undefined,
+        );
         if (res.stop_reason === "refusal") throw new ProviderError("anthropic", `refusal: ${res.stop_details?.category ?? "unknown"}`, false);
         if (res.stop_reason === "max_tokens") throw new ProviderError("anthropic", "max_tokens 도달 — 출력이 잘림", false);
         if (res.parsed_output == null) throw new ProviderError("anthropic", "스키마 파싱 실패", false);

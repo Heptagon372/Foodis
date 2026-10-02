@@ -150,23 +150,31 @@ export function rankFoods<F extends RankFood>(
     })
     .sort((a, b) => b.score - a.score || (a.food.fame_rank ?? 99) - (b.food.fame_rank ?? 99));
 
-  // 다양성: 같은 나라 상한 + 안 가본 대륙 한 자리
+  // 다양성: 같은 나라 상한 · 같은 대륙 상한(목록의 1/3) + 안 가본 대륙 한 자리
   const limit = opts.limit ?? 6;
   const perCountry = c < 0.5 ? 1 : 2;
+  const perContinent = Math.max(2, Math.ceil(limit / 3));
   const out: Ranked<F>[] = [];
   const count: Record<string, number> = {};
+  const contCount: Record<string, number> = {};
   const take = (r: Ranked<F>) => {
     out.push(r);
     count[r.food.country_code] = (count[r.food.country_code] ?? 0) + 1;
+    const cont = continentOf(r.food.country_code) ?? "?";
+    contCount[cont] = (contCount[cont] ?? 0) + 1;
   };
   const fresh = scored.find((r) => {
     const cont = continentOf(r.food.country_code);
     return cont && !visitedConts.has(cont);
   });
-  for (const r of scored) {
-    if (out.length >= limit - (fresh && !out.includes(fresh) ? 1 : 0)) break;
-    if ((count[r.food.country_code] ?? 0) >= perCountry) continue;
-    take(r);
+  // 1차: 나라·대륙 상한을 지키며. 2차: 후보가 모자라면 대륙 상한만 풀어서 채운다
+  for (const strict of [true, false]) {
+    for (const r of scored) {
+      if (out.length >= limit - (fresh && !out.includes(fresh) ? 1 : 0)) break;
+      if (out.includes(r) || (count[r.food.country_code] ?? 0) >= perCountry) continue;
+      if (strict && (contCount[continentOf(r.food.country_code) ?? "?"] ?? 0) >= perContinent) continue;
+      take(r);
+    }
   }
   if (fresh && !out.includes(fresh) && out.length < limit) take({ ...fresh, reason: fresh.reason || "아직 안 가본 대륙" });
   return out;

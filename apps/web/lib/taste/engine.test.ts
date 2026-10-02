@@ -65,6 +65,14 @@ describe("취향 엔진 v1", () => {
     expect(recs.some((r) => /좋아하는 매운맛|자주 본/.test(r.reason))).toBe(true);
   });
 
+  it("한 대륙이 목록을 독차지하지 않는다 (6개 중 같은 대륙 최대 2개)", () => {
+    const recs = rankFoods(FOODS, buildProfile([sig("view", "kr-1")], {}, cont, NOW), cont, { limit: 6 });
+    const byCont: Record<string, number> = {};
+    for (const r of recs) byCont[cont(r.food.country_code)] = (byCont[cont(r.food.country_code)] ?? 0) + 1;
+    expect(Math.max(...Object.values(byCont))).toBeLessThanOrEqual(2);
+    expect(recs).toHaveLength(6);
+  });
+
   it("안 가본 대륙 한 자리는 남겨 둔다", () => {
     const signals = ["kr-1", "kr-2", "jp-1", "jp-2", "th-1"].flatMap((s) => [sig("view", s), sig("like", s)]);
     const recs = rankFoods(FOODS, buildProfile(signals, {}, cont, NOW), cont, { limit: 4 });

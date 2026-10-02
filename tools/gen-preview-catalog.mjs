@@ -23,7 +23,7 @@ const TAG_RULES = [
   [/\b(stew|curry|goulash|tagine|casserole)/, "rich"],
   [/\b(noodle|noodles|pasta|spaghetti|udon|soba|ramen|lo mein|vermicelli|macaroni)/, "noodle"],
   [/\b(rice|pilaf|pilau|biryani|risotto|paella|congee|plov)\b/, "rice"],
-  [/\b(bread|flatbread|bun|loaf|roti|naan|pita|tortilla|bagel|baguette|pancake|crepe)/, "bread"],
+  [/\b(bread|breads|flatbread|loaf|roti|naan|pita|tortilla|bagel|baguette|pancake|crepe|baked good)\b/, "bread"],
   [/\b(dumpling|dumplings|ravioli|pierogi|momo|gyoza|mandu|empanada|samosa)/, "dumpling"],
   [/\b(cake|dessert|pastry|confection|sweet|pudding|cookie|biscuit|candy|tart|pie|doughnut|ice cream|custard|jam|halva)/, "sweet"],
   [/\b(fried|fritter|deep-fried|tempura|chips|croquette)/, "fried"],
@@ -39,8 +39,12 @@ const TAG_RULES = [
   [/\b(sour|vinegar|lime|lemon|tamarind)/, "sour"],
   [/\b(smoked|smoky)/, "smoky"],
 ];
+// 상위 분류(s01 class_labels: "pho → noodle soup → soup")도 쓴다. 통계·산업 분류(OKPD 등)와 너무 넓은 분류는 뺀다
+// ("Bakery products, pastry, cakes …" 가 프레첼을 단맛으로 만들지 않게)
+const NOISY_CLASS = /okpd|products|services|industry|classifier|production|goods|matter|entity|object|process|food and beverage|ingredient|plant|vegetarian/i;
 function tagsOf(t, w) {
-  const text = [t.name_en, ...(w?.instance_of ?? [])].join(" ").toLowerCase();
+  const classes = (w?.class_labels ?? []).filter((c) => !NOISY_CLASS.test(c));
+  const text = [t.name_en, ...(w?.instance_of ?? []), ...classes].join(" | ").toLowerCase();
   const tags = [];
   for (const [re, tag] of TAG_RULES) if (re.test(text) && !tags.includes(tag)) tags.push(tag);
   return tags.slice(0, 4);

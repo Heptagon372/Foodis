@@ -3,6 +3,7 @@
 // localStorage 는 사파리 비공개 모드 등에서 막힐 수 있어 모든 접근을 try/catch 로 감싼다.
 import { useRef, useSyncExternalStore } from "react";
 import type { Allergen, DietKey } from "@/lib/foodi/schema";
+import { track } from "./track";
 
 export type PassportStatus = "explored" | "tried" | "liked" | "saved";
 export type PassportEntry = { slug: string; name_ko: string; flag: string; cc: string; tags: string[]; statuses: PassportStatus[]; at: number };
@@ -74,6 +75,8 @@ export const useHydrated = () =>
 export type FoodRef ={ id: string; slug: string; name_ko: string; flag: string; country_code: string; taste_tags: string[] };
 
 export function record(food: FoodRef, status: PassportStatus) {
+  const newCountry = !Object.values(getState().entries).some((e) => e.cc === food.country_code); // KPI North Star
+  if (newCountry) track("explore_country", { country: food.country_code });
   update((s) => {
     const prev = s.entries[food.id];
     const statuses = prev?.statuses.includes(status) ? prev.statuses : [...(prev?.statuses ?? []), status];
@@ -89,6 +92,7 @@ export function record(food: FoodRef, status: PassportStatus) {
 
 export function toggle(food: FoodRef, status: Exclude<PassportStatus, "explored">) {
   const has = getState().entries[food.id]?.statuses.includes(status);
+  if (!has && status === "liked") track("rec_accept", { food_id: food.id, via: "like" }); // 추천 카드였는지는 KPI 계산에서 가린다
   if (!has) return record(food, status);
   update((s) => {
     const e = s.entries[food.id];

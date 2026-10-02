@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from "@/lib/content/types";
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
 import { startRadio } from "@/lib/client/radio";
+import { track } from "@/lib/client/track";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
 import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
@@ -32,6 +33,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   // 상세를 연 것 자체가 탐험 (F-REC-02)
   useEffect(() => {
     record({ id: food.id, slug: food.slug, name_ko: food.name_ko, flag: food.flag, country_code: food.country_code, taste_tags: food.taste_tags }, "explored");
+    track("detail_view", { food_id: food.id }); // KPI Hops: 세션 안 연속 상세 진입
     return () => stopSpeaking();
   }, [food.id, food.slug, food.name_ko, food.flag, food.country_code, food.taste_tags]);
 

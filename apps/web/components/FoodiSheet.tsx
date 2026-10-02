@@ -20,6 +20,7 @@ import { btn, IconButton, IconTile, ProgressBar } from "./ui";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
 import { InAppNotice, MicHelp } from "./MicHelp";
 import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
+import { noteFeature } from "@/lib/client/taste";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
 type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean; photo?: PhotoTurn; heard?: string };
@@ -68,6 +69,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setInterim("");
       pauseRadio(); // 푸디가 답하는 동안 라디오는 잠시 멈춤
       if (mode === "voice") questEvent("voice_ask"); // Food Quest: 음성으로 묻기
+      noteFeature(mode); // 취향 엔진: 음성/글 질문 횟수
       const id = ++seq.current;
       const t0 = performance.now(); // KPI: 질의 → 응답 / (음성) 발화 확정 → 첫 음성 재생
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId, heard }]);

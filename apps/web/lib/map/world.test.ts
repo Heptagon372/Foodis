@@ -7,8 +7,8 @@ import { buildWorldMap } from "./world";
 const atlasIds = new Set((atlas as unknown as { objects: { countries: { geometries: { id?: string }[] } } }).objects.countries.geometries.map((g) => g.id));
 
 describe("세계 지도 (F-EXP-05)", () => {
-  it("130개국 모두 폴리곤(world-atlas id) 또는 점 마커가 있다", () => {
-    expect(PREVIEW_COUNTRIES.length).toBe(130);
+  it("150개국 모두 폴리곤(world-atlas id) 또는 점 마커가 있다", () => {
+    expect(PREVIEW_COUNTRIES.length).toBe(150);
     for (const c of PREVIEW_COUNTRIES) {
       const id = ISO_NUMERIC[c.code];
       expect(id, `${c.code} 숫자 코드 없음`).toBeDefined();

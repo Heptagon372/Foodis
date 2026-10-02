@@ -32,3 +32,4 @@ recipe1m,Recipe1M+ / RecipeNLG,dataset,global,excluded,—,비상업 연구,N,pr
 10000recipe,만개의레시피,recipe,KR,excluded,—,공식 API 없음,N,prohibited,제외: 크롤링 금지,—,—,https://www.10000recipe.com,
 foodis_review,FOODIS 검수 출처,internal,internal,adopted,MVP,검수자 기록,Y,store,검수자가 식이 판정에 첨부한 URL(2개 이상 규칙),—,식이 정보: FOODIS 검수 (출처 링크 참조),—,
 foodis_llm_draft,FOODIS AI 초안 (근거 기반),internal,internal,adopted,MVP,자체 작성,Y,store,근거 자료로 AI(Gemini·GPT 등)가 쓴 요약·문화 이야기 (사람 검수 후 노출),—,설명: FOODIS 편집 (근거 출처 별도 표기),—,근거 없는 사실 생성 금지
+openverse,Openverse (Flickr 등 CC 사진),image,global,adopted,MVP,"파일별 (CC0 / PDM / CC BY / BY-SA, 상업 이용 가능만)",Y,store,위키미디어 공용에 맞는 사진이 없을 때 대표 사진 후보 (s02b) — 제목·태그가 음식 이름과 맞는 사진만,"키 없이 하루 200회 · 분당 20회 (등록하면 하루 1만 회)",사진: {artist} / {license} / {source},https://api.openverse.org,"원본(Flickr 등) 페이지 링크와 작가·라이선스를 image_credit 에 저장. NC·ND 는 검색 조건에서 제외"

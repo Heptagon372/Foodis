@@ -1,6 +1,6 @@
 "use client";
 // S7 세계 음식 지도 (F-EXP-05): 나라를 탭하면 아래 카드 → 국가 페이지·푸디. 경로는 서버가 계산해 넘기고(lib/map/world.ts) 여기서는 색칠·탭·확대만.
-// 색(테마 토큰 → 라이트는 흰/연두 지도, 다크는 밤의 숲 지도): 바다 = sunken, 아직 = surface + 리프 테두리, 탐험 = brand, 고른 나라 = lime, 130개국 밖 = line(탭 불가)
+// 색(테마 토큰 → 라이트는 흰/연두 지도, 다크는 밤의 숲 지도): 바다 = sunken, 아직 = surface + 리프 테두리, 탐험 = brand, 고른 나라 = lime, 150개국 밖 = line(탭 불가)
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Country } from "@/lib/content/types";
@@ -13,6 +13,7 @@ import { Icon } from "./icons";
 import { useRadioMiniVisible } from "./RadioMini";
 import { BackLink, Eyebrow, IconButton, ProgressBar, btn, chip } from "./ui";
 import { MicIcon } from "./VoiceButton";
+import { noteFeature, signal } from "@/lib/client/taste";
 
 const CHIPS: [string, string][] = [
   ["all", "전체"],
@@ -72,7 +73,10 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
     if (selected) card.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selected]);
 
-  const pick = (code: string) => setSelected((cur) => (cur === code ? null : code));
+  const pick = (code: string) => {
+    if (selected !== code) (signal("country", null, { cc: code, src: "map" }), noteFeature("map"));
+    setSelected((cur) => (cur === code ? null : code));
+  };
   const onKey = (code: string) => (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -123,7 +127,7 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
 
       <figure className="overflow-hidden rounded-[28px] border border-line bg-sunken shadow-soft" style={{ aspectRatio: map.aspect }}>
         <svg ref={svg} viewBox={map.views.all.join(" ")} className="block size-full touch-manipulation" role="group" aria-label="세계 지도 — 나라를 눌러 보세요">
-          {/* 130개국 밖: 배경으로 한 덩어리 (탭 불가). 다크에서 누를 수 있는 땅보다 밝아 보이지 않게 옅게 */}
+          {/* 150개국 밖: 배경으로 한 덩어리 (탭 불가). 다크에서 누를 수 있는 땅보다 밝아 보이지 않게 옅게 */}
           <path d={map.others} fill="var(--color-line)" fillOpacity={0.6} stroke="var(--color-sunken)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" pointerEvents="none" aria-hidden />
           {map.shapes.map((s) => {
             const c = byCode.get(s.code);

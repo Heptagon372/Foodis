@@ -63,6 +63,9 @@ const ALIASES: [RegExp, string][] = [
   [/카자흐(?!스탄)/g, "카자흐스탄"],
   [/잉글랜드|스코틀랜드|웨일스/g, "영국"],
   [/홀란드/g, "네덜란드"],
+  [/(?<!북\s*)마케도니아/g, "북마케도니아"],
+  [/베닌/g, "베냉"],
+  [/케이프\s*베르데/g, "카보베르데"],
 ];
 export const normalizeAliases = (text: string) => ALIASES.reduce((t, [re, to]) => t.replace(re, to), text);
 

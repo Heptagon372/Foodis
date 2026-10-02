@@ -89,10 +89,26 @@ def route(method, url, params=None, json_body=None):
     if "/api/rest_v1/page/summary/" in url:
         t = u.path.rsplit("/", 1)[-1]
         return {"type": "standard", "title": t, "extract": f"{t} extract.", "content_urls": {"desktop": {"page": f"https://{u.netloc}/wiki/{t}"}}}
+    if "commons.wikimedia.org" in url and p.get("prop") == "categories":  # s02b: 공용 분류로 음식 사진인지 확인
+        return {"query": {"pages": [{"title": t, "categories": [{"title": "Category:Armenian cuisine"}] if "Khorovats" in t else [{"title": "Category:Markets"}]}
+                                    for t in p["titles"].split("|")]}}
+    if "commons.wikimedia.org" in url and p.get("list") == "search":  # s02b 공용 검색: 코로바츠만 맞는 파일이 있다
+        q = p["srsearch"]
+        hits = ["File:Khorovats on the grill.jpg", "File:Armenia locator map.svg"] if "Khorovats" in q else ["File:Matapa market.jpg"]  # 이름은 맞지만 분류가 음식이 아님 → 거절
+        return {"query": {"search": [{"title": t} for t in hits]}}
     if "commons.wikimedia.org" in url:
         return {"query": {"pages": [{"title": t, "missing": True} if "fairuse" in t else
                 {"title": t, "imageinfo": [{"thumburl": "https://upload.wikimedia.org/x.jpg", "descriptionurl": "https://commons.wikimedia.org/wiki/" + t,
                  "extmetadata": {"Artist": {"value": "<a>Someone</a>"}, "LicenseShortName": {"value": commons_license(t)}}}]} for t in p["titles"].split("|")]}}
+    if "api.openverse.org" in url:  # s02b Openverse: 마타파만 제목이 맞는 Flickr 사진, NC 라이선스는 애초에 검색 조건에서 빠진다
+        if "Matapa" in p["q"]:
+            return {"results": [
+                {"source": "flickr", "license": "by", "license_version": "2.0", "width": 1024, "height": 768, "title": "Matapa with rice, Maputo",
+                 "creator": "Traveler", "url": "https://live.staticflickr.com/x.jpg", "foreign_landing_url": "https://www.flickr.com/photos/x/1", "tags": [{"name": "mozambique"}, {"name": "food"}]},
+                {"source": "flickr", "license": "by", "license_version": "2.0", "width": 200, "height": 150, "title": "Matapa", "creator": "Small",
+                 "url": "https://live.staticflickr.com/small.jpg", "foreign_landing_url": "https://www.flickr.com/photos/x/2", "tags": []}]}
+        return {"results": [{"source": "flickr", "license": "by", "license_version": "2.0", "width": 1024, "height": 768, "title": "Street at night",
+                             "creator": "X", "url": "https://live.staticflickr.com/y.jpg", "foreign_landing_url": "https://www.flickr.com/photos/x/3", "tags": []}]}
     if "themealdb.com" in url:
         return {"meals": [{"idMeal": "1", "strMeal": p["s"], "strArea": "X", "strIngredient1": "Onion", "strIngredient2": ""}]} if p.get("s") in ("Injera", "Kimchi") else {"meals": None}
     # ── LLM 3사 (s05 → scripts/llm.py). 요청 모양이 공식 문서와 다르면 여기서 바로 실패시킨다

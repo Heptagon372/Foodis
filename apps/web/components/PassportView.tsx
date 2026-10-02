@@ -16,6 +16,7 @@ import { QuestBoard } from "./QuestBoard";
 import { ThemeToggle } from "./ThemeToggle";
 import { Icon, type IconName } from "./icons";
 import { btn, chip, Eyebrow, IconTile, ProgressBar } from "./ui";
+import { TasteCard } from "./TasteCard";
 
 const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카", oceania: "오세아니아" };
 const STATUS_HEAD: Record<"liked" | "saved" | "tried", { title: string; icon: IconName }> = {
@@ -37,7 +38,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
   const listOf = (st: PassportStatus) => entries.filter(([, e]) => e.statuses.includes(st));
   const continents = Object.entries(CONTINENTS).map(([k, label]) => {
     const all = countries.filter((c) => c.continent_group === k);
-    // 탐험한 나라를 앞에, 나머지는 가나다순 — 130개국이라 대륙별로 나눠 보여 준다
+    // 탐험한 나라를 앞에, 나머지는 가나다순 — 150개국이라 대륙별로 나눠 보여 준다
     const sorted = [...all].sort((a, b) => Number(explored.includes(b.code)) - Number(explored.includes(a.code)) || a.name_ko.localeCompare(b.name_ko, "ko"));
     return { key: k, label, total: all.length, done: all.filter((c) => explored.includes(c.code)).length, countries: sorted };
   });
@@ -142,6 +143,10 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
 
       <Section title="Food DNA">
         <DnaRadar weights={dna} />
+      </Section>
+
+      <Section title="내 취향 분석">
+        <TasteCard countries={countries} />
       </Section>
 
       <Section title="이번 주 퀘스트">

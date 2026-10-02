@@ -1,9 +1,9 @@
-import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { DietKey, DietLevel } from "@/lib/foodi/schema";
 import { DietBadges } from "./DietBadge";
 import { ImageCredit } from "./ImageCredit";
 import { Icon } from "./icons";
+import { TrackLink as Link } from "./TrackLink";
 
 export type CardFood = {
   slug: string;
@@ -15,6 +15,9 @@ export type CardFood = {
   image_url: string | null;
   image_credit?: string | null;
   diet: Record<DietKey, DietLevel>;
+  /** 취향 엔진 신호용 (있으면 카드 클릭을 기록) */
+  country_code?: string;
+  taste_tags?: string[];
 };
 
 /**
@@ -32,11 +35,11 @@ export const accentBg = (accent: string, image?: string | null): CSSProperties =
  * - M: 가로 스크롤 추천 — 안쪽 여백 있는 사진 칸 + 이름 + 한 줄 (레퍼런스 'My Plants' 카드)
  * - S: 연결 행·최근 탐험 칩 — 국기 + 이름
  */
-export function FoodCard({ food, size = "M", reason, action, fluid = false, badge }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode }) {
+export function FoodCard({ food, size = "M", reason, action, fluid = false, badge, src }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode; src?: string }) {
   const href = `/food/${food.slug}`;
   if (size === "S") {
     return (
-      <Link href={href} className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-ink transition active:scale-[0.97]">
+      <Link food={food} src={src} href={href} className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-ink transition active:scale-[0.97]">
         <span aria-hidden>{food.flag}</span>
         {food.name_ko}
       </Link>
@@ -44,7 +47,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
   }
   if (size === "M") {
     return (
-      <Link href={href} className={`card block rounded-[24px] p-1.5 transition active:scale-[0.98] ${fluid ? "w-full" : "w-40"}`}>
+      <Link food={food} src={src} href={href} className={`card block rounded-[24px] p-1.5 transition active:scale-[0.98] ${fluid ? "w-full" : "w-40"}`}>
         <div className={`relative flex items-end justify-between overflow-hidden rounded-[18px] p-2.5 ${food.image_url ? (fluid ? "h-32" : "h-28") : "h-24"}`} style={accentBg(food.accent, food.image_url)}>
           <span className="text-[1.75rem] leading-none drop-shadow-sm" aria-hidden>
             {food.flag}
@@ -53,6 +56,12 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
         </div>
         <div className="px-2 pb-2 pt-2.5">
           <p className="text-[15px] font-semibold leading-tight text-ink">{food.name_ko}</p>
+          {reason && (
+            <p className="mt-1 flex items-center gap-1 text-[12px] font-semibold text-leaf">
+              <Icon name="sparkle" className="size-3.5 shrink-0" />
+              <span className="line-clamp-1">{reason}</span>
+            </p>
+          )}
           {food.summary && <p className="mt-1 line-clamp-2 text-caption leading-snug text-muted">{food.summary}</p>}
         </div>
       </Link>
@@ -60,7 +69,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
   }
   return (
     <article className="card overflow-hidden rounded-[28px]">
-      <Link href={href} className="block">
+      <Link food={food} src={src} href={href} className="block">
         <div className={`relative flex items-end justify-between p-4 ${food.image_url ? "h-48" : "h-32"}`} style={accentBg(food.accent, food.image_url)}>
           {food.country_name && (
             <span className="glass absolute left-3 top-3 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-semibold text-ink">

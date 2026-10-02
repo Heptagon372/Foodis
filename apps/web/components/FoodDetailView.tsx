@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from "@/lib/content/types";
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
 import { startRadio } from "@/lib/client/radio";
+import { noteFeature, signal } from "@/lib/client/taste";
 import { track } from "@/lib/client/track";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
@@ -47,13 +48,24 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   useEffect(() => {
     record({ id: food.id, slug: food.slug, name_ko: food.name_ko, flag: food.flag, country_code: food.country_code, taste_tags: food.taste_tags }, "explored");
     track("detail_view", { food_id: food.id }); // KPI Hops: 세션 안 연속 상세 진입
-    return () => stopSpeaking();
+    // 취향 엔진: 상세 열기 + 머문 시간 (떠날 때 한 번)
+    const sf = { slug: food.slug, country_code: food.country_code, taste_tags: food.taste_tags };
+    signal("view", sf);
+    const t0 = Date.now();
+    return () => {
+      stopSpeaking();
+      signal("dwell", sf, { ms: Date.now() - t0 });
+    };
   }, [food.id, food.slug, food.name_ko, food.flag, food.country_code, food.taste_tags]);
+  const sf = { slug: food.slug, country_code: food.country_code, taste_tags: food.taste_tags };
+  const askFoodi = (o: Parameters<typeof open>[0]) => (signal("ask", sf), open(o));
 
   const tell = () => {
     if (telling) return (stopSpeaking(), setTelling(false));
     const text = food.culture_story ?? food.summary;
     if (!text) return;
+    signal("listen", sf);
+    noteFeature("listen");
     setTelling(true);
     void speak(text, () => setTelling(false));
   };
@@ -71,7 +83,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   const mains = food.ingredients.filter((i) => i.role === "main").map((i) => i.name_ko);
   const stats: Stat[] = [];
   if (food.cooking_method) stats.push({ icon: "pot", label: "조리법", value: METHOD_LABEL[food.cooking_method] ?? food.cooking_method });
-  if (food.taste_tags.length) stats.push({ icon: "flame", label: "맛", value: food.taste_tags.map((t) => TASTE_LABEL[t] ?? t).join(" · ") });
+  if (food.taste_tags.length) stats.push({ icon: "flame", label: food.summary ? "맛" : "분류 (이름으로 추정)", value: food.taste_tags.map((t) => TASTE_LABEL[t] ?? t).join(" · ") });
   if (mains.length) stats.push({ icon: "carrot", label: "주재료", value: mains.join(" · ") });
   stats.push({ icon: "pin", label: "어디서", value: `${food.country.name_ko}${food.region_in_country ? ` · ${food.region_in_country}` : ""}` });
 
@@ -101,10 +113,12 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               </span>
               <Icon name="next" className="size-4 shrink-0 text-muted" />
             </Link>
-            <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className={`${btn("outline", "sm")} shrink-0`} aria-label={`${food.name_ko} 이야기부터 라디오로 듣기`}>
-              <Icon name="headphones" className="size-4 text-leaf" />
-              라디오로 듣기
-            </button>
+            {food.summary && (
+              <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className={`${btn("outline", "sm")} shrink-0`} aria-label={`${food.name_ko} 이야기부터 라디오로 듣기`}>
+                <Icon name="headphones" className="size-4 text-leaf" />
+                라디오로 듣기
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <h1 className="text-h1 font-bold text-ink">{food.name_ko}</h1>
@@ -146,7 +160,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               );
             })}
           </div>
-          <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, listen: true })} className={`${btn("primary", "md")} w-full`} aria-label="이 음식에 대해 푸디에게 묻기">
+          <button type="button" onClick={() => askFoodi({ contextFoodId: food.id, contextName: food.name_ko, listen: true })} className={`${btn("primary", "md")} w-full`} aria-label="이 음식에 대해 푸디에게 묻기">
             <MicIcon className="size-5" />
             푸디에게 묻기
           </button>
@@ -154,13 +168,25 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
 
         {/* 길게 스크롤해도 탭을 바로 바꿀 수 있게 위에 붙는다 (유리 트랙이라 아래 내용이 비친다) */}
         <div className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-10">
-          <SegTabs tabs={TABS} value={tab} onChange={setTab} label="음식 정보" />
+          <SegTabs tabs={TABS} value={tab} onChange={(t) => (setTab(t), t !== "기본" && (signal("tab", sf, { src: t }), noteFeature(`tab:${t}`)))} label="음식 정보" />
         </div>
 
         <div className="min-h-48 animate-rise space-y-4" key={tab} role="tabpanel" aria-label={tab}>
           {tab === "기본" && (
             <>
-              {food.summary && <p className="text-[17px] leading-relaxed text-ink">{food.summary}</p>}
+              {food.summary ? (
+                <p className="text-[17px] leading-relaxed text-ink">{food.summary}</p>
+              ) : (
+                // 자동 후보 음식: 소개 글 전이라 확인된 것(이름·나라·사진)만
+                <div className="card flex items-start gap-3 rounded-3xl p-4">
+                  <IconTile icon="book" size="sm" />
+                  <p className="min-w-0 text-[15px] leading-relaxed text-ink">
+                    {food.country.name_ko}의 <b>{food.name_ko}</b>
+                    {food.name_en !== food.name_ko && <span className="text-muted"> ({food.name_en})</span>}
+                    <span className="mt-1 block text-sm text-muted">소개 글은 출처를 확인하며 준비하고 있어요. 지금은 이름·나라·사진만 확인된 음식이에요.</span>
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 {stats.map((s) => (
                   <div key={s.label} className="card flex items-start gap-3 rounded-3xl p-3.5 odd:last:col-span-2">
@@ -270,7 +296,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               </Link>
               <RelationRow label={`같은 나라 · ${food.country.name_ko}`} foods={food.sameCountry} />
               {!byType.length && !food.sameCountry.length && <p className="text-sm text-muted">아직 검수된 연결이 없어요.</p>}
-              <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, question: "비슷한 음식 있어?" })} className={`${btn("soft", "md")} w-full`}>
+              <button type="button" onClick={() => askFoodi({ contextFoodId: food.id, contextName: food.name_ko, question: "비슷한 음식 있어?" })} className={`${btn("soft", "md")} w-full`}>
                 <Icon name="sparkle" className="size-5" />
                 푸디에게 비슷한 음식 물어보기
               </button>

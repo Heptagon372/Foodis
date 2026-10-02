@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Country } from "@/lib/content/types";
 import { drawShareCard, shareOrDownload } from "@/lib/client/share-card";
 import { track } from "@/lib/client/track";
+import { noteFeature } from "@/lib/client/taste";
 import { Icon } from "./icons";
 import { btn } from "./ui";
 
@@ -28,6 +29,7 @@ export function ShareCardButton({ explored, countries, foodCount, dna }: { explo
       if (img) URL.revokeObjectURL(img.url);
       setImg({ url: URL.createObjectURL(blob), blob });
       track("share_card", { countries: explored.length });
+      noteFeature("share");
     } catch (e) {
       setMsg((e as Error).message);
     } finally {

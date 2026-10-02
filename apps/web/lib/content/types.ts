@@ -26,6 +26,8 @@ export type FoodSummary = {
   image_credit: string | null;
   diet: Record<DietKey, DietLevel>;
   allergens: string[];
+  /** 그 나라 안에서의 유명도 순위 (1 = 가장 대표적인 음식). 취향 엔진의 '대표 음식 먼저' 규칙에 쓴다 */
+  fame_rank?: number | null;
 };
 
 export type RelationType = "similar_taste" | "shares_ingredient" | "same_technique" | "historical_link" | "regional_variant";

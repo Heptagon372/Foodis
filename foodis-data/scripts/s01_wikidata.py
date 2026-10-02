@@ -67,6 +67,32 @@ GROUP BY ?item ?labelKo ?labelEn ?origin ?originCode ?image
 """
 
 
+# 상위 분류 이름 (영문) — "pho → noodle soup → soup" 처럼 따라 올라가 맛 태그·취향 엔진의 묶음 근거로 쓴다
+CLASS_TMPL = """
+SELECT ?item (GROUP_CONCAT(DISTINCT ?l; separator="|") AS ?classes) WHERE {
+  VALUES ?item { %s }
+  ?item (wdt:P31|wdt:P279)/wdt:P279* ?c .
+  ?c rdfs:label ?l FILTER(LANG(?l) = "en")
+}
+GROUP BY ?item
+"""
+
+
+def class_labels(http: Http, qids: list[str]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for batch in chunks(qids, 25):
+        try:
+            res = http.get(SPARQL, params={"query": CLASS_TMPL % " ".join(f"wd:{q}" for q in batch), "format": "json"},
+                           headers={"Accept": "application/sparql-results+json"})
+        except Exception as e:  # 타임아웃 등 — 태그는 보조 정보라 건너뛴다
+            print(f"  ⚠ 상위 분류 조회 실패 ({len(batch)}건): {e}")
+            continue
+        for b in res.get("results", {}).get("bindings", []):
+            if "item" in b and "classes" in b:
+                out[b["item"]["value"].rsplit("/", 1)[-1]] = sorted({x for x in b["classes"]["value"].split("|") if x})
+    return out
+
+
 def parse_sparql(res: dict) -> dict[str, dict]:
     """SPARQL JSON → {qid: {...}}. 원산지가 여러 개면 리스트로 합친다."""
     out: dict[str, dict] = {}
@@ -117,8 +143,10 @@ def main() -> None:
         res = http.get(SPARQL, params={"query": SPARQL_TMPL % " ".join(f"wd:{q}" for q in batch), "format": "json"},
                        headers={"Accept": "application/sparql-results+json"})
         wd.update(parse_sparql(res))
+    classes = class_labels(http, qids)
     for slug, r in result.items():
         r.update(wd.get(r["qid"], {}))
+        r["class_labels"] = classes.get(r["qid"], [])
         if "Wikimedia disambiguation page" in r.get("instance_of", []):
             r["needs_review"] = f"'{r.get('src_title')}' 는 동음이의어 문서 → dish_targets.csv 제목 힌트 수정 필요"
         if r.get("origin_codes") and r["target_country"] not in r["origin_codes"]:

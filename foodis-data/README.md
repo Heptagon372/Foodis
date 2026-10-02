@@ -1,6 +1,6 @@
 # foodis-data — FOODIS 음식·문화 DB 구축 키트
 
-세계 130개국 280개 음식(심화 30개국 × 6 + 확장 100개국 × 1)의 **근거 수집 → LLM 초안 → 사람 검수 → Supabase 적재 → 임베딩**까지 한 번에 돌리는 파이프라인.
+세계 150개국 약 2,100개 음식(사람이 고른 대표 음식 298 + Wikidata·위키백과 분류에서 고른 자동 후보 1,800여 개)의 **목표 선정 → 근거·사진 수집 → LLM 초안 → 사람 검수 → Supabase 적재 → 임베딩**까지 한 번에 돌리는 파이프라인.
 원칙은 기획 문서 04·07과 같다: **DB가 사실의 기준, AI는 근거 안에서만 초안을 쓴다, 식이 정보는 사람이 확정한다.**
 
 ## 폴더
@@ -8,16 +8,19 @@
 ```
 foodis-data/                         (스키마는 루트 ../supabase/migrations/ 에서 앱과 공유: 0001_init · 0002_data_sources)
 ├─ data/seed/
-│   ├─ data_sources.csv       데이터 소스 33개 (판정·저장 정책·라이선스·표기 문구) = DB data_sources
-│   ├─ countries.csv          130개국 (ISO 코드, 국기, 대륙 그룹 5개, Accent 컬러). 이름은 CLDR 한국어 표기
-│   ├─ dish_targets.csv       280개 음식 목표 리스트 (위키백과 제목 힌트, 기원 메모, 데모 필수 16개 표시)
+│   ├─ data_sources.csv       데이터 소스 34개 (판정·저장 정책·라이선스·표기 문구) = DB data_sources
+│   ├─ countries.csv          150개국 (ISO 코드, 국기, 대륙 그룹 5개, Accent 컬러). 이름은 CLDR 한국어 표기
+│   ├─ dish_targets.csv       음식 목표 리스트 (위키백과 제목 힌트, 기원 메모, 데모 필수 16개 표시)
+│   │                         origin_note 가 "자동 후보" 로 시작하는 행은 s00 이 만든다 (다시 돌리면 자동 행만 갈아 끼움)
+│   ├─ dish_names_ko.csv      자동 후보의 한국어 이름 (위키백과 한국어 문서 제목보다 우선)
+│   ├─ dish_excludes.csv      자동 후보 제외 목록 (음식 아님 · 상표 · 술 · 다른 나라 음식 — country_code 가 있으면 그 나라 배정만 막음)
 │   │                         제목 힌트는 영어 위키 기준. 영어 문서가 없거나 엉뚱하면 "es:Majadito" 처럼 언어를 붙인다 (en·ko·es·pt·fr)
 │   ├─ relation_themes.csv    역사·조리법 테마 (만두 로드, 커피 하우스, 필라프 계열 …)
 │   └─ image_overrides.csv    대표 이미지 교체 지정 (slug, 공용 파일명, 근거). 다른 나라 사진·비자유 라이선스 대신 쓸 파일
 ├─ data/raw/    ← s01~s04 수집 결과 (git 제외)
 ├─ data/draft/  ← s05~s07 초안·검수 시트
 ├─ data/final/  ← 검수 승인본 (적재 대상)
-├─ scripts/     s01 ~ s09 + llm.py (LLM 제공자 선택: Gemini · GPT · Claude)
+├─ scripts/     s00 ~ s09 (+ s02b 사진 보강) + llm.py (LLM 제공자 선택: Gemini · GPT · Claude)
 └─ tests/       가짜 HTTP로 전체 파이프라인 E2E 검증 (네트워크·API 키 불필요)
 ```
 
@@ -29,17 +32,22 @@ cp .env.example .env            # 키 입력
 
 # 0) Supabase 프로젝트 생성 → SQL Editor 에 ../supabase/migrations/0001_init.sql, 0002_data_sources.sql 순서로 실행
 
+# 0) 목표 확장 (API 키 불필요) — 나라별 「○○ cuisine」 분류(PetScan) + Wikidata 로 후보를 모아 유명한 순서로
+python scripts/s00_expand_targets.py --total 2100
+
 # 1) 근거 수집 (API 키 불필요)
 python scripts/s01_wikidata.py      # 위키백과 제목 → Wikidata QID, 원산지·재료·이미지
 python scripts/s02_wikipedia.py     # 위키백과 ko/en 요약 + 공용 이미지 작가·라이선스
                                     #   이미지: 교체 지정 → P18 → 문서 대표 이미지 순, 자유 라이선스(CC0·PD·CC BY·BY-SA)만
+python scripts/s02b_images.py       # 사진 보강: 사진이 없거나 이름과 안 맞는 음식 → 공용 검색 → Openverse(Flickr 등 CC)
+                                    #   OPENVERSE_CLIENT_ID/SECRET 이 없으면 하루 200회 — 내일 다시 돌리면 이어서 찾는다
 python scripts/s03_themealdb.py     # (선택) 재료 교차검증
 python scripts/s04_hansik800.py     # (선택) 한식 표기 표준 — data/raw/hansik800.xlsx 필요
 
 # 2) 초안 (기본 GEMINI_API_KEY — 아래 "LLM 제공자 고르기")
 python scripts/s05_llm_draft.py --dry-run   # 비용 추정 + 제공자별 비교표 (키 불필요, 호출 안 함)
 python scripts/s05_llm_draft.py --demo      # 데모 필수 16건만 먼저 → 품질 확인
-python scripts/s05_llm_draft.py --yes       # 남은 전체. --yes 없으면 추정만 보여 주고 멈춤(실수로 돈 쓰지 않게)
+python scripts/s05_llm_draft.py --yes       # 남은 전체(약 2,100건). --yes 없으면 추정만 보여 주고 멈춤(실수로 돈 쓰지 않게)
                                     # 중단돼도 이어서 실행됨. 특정 음식만: s05_llm_draft.py kimchi injera
                                     # 스키마 오류로 '검수 필요' 표시된 것만 더 똑똑한 모델로: --needs-review --smart
 python scripts/s06_relations.py     # 관계 후보 + relations_review.csv (규칙 기반, LLM 안 씀)
@@ -96,7 +104,7 @@ python -m pytest tests -q   # 오프라인 E2E: s01→s09 전 구간, 검수 규
 
 ## 라이선스 메모
 
-전체 33개 소스 판정은 `data/seed/data_sources.csv` (= DB `data_sources`, ../supabase/migrations/0002). 모든 `sources` 레코드는 `data_source_id`로 연결되고, 실시간 전용·저장 금지 소스(카카오 로컬 등)는 트리거가 저장을 막는다. s08 실행 시 CSV 내용으로 data_sources 를 동기화한다.
+전체 34개 소스 판정은 `data/seed/data_sources.csv` (= DB `data_sources`, ../supabase/migrations/0002). 모든 `sources` 레코드는 `data_source_id`로 연결되고, 실시간 전용·저장 금지 소스(카카오 로컬 등)는 트리거가 저장을 막는다. s08 실행 시 CSV 내용으로 data_sources 를 동기화한다.
 
 
 | 출처 | 라이선스 | 우리 쓰임 |
@@ -104,25 +112,26 @@ python -m pytest tests -q   # 오프라인 E2E: s01→s09 전 구간, 검수 규
 | Wikidata | CC0 | 원산지·재료·이미지 파일명 (구조 데이터) |
 | 위키백과 본문 | CC BY-SA 4.0 | LLM 초안의 근거 자료. 문장 그대로 쓰지 않고 sources 에 URL 기록 |
 | 위키미디어 공용 이미지 | 파일별 (대부분 CC BY-SA) | image_credit 에 작가·라이선스·원본 링크 표시 필수 |
+| Openverse (Flickr 등) | 파일별 (CC0 · PDM · CC BY · BY-SA 만) | 공용에 맞는 사진이 없을 때. image_credit 에 작가·라이선스·원본 페이지 |
 | TheMealDB | 테스트 키는 개발·교육용, 상용은 유료 | 재료 교차검증만. 본문·이미지 저장 안 함 |
 | 한식진흥원 800선 | 공공데이터, 이용 제한 없음 | 한국 음식 영문 표기 표준 |
 
-## 비용 (280건 기준 추정)
+## 비용 (약 2,100건 기준 추정)
 
-s05 초안: 실제 수집한 근거로 `s05_llm_draft.py --dry-run` 을 돌린 값. 1건당 입력 ~1.5k 토큰(시스템 프롬프트 + 스키마 + 근거), 출력은 보이는 답 ~1.5k + 생각 ~1.5k 로 넉넉히 잡았다(Anthropic 은 생각을 켜지 않아 1.5k). 실제 청구는 실행 끝에 토큰 수와 함께 출력된다.
+s05 초안: 사람이 고른 280건의 실제 근거로 `s05_llm_draft.py --dry-run` 을 돌린 값을 건수에 비례해 늘렸다. 1건당 입력 ~1.5k 토큰(시스템 프롬프트 + 스키마 + 근거), 출력은 보이는 답 ~1.5k + 생각 ~1.5k 로 넉넉히 잡았다(Anthropic 은 생각을 켜지 않아 1.5k). 실제 청구는 실행 끝에 토큰 수와 함께 출력된다.
 
-| 제공자 · 등급 | 모델 | 가격 (입력 / 출력, USD per 1M) | 280건 표준 | 280건 Flex(50%) |
-|---|---|---|---|---|
-| gemini draft (기본) | gemini-3.5-flash-lite | $0.30 / $2.50 | **약 $2.2** | 약 $1.1 |
-| gemini smart | gemini-3.8-flash | $0.75 / $3.75 (2027-01-01 부터 $1.50 / $7.50) | 약 $3.5 | 약 $1.7 |
-| openai draft | gpt-6-luna | $0.10 / $0.50 | **약 $0.5** | 약 $0.2 |
-| openai smart | gpt-6.1-sol | $2.00 / $10.00 | 약 $9.2 | 약 $4.6 |
-| anthropic draft | claude-haiku-4-5 | $1.00 / $5.00 | 약 $2.5 | (Flex 없음) |
-| anthropic smart | claude-sonnet-5 | $2.00 / $10.00 | 약 $5.0 | (Flex 없음) |
+| 제공자 · 등급 | 모델 | 가격 (입력 / 출력, USD per 1M) | 사람이 고른 298건 | 전체 2,147건 표준 | 전체 Flex(50%) |
+|---|---|---|---|---|---|
+| gemini draft (기본) | gemini-3.5-flash-lite | $0.30 / $2.50 | 약 $2.3 | **약 $17** | 약 $8.5 |
+| gemini smart | gemini-3.8-flash | $0.75 / $3.75 (2027-01-01 부터 $1.50 / $7.50) | 약 $3.7 | 약 $27 | 약 $13 |
+| openai draft | gpt-6-luna | $0.10 / $0.50 | 약 $0.5 | **약 $4** | 약 $2 |
+| openai smart | gpt-6.1-sol | $2.00 / $10.00 | 약 $9.8 | 약 $71 | 약 $35 |
+| anthropic draft | claude-haiku-4-5 | $1.00 / $5.00 | 약 $2.7 | 약 $19 | (Flex 없음) |
+| anthropic smart | claude-sonnet-5 | $2.00 / $10.00 | 약 $5.3 | 약 $38 | (Flex 없음) |
 
 - 권장 순서: `--demo` 16건(약 $0.1)으로 draft 모델 품질 확인 → 괜찮으면 `--yes`(필요하면 `--flex`) → 검수에서 걸린 것만 `--needs-review --smart`.
 - Batch API(Gemini·OpenAI·Anthropic 모두 50%)는 이 스크립트에서 쓰지 않는다. 같은 할인을 동기 호출로 받는 Flex 로 대신한다.
 - Gemini 무료 등급(결제 미설정 키)이면 gemini-3.5-flash-lite·3.8-flash 도 $0 이다. 대신 분당·일일 요청 한도가 낮아(한도는 AI Studio 에서 확인) 429 가 나면 응답의 retryDelay 만큼 기다렸다 재시도하고, 입력이 제품 개선에 쓰일 수 있다. 다 못 끝내면 다음 날 그대로 다시 실행하면 이어서 한다.
-- s09 임베딩: ~11만 토큰 → openai `text-embedding-3-small`($0.02/1M) 약 $0.002, gemini `gemini-embedding-2`($0.20/1M) 약 $0.02
+- s09 임베딩: 280건 ~11만 토큰 → 전체 약 85만 토큰 → openai `text-embedding-3-small`($0.02/1M) 약 $0.02, gemini `gemini-embedding-2`($0.20/1M) 약 $0.17
 - s01~s04: 무료 (Wikimedia는 연락처가 있는 User-Agent 필수)
 - 가격 출처 (확인일 2026-10-02): [Gemini](https://ai.google.dev/gemini-api/docs/pricing) · [OpenAI](https://developers.openai.com/api/docs/pricing) · [Anthropic](https://platform.claude.com/docs/en/about-claude/pricing). 바뀌면 `scripts/llm.py` 의 `PRICES` 만 고치면 된다.

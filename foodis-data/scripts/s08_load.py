@@ -65,7 +65,8 @@ def build_payloads(countries: list[dict], final: dict) -> dict[str, list[dict]]:
         if f.get("wikidata_qid"):
             src("origin,ingredients", f"https://www.wikidata.org/wiki/{f['wikidata_qid']}", "Wikidata", "wikidata", "CC0")
         if f.get("image_page"):
-            src("image", f["image_page"], "Wikimedia Commons", "wikimedia_commons", (f.get("image_credit") or "").split(" / ")[1] if " / " in (f.get("image_credit") or "") else None)
+            ov = f.get("image_source") == "openverse"  # s02b: Flickr 등 Openverse 사진
+            src("image", f["image_page"], "Openverse" if ov else "Wikimedia Commons", "openverse" if ov else "wikimedia_commons", (f.get("image_credit") or "").split(" / ")[1] if " / " in (f.get("image_credit") or "") else None)
         if "hansik800" in f.get("evidence_used", []):
             src("name_en,summary", "https://www.data.go.kr/data/15129784/fileData.do", "한식진흥원 한식메뉴 외국어표기 800선", "hansik800", "공공데이터")
         if "themealdb" in f.get("evidence_used", []):

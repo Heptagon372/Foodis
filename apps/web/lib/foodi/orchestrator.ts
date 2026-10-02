@@ -141,7 +141,7 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
       text: req.text,
     });
     foods = r.foods;
-    // 지도에 있는 나라지만 검수된 음식이 아직 없을 때 (130개국 중 일부): 같은 대륙에서 대신 고른다
+    // 지도에 있는 나라지만 검수된 음식이 아직 없을 때 (150개국 중 일부): 같은 대륙에서 대신 고른다
     const emptyCountry = !foods.length && intentRes.countryCode && !targetId && (intent === "recommend" || intent === "filter_by_diet") ? countries.find((c) => c.code === intentRes.countryCode) : undefined;
     const near = emptyCountry
       ? (await retrieve(repo, { intent, diet: intentRes.diet, countryCode: null, continent: emptyCountry.continent_group, targetId: null, ctx, seen: req.seen_food_ids, embedding, text: req.text })).foods

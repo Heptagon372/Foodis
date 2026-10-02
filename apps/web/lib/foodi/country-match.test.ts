@@ -5,7 +5,7 @@ import { extractContinent, findCountry } from "./intent";
 const C = PREVIEW_COUNTRIES.map(({ code, name_ko, name_en, continent_group }) => ({ code, name_ko, name_en, continent_group }));
 const f = (t: string) => findCountry(t, C);
 
-describe("국가 찾기 (130개국)", () => {
+describe("국가 찾기 (150개국)", () => {
   it("새로 추가한 나라 · 별칭", () => {
     expect(f("몽골 음식 추천해줘")).toBe("MN");
     expect(f("가나 음식 알려줘")).toBe("GH");
@@ -19,6 +19,17 @@ describe("국가 찾기 (130개국)", () => {
     expect(f("보스니아 음식")).toBe("BA");
     expect(f("스코틀랜드 음식")).toBe("GB");
     expect(f("what do people eat in Oman")).toBe("OM");
+  });
+
+  it("150개국 확장: 새로 넣은 20개국 · 별칭", () => {
+    expect(f("북한 음식 뭐가 있어?")).toBe("KP");
+    expect(f("한국 음식")).toBe("KR");
+    expect(f("마케도니아 요리")).toBe("MK");
+    expect(f("북마케도니아 음식")).toBe("MK");
+    expect(f("케이프베르데 음식")).toBe("CV");
+    expect(f("모리셔스 디저트")).toBe("MU");
+    expect(f("슬로베니아 전통 음식")).toBe("SI");
+    expect(f("what do people eat in Suriname")).toBe("SR");
   });
 
   it("짧은 이름이 일반 단어 안에 있으면 나라로 보지 않는다", () => {

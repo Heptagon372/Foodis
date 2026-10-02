@@ -168,7 +168,7 @@ describe("아이콘 · 문구 (디자인 v2)", () => {
 });
 
 describe("대륙 표", () => {
-  it("시드 130개국과 같다", () => {
+  it("시드 150개국과 같다", () => {
     expect(Object.keys(CONTINENT_OF)).toHaveLength(PREVIEW_COUNTRIES.length);
     for (const c of PREVIEW_COUNTRIES) expect(CONTINENT_OF[c.code], c.code).toBe(c.continent_group);
   });

@@ -34,7 +34,12 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
     <main className="space-y-8 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between">
         <Wordmark />
-        <span className="text-sm font-semibold text-green-800">📕 Passport</span>
+        <div className="flex items-center gap-2">
+          <Link href="/map" className="rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-green-800 transition active:scale-95">
+            🗺 지도
+          </Link>
+          <span className="text-sm font-semibold text-green-800">📕 Passport</span>
+        </div>
       </header>
       {preview && <PreviewBanner />}
 

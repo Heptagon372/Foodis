@@ -40,7 +40,7 @@ export async function crawlKakaoReviews(placeId: string): Promise<KakaoPlaceRevi
     const rating = scoreSet?.average_score ?? null;
 
     const rawReviews: KakaoReview[] = [];
-    for (const r of (data?.reviews ?? []).slice(0, 5)) {
+    for (const r of (data?.reviews ?? []).slice(0, 20)) {
       rawReviews.push({
         username: r.meta?.owner?.nickname ?? "익명",
         rating: r.star_rating ?? 0,

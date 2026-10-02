@@ -61,7 +61,7 @@ async function fetchNaverReviews(naverId: string): Promise<Omit<NaverPlaceReview
       headers: HEADERS,
       body: JSON.stringify([{
         operationName: "getVisitorReviews",
-        variables: { input: { businessId: naverId, businessType: "restaurant", page: 1, size: 5, isPhotoUsed: false, item: "0" } },
+        variables: { input: { businessId: naverId, businessType: "restaurant", page: 1, size: 20, isPhotoUsed: false, item: "0" } },
         query: `query getVisitorReviews($input: VisitorReviewsInput) {
           visitorReviews(input: $input) {
             items { id rating author { nickname } body created }
@@ -92,7 +92,7 @@ async function fetchNaverReviews(naverId: string): Promise<Omit<NaverPlaceReview
       if (ratings.length) rating = ratings.reduce((a: number, r) => a + (r.rating ?? 0), 0) / ratings.length;
     }
 
-    const reviews: NaverReview[] = (vr.items ?? []).slice(0, 5).map((r: { author?: { nickname?: string }; rating?: number; created?: string; body?: string }) => ({
+    const reviews: NaverReview[] = (vr.items ?? []).slice(0, 20).map((r: { author?: { nickname?: string }; rating?: number; created?: string; body?: string }) => ({
       username: r.author?.nickname ?? "익명",
       rating: r.rating ?? 0,
       date: (r.created ?? "").split("T")[0],

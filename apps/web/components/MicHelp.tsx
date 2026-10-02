@@ -1,7 +1,8 @@
 "use client";
 // 마이크 권한 거부 · 인앱 브라우저 안내 (01 UI 설계 §6). 막다른 화면 금지: 항상 "글로 물어보기"가 함께 있다.
 import { useState } from "react";
-import { MicIcon } from "./VoiceButton";
+import { Icon } from "./icons";
+import { btn, IconTile } from "./ui";
 import { detectEnv, externalOpenUrl, IN_APP_LABEL, micSteps } from "@/lib/client/browser-env";
 
 export function MicHelp({ reason, onType }: { reason: "mic_denied" | "unsupported"; onType: () => void }) {
@@ -28,36 +29,43 @@ export function MicHelp({ reason, onType }: { reason: "mic_denied" | "unsupporte
   };
 
   return (
-    <div className="animate-rise rounded-2xl border border-line bg-surface p-4" role="status">
+    <div className="card animate-rise rounded-3xl p-4" role="status">
       <div className="flex items-start gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-mint-100 text-green-800" aria-hidden>
-          <MicIcon className="size-5" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-semibold text-charcoal">{title}</p>
-          <p className="mt-0.5 text-caption text-muted">아래 순서로 켜거나, 지금은 글로 물어봐도 똑같이 답해요.</p>
+        <IconTile icon="mic" tone="soft" />
+        <div className="min-w-0 pt-0.5">
+          <p className="font-semibold text-ink">{title}</p>
+          <p className="mt-0.5 text-caption text-ink-soft">아래 순서로 켜거나, 지금은 글로 물어봐도 똑같이 답해요.</p>
         </div>
       </div>
-      <ol className="mt-3 space-y-1.5">
+      <ol className="mt-4 space-y-2.5">
         {steps.map((s, i) => (
-          <li key={s} className="flex gap-2.5 text-sm">
-            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-green-800 text-[11px] font-semibold text-ivory">{i + 1}</span>
-            <span className="text-charcoal/85">{s}</span>
+          <li key={s} className="flex items-start gap-2.5 text-sm">
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-on-brand">{i + 1}</span>
+            <span className="pt-0.5 text-ink">{s}</span>
           </li>
         ))}
       </ol>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={onType} className="rounded-full bg-green-800 px-4 py-2 text-sm font-semibold text-ivory">
+        <button type="button" onClick={onType} className={btn("primary", "sm")}>
+          <Icon name="edit" className="size-4" />
           글로 물어보기
         </button>
         {href && (
-          <a href={href} className="rounded-full border border-green-800/30 px-4 py-2 text-sm font-semibold text-green-800">
+          <a href={href} className={btn("outline", "sm")}>
+            <Icon name="globe" className="size-4 text-leaf" />
             {env.inApp === "kakaotalk" ? "기본 브라우저로 열기" : "Chrome 으로 열기"}
           </a>
         )}
         {env.inApp && (
-          <button type="button" onClick={copy} className="rounded-full border border-line px-4 py-2 text-sm text-charcoal/80">
-            {copied ? "복사했어요 ✓" : "링크 복사"}
+          <button type="button" onClick={copy} className={btn("ghost", "sm")}>
+            {copied ? (
+              <>
+                <Icon name="check" className="size-4 text-leaf" />
+                복사했어요
+              </>
+            ) : (
+              "링크 복사"
+            )}
           </button>
         )}
       </div>
@@ -71,15 +79,18 @@ export function InAppNotice() {
   if (!env.inApp) return null;
   const href = typeof window !== "undefined" ? externalOpenUrl(env, window.location.href) : null;
   return (
-    <p className="rounded-xl bg-mint-100/70 px-3 py-2 text-caption text-green-800">
-      {IN_APP_LABEL[env.inApp]} 안에서는 음성이 안 될 수 있어요.{" "}
-      {href ? (
-        <a href={href} className="font-semibold underline underline-offset-2">
-          브라우저로 열기
-        </a>
-      ) : (
-        "⋯ 메뉴에서 ‘Safari로 열기’를 눌러 주세요."
-      )}
+    <p className="flex items-start gap-2 rounded-2xl bg-lime-soft px-3.5 py-2.5 text-caption text-ink">
+      <Icon name="info" className="mt-px size-4 shrink-0 text-leaf" />
+      <span className="min-w-0">
+        {IN_APP_LABEL[env.inApp]} 안에서는 음성이 안 될 수 있어요.{" "}
+        {href ? (
+          <a href={href} className="font-semibold text-leaf underline underline-offset-2">
+            브라우저로 열기
+          </a>
+        ) : (
+          "점 세 개(더보기) 메뉴에서 ‘Safari로 열기’를 눌러 주세요."
+        )}
+      </span>
     </p>
   );
 }

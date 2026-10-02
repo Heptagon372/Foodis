@@ -1,5 +1,5 @@
 "use client";
-// 사진으로 물어보기 (F-VIS-01): 📷 → 브라우저에서 1024px JPEG 로 줄여 → /api/foodi/vision → DB 에 있는 닮은 음식 카드.
+// 사진으로 물어보기 (F-VIS-01): 카메라 버튼 → 브라우저에서 1024px JPEG 로 줄여 → /api/foodi/vision → DB 에 있는 닮은 음식 카드.
 // 상태는 FoodiSheet 의 대화 피드(turns)에 그대로 얹는다 — 시트는 onTurn 으로 받은 PhotoTurn 을 같은 key 로 갱신만 한다.
 // 사진은 이 기기 메모리(썸네일)에만 있고, 서버는 인식 후 버린다.
 import Link from "next/link";
@@ -8,6 +8,8 @@ import { getAiPrefs } from "@/lib/client/ai-prefs";
 import type { Confidence, VisionResponse } from "@/lib/foodi/vision";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
+import { Icon, type IconName } from "./icons";
+import { btn } from "./ui";
 
 export type PhotoTurn = { key: number; thumb: string; status: "pending" | "done" | "error"; res?: VisionResponse; error?: string };
 
@@ -56,7 +58,7 @@ async function recognize(dataUrl: string): Promise<VisionResponse> {
   return data as VisionResponse;
 }
 
-/** 입력창 옆 📷 버튼. 모바일은 바로 후면 카메라, 데스크톱은 파일 선택 */
+/** 입력창 안 카메라 버튼 (44px). 모바일은 바로 후면 카메라, 데스크톱은 파일 선택 */
 export function PhotoAskButton({ onTurn, disabled }: { onTurn: (t: PhotoTurn) => void; disabled?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
@@ -86,11 +88,8 @@ export function PhotoAskButton({ onTurn, disabled }: { onTurn: (t: PhotoTurn) =>
 
   return (
     <>
-      <button type="button" onClick={() => input.current?.click()} disabled={disabled} aria-label="사진으로 물어보기" title="사진으로 물어보기" className="-ml-1.5 grid size-8 shrink-0 place-items-center rounded-full text-green-800 transition hover:bg-mint-100 active:scale-95 disabled:opacity-40">
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
-          <circle cx="12" cy="13" r="3.5" />
-        </svg>
+      <button type="button" onClick={() => input.current?.click()} disabled={disabled} aria-label="사진으로 물어보기" title="사진으로 물어보기" className="grid size-11 shrink-0 place-items-center rounded-full text-leaf transition hover:bg-lime-soft active:scale-95 disabled:opacity-40">
+        <Icon name="camera" className="size-[22px]" />
       </button>
       <input
         ref={input}
@@ -107,10 +106,11 @@ export function PhotoAskButton({ onTurn, disabled }: { onTurn: (t: PhotoTurn) =>
   );
 }
 
-const CONFIDENCE: Record<Confidence, [string, string]> = {
-  high: ["많이 닮았어요", "bg-mint-100 text-green-800"],
-  medium: ["꽤 닮았어요", "bg-line/60 text-charcoal/80"],
-  low: ["조금 닮았어요", "border border-line text-muted"],
+// 닮은 정도: 색만으로 말하지 않게 아이콘 + 글자 (많이 = 초록 채움, 꽤 = 연두 옅은, 조금 = 테두리)
+const CONFIDENCE: Record<Confidence, [string, string, IconName]> = {
+  high: ["많이 닮았어요", "bg-brand text-on-brand", "check-circle"],
+  medium: ["꽤 닮았어요", "bg-lime-soft text-leaf", "check"],
+  low: ["조금 닮았어요", "border border-line text-ink-soft", "help"],
 };
 
 /** 피드 속 사진 질문 한 턴: 썸네일 → 답 문장 → 카드(닮은 정도) → 이어지는 질문 */
@@ -119,18 +119,31 @@ export function PhotoTurnView({ p, onFollowUp }: { p: PhotoTurn; onFollowUp: (q:
     <div className="animate-rise space-y-3">
       <div className="ml-auto w-fit space-y-1 text-right">
         {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 줄인 data URL 썸네일 */}
-        {p.thumb && <img src={p.thumb} alt="물어본 사진" className="ml-auto h-28 w-auto max-w-[60vw] rounded-2xl object-cover shadow-[0_6px_16px_-10px_#00000055]" />}
-        <p className="text-caption text-muted">📷 사진으로 물어봤어요</p>
+        {p.thumb && <img src={p.thumb} alt="물어본 사진" className="ml-auto h-28 w-auto max-w-[60vw] rounded-[18px] border-2 border-brand object-cover shadow-lift" />}
+        <p className="inline-flex items-center gap-1.5 text-caption text-muted">
+          <Icon name="camera" className="size-4" />
+          사진으로 물어봤어요
+        </p>
       </div>
-      {p.status === "pending" && <p className="text-sm text-muted">푸디가 사진을 보고 지도에서 찾고 있어요…</p>}
-      {p.status === "error" && <p className="rounded-xl bg-surface px-3 py-2 text-sm">{p.error}</p>}
+      {p.status === "pending" && (
+        <p className="flex items-center gap-2 text-sm text-muted">
+          <Icon name="search" className="size-4 shrink-0 animate-pulse text-leaf" />
+          푸디가 사진을 보고 지도에서 찾고 있어요…
+        </p>
+      )}
+      {p.status === "error" && (
+        <p className="card flex items-start gap-2 rounded-2xl px-3.5 py-2.5 text-sm text-ink">
+          <Icon name="warn" className="mt-px size-[18px] shrink-0 text-leaf" />
+          <span className="min-w-0">{p.error}</span>
+        </p>
+      )}
       {p.res && (
         <>
-          <p className="text-subtitle font-medium">{p.res.speech}</p>
+          <p className="text-subtitle font-medium text-ink">{p.res.speech}</p>
           {p.res.cards.length > 0 && (
             <div className="snap-row -mx-5 px-5">
               {p.res.cards.map((c) => {
-                const [label, tone] = CONFIDENCE[c.confidence];
+                const [label, tone, icon] = CONFIDENCE[c.confidence];
                 return (
                   <div key={c.food_id} className="w-[82%]">
                     <FoodCard
@@ -139,9 +152,13 @@ export function PhotoTurnView({ p, onFollowUp }: { p: PhotoTurn; onFollowUp: (q:
                       food={{ slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, accent: c.country.accent, summary: c.summary, image_url: c.image_url, image_credit: c.image_credit, diet: Object.fromEntries(c.diet_badges.map((b) => [b.key, b.level])) as never }}
                       action={
                         <>
-                          <span className={`rounded-full px-2.5 py-1 text-caption font-medium ${tone}`}>{label}</span>
-                          <Link href={`/food/${c.slug}`} className="ml-auto rounded-full bg-mint-100 px-3 py-1.5 text-sm font-semibold text-green-800">
+                          <span className={`inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full px-3 text-caption font-semibold ${tone}`}>
+                            <Icon name={icon} className="size-4" />
+                            {label}
+                          </span>
+                          <Link href={`/food/${c.slug}`} className={`${btn("soft", "sm")} ml-auto shrink-0 whitespace-nowrap`}>
                             자세히
+                            <Icon name="next" className="-mr-1 size-4" />
                           </Link>
                         </>
                       }

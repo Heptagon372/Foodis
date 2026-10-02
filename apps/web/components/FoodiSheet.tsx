@@ -1,6 +1,6 @@
 "use client";
 // S3 푸디 대화 시트 (05 문서 §4): 홈·상세 위에 겹치는 바텀 시트 → 맥락 유지.
-// 채팅 UI 가 아니라 "말하는 카드 피드": 인식 텍스트(탭해서 수정) → 자막 → 카드 1~3 → 추천 질문 → 🎙 재질문
+// 채팅 UI 가 아니라 "말하는 카드 피드": 인식 텍스트(탭해서 수정) → 자막 → 카드 1~3 → 추천 질문 → 마이크로 재질문
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -12,8 +12,11 @@ import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voi
 import { pauseRadio } from "@/lib/client/radio";
 import { questEvent } from "@/lib/client/quest";
 import { track } from "@/lib/client/track";
+import { ArrowUp } from "lucide-react";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
+import { Icon, type IconName } from "./icons";
+import { btn, IconButton, IconTile, ProgressBar } from "./ui";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
 import { InAppNotice, MicHelp } from "./MicHelp";
 import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
@@ -197,34 +200,42 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
     inputRef.current?.focus();
   };
 
+  const submit = () => {
+    void ask(draft, "text", context.id);
+    setDraft("");
+  };
+
   return (
     <Ctx.Provider value={{ open }}>
       {children}
       {isOpen && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="푸디와 대화">
-          <button type="button" aria-label="닫기" onClick={close} className="absolute inset-0 bg-charcoal/30 backdrop-blur-[2px]" />
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] max-w-md animate-sheet flex-col rounded-t-[28px] bg-ivory shadow-[0_-12px_40px_-12px_#00000055]">
-            <div className="flex items-center justify-between px-5 pt-3">
-              <span className="mx-auto h-1.5 w-10 rounded-full bg-line" aria-hidden />
+          <button type="button" aria-label="닫기" onClick={close} className="absolute inset-0 bg-shade/40 backdrop-blur-[2px]" />
+          {/* 바탕색 유리 시트: 뒤 화면이 살짝 비치되 글은 또렷하게 (95% 불투명) */}
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] max-w-md animate-sheet flex-col rounded-t-[28px] border-t border-line bg-canvas/95 shadow-[0_-16px_44px_-16px_var(--glass-shadow)] backdrop-blur-xl">
+            <div className="flex justify-center pt-2.5">
+              <span className="h-1.5 w-10 rounded-full bg-line" aria-hidden />
             </div>
-            <div className="flex items-center justify-between px-5 pb-2 pt-1">
-              <p className="text-sm font-semibold text-green-800">
-                푸디{context.name && <span className="font-normal text-muted"> · {context.name} 보는 중</span>}
+            <div className="flex items-center justify-between gap-3 py-1 pl-5 pr-3">
+              <p className="min-w-0 truncate text-title font-bold text-ink">
+                푸디{context.name && <span className="text-sm font-medium text-muted"> · {context.name} 보는 중</span>}
               </p>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => (setMuted((m) => !m), stopSpeaking(), setVoice((v) => (v === "speaking" ? "idle" : v)))} className="rounded-full px-2.5 py-1 text-caption text-muted hover:bg-line/60" aria-pressed={muted}>
-                  {muted ? "🔇 음성 끔" : "🔊 음성 켬"}
-                </button>
-                <button type="button" onClick={close} className="rounded-full px-2.5 py-1 text-caption text-muted hover:bg-line/60">
-                  닫기
-                </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <IconButton
+                  icon={muted ? "volume-off" : "volume-on"}
+                  label={muted ? "푸디 음성 꺼짐 — 탭하면 켜기" : "푸디 음성 켜짐 — 탭하면 끄기"}
+                  pressed={muted}
+                  variant={muted ? "soft" : "ghost"}
+                  onClick={() => (setMuted((m) => !m), stopSpeaking(), setVoice((v) => (v === "speaking" ? "idle" : v)))}
+                />
+                <IconButton icon="close" label="닫기" variant="ghost" onClick={close} />
               </div>
             </div>
 
-            <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4">
+            <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-1">
               {turns.length === 0 && voice !== "listening" && (
-                <div className="space-y-3 pt-2">
-                  <p className="font-display text-h2 font-semibold">무엇이든 물어보세요</p>
+                <div className="space-y-4 pt-2">
+                  <h2 className="text-h2 font-bold text-ink">무엇이든 물어보세요</h2>
                   {!micHelp && <InAppNotice />}
                   <div className="flex flex-wrap gap-2">
                     {(context.id ? ["문화 이야기 들려줘", "비슷한 음식 있어?", "비건으로 먹을 수 있어?"] : STARTERS).map((s) => (
@@ -247,27 +258,32 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
                   onKnown={(foodId) => void ask("다른 거 추천", "text", foodId)}
                 />
               ))}
-              {voice === "listening" && <p className="text-right text-subtitle text-charcoal/70">{interim || "듣고 있어요…"}</p>}
+              {voice === "listening" && (
+                <p className="flex items-center justify-end gap-2 text-right text-subtitle text-ink-soft">
+                  {!interim && <Icon name="wave" className="size-5 shrink-0 text-leaf" />}
+                  {interim || "듣고 있어요…"}
+                </p>
+              )}
               {micHelp && <MicHelp reason={micHelp} onType={() => (setMicHelp(null), inputRef.current?.focus())} />}
-              {hint && <p className="rounded-xl bg-surface px-3 py-2 text-sm text-charcoal/80">{hint}</p>}
+              {hint && <Notice icon="info">{hint}</Notice>}
               <div ref={feedEnd} />
             </div>
 
-            <div className="border-t border-line bg-ivory/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div className="border-t border-line px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               <div className="flex items-center gap-3">
                 <form
-                  className="flex flex-1 items-center gap-2 rounded-full border border-line bg-surface px-4 py-2"
+                  className="flex h-14 min-w-0 flex-1 items-center gap-1 rounded-full border border-line bg-surface px-1.5 shadow-soft transition focus-within:border-leaf/60 focus-within:ring-2 focus-within:ring-leaf/25"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    void ask(draft, "text", context.id);
-                    setDraft("");
+                    submit();
                   }}
                 >
                   <PhotoAskButton onTurn={photoTurn} disabled={voice === "listening"} />
-                  <input ref={inputRef} autoFocus={typeFirst} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="글로 물어보기" maxLength={300} className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted" enterKeyHint="send" />
+                  {/* 포커스 표시는 입력칸의 사각 링 대신 알약 전체(form focus-within)로 */}
+                  <input ref={inputRef} autoFocus={typeFirst} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="글로 물어보기" aria-label="글로 물어보기" maxLength={300} className="h-full min-w-0 flex-1 bg-transparent px-1 text-[15px] text-ink outline-none placeholder:text-muted" enterKeyHint="send" />
                   {draft && (
-                    <button type="submit" className="text-sm font-semibold text-green-800">
-                      보내기
+                    <button type="submit" aria-label="보내기" className="grid size-11 shrink-0 place-items-center rounded-full bg-brand text-on-brand shadow-brand transition active:scale-95">
+                      <ArrowUp className="size-5" strokeWidth={2} aria-hidden />
                     </button>
                   )}
                 </form>
@@ -281,6 +297,21 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** 피드 속 안내 한 줄 (오프라인·오류·힌트) — 아이콘 + 글자로, 색만으로 말하지 않게 */
+function Notice({ icon, children, tone = "card" }: { icon: IconName; children: ReactNode; tone?: "card" | "warn" | "soft" }) {
+  const t = {
+    card: "card rounded-2xl px-3.5 py-2.5 text-sm text-ink",
+    warn: "w-fit rounded-full border border-diet-warn/25 bg-diet-warn/10 px-3 py-1.5 text-caption text-diet-warn-ink",
+    soft: "w-fit rounded-full bg-sunken px-3 py-1.5 text-caption text-ink-soft",
+  }[tone];
+  return (
+    <p className={`flex items-start gap-2 ${t}`}>
+      <Icon name={icon} className={`mt-px shrink-0 ${tone === "card" ? "size-[18px] text-leaf" : "size-4"}`} />
+      <span className="min-w-0">{children}</span>
+    </p>
+  );
+}
+
 // 추천 계열 답의 카드에는 "이미 알아요" — 아는 음식이 나오면 바로 다른 추천 (07 문서 사용자 여정의 이탈 대응)
 const KNOWN_INTENTS = new Set(["recommend", "filter_by_diet", "compare_similar", "out_of_scope"]);
 
@@ -288,17 +319,34 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
   if (t.photo) return <PhotoTurnView p={t.photo} onFollowUp={onFollowUp} />;
   return (
     <div className="animate-rise space-y-3">
-      <button type="button" onClick={onEdit} className="ml-auto block max-w-[85%] text-right text-subtitle text-charcoal/70" title="탭해서 고치기">
-        “{t.q}” <span className="text-caption text-muted">✎</span>
-      </button>
+      <div className="flex justify-end">
+        <button type="button" onClick={onEdit} className="flex max-w-[85%] items-start gap-2 rounded-3xl rounded-br-lg bg-brand px-4 py-2.5 text-left text-[15px] font-medium leading-snug text-on-brand shadow-brand transition active:scale-[0.98]" title="탭해서 고치기">
+          <span className="min-w-0">{t.q}</span>
+          <Icon name="edit" className="mt-0.5 size-4 shrink-0 opacity-80" />
+          <span className="sr-only">(탭해서 고치기)</span>
+        </button>
+      </div>
       {t.heard && <p className="ml-auto max-w-[85%] text-right text-caption text-muted">들은 말: {t.heard}</p>}
-      {!t.res && !t.error && <p className="text-sm text-muted">푸디가 지도를 보고 있어요…</p>}
-      {t.error && <p className="rounded-xl bg-surface px-3 py-2 text-sm">{t.error}</p>}
+      {!t.res && !t.error && (
+        <p className="flex items-center gap-2 text-sm text-muted">
+          <Icon name="earth" className="size-4 shrink-0 animate-spin-slow text-leaf" />
+          푸디가 지도를 보고 있어요…
+        </p>
+      )}
+      {t.error && <Notice icon="warn">{t.error}</Notice>}
       {t.res && (
         <>
-          {t.offline && <p className="w-fit rounded-full bg-diet-warn/15 px-3 py-1 text-caption text-[#7a5a10]">📦 연결이 불안정해 저장된 답으로 보여드려요</p>}
-          {t.res.not_in_map && <p className="w-fit rounded-full bg-line/60 px-3 py-1 text-caption text-charcoal/70">🗺 ‘{t.res.not_in_map}’ — 아직 FOODIS 지도에 없어요</p>}
-          <p className="text-subtitle font-medium">{t.res.speech}</p>
+          {t.offline && (
+            <Notice icon="package" tone="warn">
+              연결이 불안정해 저장된 답으로 보여드려요
+            </Notice>
+          )}
+          {t.res.not_in_map && (
+            <Notice icon="map" tone="soft">
+              ‘{t.res.not_in_map}’ — 아직 FOODIS 지도에 없어요
+            </Notice>
+          )}
+          <p className="text-subtitle font-medium text-ink">{t.res.speech}</p>
           {t.res.passport && <PassportCard p={t.res.passport} />}
           {t.res.cards.length > 0 && (
             <div className="snap-row -mx-5 px-5">
@@ -311,10 +359,12 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
                     action={
                       KNOWN_INTENTS.has(t.res!.intent) ? (
                         <>
-                          <Link href={`/food/${c.slug}`} className="rounded-full bg-mint-100 px-3 py-1.5 text-sm font-semibold text-green-800">
+                          <Link href={`/food/${c.slug}`} className={`${btn("soft", "sm")} shrink-0 whitespace-nowrap`}>
                             자세히
                           </Link>
-                          <button type="button" onClick={() => onKnown(c.food_id)} className="rounded-full px-3 py-1.5 text-sm text-muted hover:bg-line/50">
+                          {/* 좁은 화면에서는 글자가 두 줄로 접히게 (문구는 줄이지 않는다) */}
+                          <button type="button" onClick={() => onKnown(c.food_id)} className={`${btn("ghost", "sm")} h-auto! min-h-10 min-w-0 px-3! py-1 text-left leading-tight`}>
+                            <Icon name="replay" className="size-4 shrink-0" />
                             이미 알아요 · 다른 거
                           </button>
                         </>
@@ -336,7 +386,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
             <p className="truncate text-caption text-muted">
               출처:{" "}
               {t.res.sources.map((s, i) => (
-                <a key={s.url + i} href={s.url} target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2">
+                <a key={s.url + i} href={s.url} target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2 hover:text-ink">
                   {s.title ?? "링크"}
                   {i < t.res!.sources.length - 1 ? ", " : ""}
                 </a>
@@ -350,20 +400,21 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
   );
 }
 
-/** passport_status 답에 붙는 요약 카드 (03 문서 #7) */
+/** passport_status 답에 붙는 요약 카드 (03 문서 #7) — Passport 화면 요약과 같은 연두 패널 */
 function PassportCard({ p }: { p: PassportSummary }) {
   return (
-    <div className="space-y-2 rounded-2xl bg-green-800 p-4 text-ivory">
-      <p className="font-display text-xl font-semibold">
-        📕 {p.countries}개국 · {p.foods}개 음식
+    <div className="meadow-panel space-y-3 rounded-3xl p-4">
+      <p className="flex items-center gap-2.5">
+        <IconTile icon="passport" tone="brand" size="sm" />
+        <span className="text-title font-bold text-ink">
+          <span className="text-leaf">{p.countries}</span>개국 · <span className="text-leaf">{p.foods}</span>개 음식
+        </span>
       </p>
       {p.by_continent.map((c) => (
-        <div key={c.key} className="flex items-center gap-2 text-caption">
+        <div key={c.key} className="flex items-center gap-2 text-caption text-ink-soft">
           <span className="w-24 shrink-0">{c.label}</span>
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ivory/20">
-            <span className="block h-full rounded-full bg-mint-500" style={{ width: `${c.total ? (c.done / c.total) * 100 : 0}%` }} />
-          </span>
-          <span className="w-9 text-right tabular-nums">
+          <ProgressBar value={c.done} max={c.total} label={`${c.label} ${c.done}/${c.total}`} className="h-1.5" />
+          <span className="w-9 text-right font-medium tabular-nums text-ink">
             {c.done}/{c.total}
           </span>
         </div>

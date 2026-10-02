@@ -9,9 +9,10 @@ import { RadioMini } from "@/components/RadioMini";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
 import { Tracker } from "@/components/Tracker";
+import { THEME_COLOR, THEME_SCRIPT } from "@/lib/client/theme";
 import "./globals.css";
 
-// 워드마크·H1: Fraunces (여행·문화 톤 세리프) / 본문: Pretendard (한글), 영문 fallback Inter — 05 문서 §7
+// 본문·제목: Pretendard (한글) → Inter (영문) / 워드마크·영문 이탤릭 강조: Fraunces (font-serif) — 디자인 v2 (docs/design/09)
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"] });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
@@ -20,12 +21,23 @@ export const metadata: Metadata = {
   description: "푸디에게 물어보세요. 세계 음식 문화를 음성으로 탐험하는 플랫폼.",
 };
 
-export const viewport: Viewport = { themeColor: "#FBF8F1", width: "device-width", initialScale: 1, viewportFit: "cover" };
+// 상단 바 색: 첫 방문은 시스템 설정 기준, 새싹 토글로 고르면 THEME_SCRIPT·setTheme 가 덮어쓴다
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="ko" className={`${fraunces.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
+        {/* 그리기 전에 테마를 정해 깜빡임이 없게 (data-theme 은 서버 HTML 에 없으므로 html 의 하이드레이션 경고는 끈다) */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
       </head>
       <body className="antialiased">

@@ -16,7 +16,7 @@ export default async function RadioPage({ searchParams }: { searchParams: Promis
   const has = (continent: string | null) => !continent || foods.some((f) => cont.get(f.country_code) === continent);
   return (
     <RadioView
-      channels={Object.entries(CHANNELS).map(([id, c]) => ({ id, title: c.title, emoji: c.emoji, ready: has(c.continent) }))}
+      channels={Object.entries(CHANNELS).map(([id, c]) => ({ id, title: c.title, icon: c.icon, ready: has(c.continent) }))}
       preview={content.mode === "preview"}
       startFood={food ? { slug: food.slug, name_ko: food.name_ko, flag: food.flag } : null}
     />

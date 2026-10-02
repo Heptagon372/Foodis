@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PREVIEW_COUNTRIES } from "@/lib/preview/countries";
 import { CONTINENT_OF } from "./continents";
-import { badgeShelf, bump, EMPTY_QUEST_DATA, kstWeek, pickWeekly, QUESTS, settle, streak, weeklyBoard, type QuestData, type QuestEntry } from "./quests";
+import { BADGES, badgeShelf, bump, EMPTY_QUEST_DATA, kstWeek, pickWeekly, QUESTS, settle, streak, weeklyBoard, type QuestData, type QuestEntry } from "./quests";
 
 // 2026-W40 = 9/28(월) ~ 10/4(일), 한국 시간
 const MON = Date.parse("2026-09-28T00:00:00+09:00");
@@ -146,6 +146,24 @@ describe("연속 기록 · 배지", () => {
   it("받은 배지는 기록이 줄어도 유지", () => {
     const b = badgeShelf([], data({ badges: { countries_5: 123 } }), NOW).find((x) => x.id === "countries_5")!;
     expect(b).toMatchObject({ earnedAt: 123, value: 5 });
+  });
+});
+
+describe("아이콘 · 문구 (디자인 v2)", () => {
+  // 화면은 라인 아이콘만 쓴다 — 이모지가 데이터 문구에 섞여 들어오면 보상 칩·토스트에 그대로 찍힌다
+  const EMOJI = /\p{Extended_Pictographic}/u;
+  it("퀘스트·배지·축하는 아이콘 이름만 갖고, 문구엔 이모지가 없다", () => {
+    for (const q of QUESTS) {
+      expect(q.icon, q.id).toMatch(/^[a-z-]+$/);
+      expect(EMOJI.test(q.title + q.reward + q.next(1)), q.id).toBe(false);
+    }
+    for (const b of BADGES) {
+      expect(b.icon, b.id).toMatch(/^[a-z-]+$/);
+      expect(EMOJI.test(b.name + b.hint), b.id).toBe(false);
+    }
+    const r = settle(data({ week: "2026-W40", counts: ALL_COUNTS }), ALL, NOW);
+    for (const f of r.fresh) expect(f.icon).toMatch(/^[a-z-]+$/);
+    expect(weeklyBoard([], data(), NOW).quests[0]).not.toHaveProperty("emoji");
   });
 });
 

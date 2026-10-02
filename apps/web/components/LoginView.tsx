@@ -7,6 +7,13 @@ import { authAvailable, useAccount } from "@/lib/client/account";
 import { exploredCountries, useLocal } from "@/lib/client/passport";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 import { Wordmark } from "./bits";
+import { Icon } from "./icons";
+import { btn } from "./ui";
+
+// 입력칸 공통 — 바탕은 surface, 포커스는 리프 링 (두 테마 모두 토큰)
+const INPUT = "rounded-2xl border border-line bg-surface px-4 text-ink outline-none transition placeholder:text-muted focus:border-leaf focus:ring-2 focus:ring-leaf/25";
+// 안내 띠 (미리보기·준비 중) — PreviewBanner 와 같은 식이 '주의' 의미색
+const NOTE = "flex items-start gap-2 rounded-2xl border border-diet-warn/25 bg-diet-warn/10 px-3.5 py-2.5 text-caption text-diet-warn-ink";
 
 type Provider = "kakao" | "google";
 
@@ -121,15 +128,15 @@ function Login({ live }: { live: boolean }) {
   if (acct.status === "user") {
     return (
       <Shell>
-        <div className="space-y-3 rounded-3xl bg-surface p-5 text-center">
-          <p className="text-lg font-semibold">이미 로그인했어요</p>
-          <p className="text-sm text-muted">
+        <div className="card flex flex-col items-center gap-3 rounded-[28px] p-6 text-center">
+          <span className="grid size-14 place-items-center rounded-[18px] bg-lime-soft text-leaf" aria-hidden>
+            <Icon name="check-circle" className="size-6" />
+          </span>
+          <p className="text-title font-bold text-ink">이미 로그인했어요</p>
+          <p className="text-sm text-ink-soft">
             {acct.user?.email ?? acct.user?.name}
           </p>
-          <Link
-            href={next}
-            className="block rounded-2xl bg-green-800 py-3 font-semibold text-ivory"
-          >
+          <Link href={next} className={`${btn("primary")} mt-1 w-full`}>
             계속하기
           </Link>
         </div>
@@ -140,20 +147,19 @@ function Login({ live }: { live: boolean }) {
   return (
     <Shell>
       <div className="space-y-2">
-        <h1 className="font-display text-h1 font-semibold leading-tight">
-          탐험 기록을
-          <br />
-          계정에 저장해요
+        <h1 className="text-h1">
+          <span className="block font-medium text-ink-soft">탐험 기록을</span>
+          <span className="block font-bold text-ink">계정에 저장해요</span>
         </h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-ink-soft">
           휴대폰을 바꿔도, 다른 기기에서도 Passport 가 이어져요.
         </p>
       </div>
 
       {foods > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl bg-mint-100/70 px-4 py-3 text-sm text-green-800">
-          <span className="text-xl" aria-hidden>
-            📕
+        <div className="glass flex items-center gap-3 rounded-3xl p-3 pr-4 text-sm text-ink">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-lime-soft text-leaf" aria-hidden>
+            <Icon name="passport" className="size-5" />
           </span>
           <span>
             지금까지 모은{" "}
@@ -165,12 +171,14 @@ function Login({ live }: { live: boolean }) {
         </div>
       )}
       {!authAvailable && (
-        <p className="rounded-xl bg-[#FFF6D6] px-3 py-2 text-caption text-[#7A5B00]">
+        <p className={NOTE}>
+          <Icon name="info" className="mt-px size-4 shrink-0" />
           로그인은 Supabase 연결 후에 열려요. 지금은 이 기기에만 저장돼요.
         </p>
       )}
       {authAvailable && !live && (
-        <p className="rounded-xl bg-[#FFF6D6] px-3 py-2 text-caption text-[#7A5B00]">
+        <p className={NOTE}>
+          <Icon name="info" className="mt-px size-4 shrink-0" />
           미리보기 모드예요. 로그인은 되지만 기록은 실제 DB 가 준비된 뒤 계정에
           저장돼요.
         </p>
@@ -183,7 +191,8 @@ function Login({ live }: { live: boolean }) {
               type="button"
               disabled={!!busy}
               onClick={() => void oauth("kakao")}
-              className="relative flex w-full items-center justify-center rounded-2xl bg-[#FEE500] py-3.5 font-semibold text-black/85 transition active:scale-[0.99] disabled:opacity-50"
+              // 카카오 공식 표기(노랑 #FEE500 + 검정 85%)는 브랜드 가이드라 테마와 무관하게 고정
+              className="relative flex h-12 w-full items-center justify-center rounded-full bg-[#FEE500] font-semibold text-black/85 transition active:scale-[0.99] disabled:opacity-50"
             >
               <KakaoIcon />
               {busy === "kakao" ? "카카오로 이동 중…" : "카카오로 시작하기"}
@@ -194,7 +203,8 @@ function Login({ live }: { live: boolean }) {
               type="button"
               disabled={!!busy}
               onClick={() => void oauth("google")}
-              className="relative flex w-full items-center justify-center rounded-2xl border border-line bg-white py-3.5 font-semibold text-charcoal transition active:scale-[0.99] disabled:opacity-50"
+              // Google 공식 라이트 버튼(흰 바탕 + #1F1F1F 글자) — 다크 테마에서도 브랜드 가이드의 라이트 표기를 쓴다
+              className="relative flex h-12 w-full items-center justify-center rounded-full border border-[#747775] bg-white font-semibold text-[#1f1f1f] transition active:scale-[0.99] disabled:opacity-50"
             >
               <GoogleIcon />
               {busy === "google" ? "Google 로 이동 중…" : "Google 로 시작하기"}
@@ -218,11 +228,11 @@ function Login({ live }: { live: boolean }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일 주소"
               autoComplete="email"
-              className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 outline-none focus:border-mint-500"
+              className={`${INPUT} h-12 min-w-0 flex-1`}
             />
             <button
               disabled={!authAvailable || !!busy}
-              className="shrink-0 rounded-2xl bg-green-800 px-4 font-semibold text-ivory disabled:opacity-50"
+              className={`${btn("primary")} shrink-0`}
             >
               {busy === "email" ? "보내는 중" : "코드 받기"}
             </button>
@@ -240,19 +250,19 @@ function Login({ live }: { live: boolean }) {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="6자리 코드"
-            className="w-full rounded-2xl border border-line bg-surface px-4 py-3.5 text-center text-xl tracking-[0.4em] outline-none focus:border-mint-500"
+            className={`${INPUT} h-14 w-full text-center text-xl tracking-[0.4em]`}
             autoFocus
           />
           <button
             disabled={!!busy}
-            className="w-full rounded-2xl bg-green-800 py-3.5 font-semibold text-ivory disabled:opacity-50"
+            className={`${btn("primary", "lg")} w-full`}
           >
             {busy === "code" ? "확인 중…" : "로그인"}
           </button>
           <button
             type="button"
             onClick={() => (setStep("start"), setCode(""), setMsg(null))}
-            className="w-full text-sm text-muted"
+            className={`${btn("ghost", "sm")} w-full`}
           >
             이메일 다시 입력
           </button>
@@ -261,8 +271,10 @@ function Login({ live }: { live: boolean }) {
 
       {msg && (
         <p
-          className={`rounded-xl px-3 py-2 text-sm ${msg.tone === "error" ? "bg-[#FDECEA] text-[#9B2C1F]" : "bg-mint-100 text-green-800"}`}
+          role={msg.tone === "error" ? "alert" : "status"}
+          className={`flex items-start gap-2 rounded-2xl px-3.5 py-2.5 text-sm ${msg.tone === "error" ? "border border-diet-no/25 bg-diet-no/10 text-diet-no" : "bg-lime-soft text-ink"}`}
         >
+          <Icon name={msg.tone === "error" ? "warn" : "check-circle"} className={`mt-0.5 size-4 shrink-0 ${msg.tone === "error" ? "" : "text-leaf"}`} />
           {msg.text}
         </p>
       )}
@@ -270,11 +282,12 @@ function Login({ live }: { live: boolean }) {
       <div className="space-y-3 pt-2 text-center">
         <Link
           href={next}
-          className="text-sm font-medium text-muted underline-offset-4 hover:underline"
+          className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-leaf underline-offset-4 hover:underline"
         >
           로그인 없이 계속 둘러보기
+          <Icon name="next" className="size-4" />
         </Link>
-        <p className="text-caption text-muted/80">
+        <p className="text-caption text-muted">
           로그인하면 탐험 기록·식이 조건·취향이 계정에 저장돼요. 언제든 Passport
           에서 탈퇴하면 모두 지워져요.
         </p>

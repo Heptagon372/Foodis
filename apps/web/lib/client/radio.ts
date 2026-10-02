@@ -134,7 +134,7 @@ async function streamSeg(my: number, ep: number, seg: number): Promise<"playing"
     if (!res.ok) return "failed";
     att = await attachResponse(res, el);
     live = att;
-    // 다 받으면 캐시에 — 같은 구간을 다시 들을 때(이전 에피소드·자동 재생 거부 뒤 ▶)는 받지 않고 바로
+    // 다 받으면 캐시에 — 같은 구간을 다시 들을 때(이전 에피소드·자동 재생 거부 뒤 재생 버튼)는 받지 않고 바로
     void att.done.then((b) => b && epoch === cacheEpoch && !blobs.has(k) && blobs.set(k, Promise.resolve(URL.createObjectURL(b))));
     bindAudio(my, ep, seg);
     await Promise.all([el.play(), att.firstAudio]);
@@ -144,7 +144,7 @@ async function streamSeg(my: number, ep: number, seg: number): Promise<"playing"
     return "playing";
   } catch (e) {
     if (my !== gen) return "failed";
-    if ((e as Error)?.name === "NotAllowedError") return "paused"; // 자동 재생 차단 — ▶ 를 다시 누르면 이어진다
+    if ((e as Error)?.name === "NotAllowedError") return "paused"; // 자동 재생 차단 — 재생 버튼을 다시 누르면 이어진다
     // 받은 조각이 늦게라도 재생되지 않게 (브라우저 음성과 겹침 방지)
     el.pause();
     att?.release();
@@ -238,7 +238,7 @@ async function playAt(ep: number, seg: number, fromSentence = 0) {
         return;
       } catch {
         if (my !== gen) return;
-        // 자동 재생 차단 — 사용자가 ▶ 를 다시 누르면 이어진다
+        // 자동 재생 차단 — 사용자가 재생 버튼을 다시 누르면 이어진다
         return set({ status: "paused" });
       }
     }

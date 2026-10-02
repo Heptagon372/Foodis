@@ -1,6 +1,6 @@
 # foodis-data — FOODIS 음식·문화 DB 구축 키트
 
-세계 150개국 2,147개 음식(사람이 고른 대표 음식 294 + Wikidata·위키백과 분류에서 고른 자동 후보 1,853개)의 **목표 선정 → 근거·사진 수집 → LLM 초안 → 사람 검수 → Supabase 적재 → 임베딩**까지 한 번에 돌리는 파이프라인.
+세계 150개국 3,240개 음식(사람이 고른 대표 음식 294 + 나라별 최소 5개 보강 78 + Wikidata·위키백과 분류에서 고른 자동 후보 2,868개, 나라당 최대 100개)의 **목표 선정 → 근거·사진 수집 → LLM 초안 → 사람 검수 → Supabase 적재 → 임베딩**까지 한 번에 돌리는 파이프라인.
 원칙은 기획 문서 04·07과 같다: **DB가 사실의 기준, AI는 근거 안에서만 초안을 쓴다, 식이 정보는 사람이 확정한다.**
 
 ## 폴더
@@ -33,7 +33,7 @@ cp .env.example .env            # 키 입력
 # 0) Supabase 프로젝트 생성 → SQL Editor 에 ../supabase/migrations/0001_init.sql, 0002_data_sources.sql 순서로 실행
 
 # 0) 목표 확장 (API 키 불필요) — 나라별 「○○ cuisine」 분류(PetScan) + Wikidata 로 후보를 모아 유명한 순서로
-python scripts/s00_expand_targets.py --total 2100
+python scripts/s00_expand_targets.py --total 3150
 
 # 1) 근거 수집 (API 키 불필요)
 python scripts/s01_wikidata.py      # 위키백과 제목 → Wikidata QID, 원산지·재료·이미지

@@ -393,7 +393,15 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
               ))}
             </p>
           )}
-          {t.res.model_used && <p className="text-caption text-muted">🧠 {t.res.model_used.label}{t.res.model_used.downgraded ? " · 오늘은 사용량이 많아 기본 AI 가 답했어요" : ""}</p>}
+          {t.res.model_used && (
+            <p className="flex items-start gap-1 text-caption text-muted">
+              <Icon name="brain" className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                {t.res.model_used.label}
+                {t.res.model_used.downgraded ? " · 오늘은 사용량이 많아 기본 AI 가 답했어요" : ""}
+              </span>
+            </p>
+          )}
         </>
       )}
     </div>

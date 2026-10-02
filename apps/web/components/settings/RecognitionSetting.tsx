@@ -3,6 +3,9 @@
 // 서버 엔진 준비 상태는 GET /api/foodi/stt 로 본다 (키 값은 오지 않는다).
 import { useEffect, useState } from "react";
 import { setVoicePrefs, useVoicePrefs, type VoicePrefs } from "@/lib/client/voice-prefs";
+import { Icon } from "../icons";
+import { chip } from "../ui";
+import { optionRow, RadioDot, SettingCard } from "./parts";
 
 type Engine = { id: string; label_ko: string; desc_ko: string; ready: boolean; langs: ("ko" | "auto")[] };
 type Status = { engines: Engine[]; chains: { ko: string[]; auto: string[] }; normalize: boolean };
@@ -15,9 +18,6 @@ const LANGS: { id: VoicePrefs["sttLang"]; label: string }[] = [
   { id: "ko", label: "한국어(사투리 포함)" },
   { id: "auto", label: "자동 감지(외국어)" },
 ];
-
-const chip = (on: boolean, disabled = false) =>
-  `rounded-full border px-3 py-1.5 text-sm ${disabled ? "border-line bg-surface text-muted opacity-60" : on ? "border-mint-500 bg-mint-100 font-medium text-green-800" : "border-line bg-surface text-charcoal/80"}`;
 
 export function RecognitionSetting() {
   const mode = useVoicePrefs((p) => p.sttMode);
@@ -45,48 +45,48 @@ export function RecognitionSetting() {
   const server = mode === "server";
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-green-800">알아듣기</p>
+    <SettingCard icon="ear" title="알아듣기" desc="내 말을 글자로 알아듣는 방식이에요.">
       <div role="radiogroup" aria-label="음성 인식 방식" className="grid gap-2">
         {MODES.map((m) => {
           const on = mode === m.id;
           return (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => setVoicePrefs({ sttMode: m.id })}
-              className={`rounded-2xl border px-4 py-3 text-left ${on ? "border-mint-500 bg-mint-100" : "border-line bg-surface"}`}
-            >
-              <span className={`block text-[15px] font-semibold ${on ? "text-green-800" : "text-charcoal"}`}>
-                {on ? "● " : "○ "}
-                {m.title}
+            <button key={m.id} type="button" role="radio" aria-checked={on} onClick={() => setVoicePrefs({ sttMode: m.id })} className={optionRow(on)}>
+              <span className="mt-0.5">
+                <RadioDot on={on} />
               </span>
-              <span className="mt-0.5 block text-caption text-muted">{m.desc}</span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-ink">{m.title}</span>
+                <span className="mt-0.5 block text-caption text-muted">{m.desc}</span>
+              </span>
             </button>
           );
         })}
       </div>
 
-      <div className={server ? "space-y-3" : "space-y-3 opacity-60"}>
-        <div>
-          <p className="pb-1.5 text-caption text-muted">무슨 말로 말할까요?</p>
+      <div className={`space-y-4 border-t border-line pt-4 ${server ? "" : "opacity-60"}`}>
+        <div className="space-y-2">
+          <p className="text-caption font-semibold text-ink-soft">무슨 말로 말할까요?</p>
           <div role="radiogroup" aria-label="언어 힌트" className="flex flex-wrap gap-2">
-            {LANGS.map((l) => (
-              <button key={l.id} type="button" role="radio" aria-checked={lang === l.id} onClick={() => setVoicePrefs({ sttLang: l.id })} className={chip(lang === l.id)}>
-                {lang === l.id ? "✓ " : ""}
-                {l.label}
-              </button>
-            ))}
+            {LANGS.map((l) => {
+              const on = lang === l.id;
+              return (
+                <button key={l.id} type="button" role="radio" aria-checked={on} onClick={() => setVoicePrefs({ sttLang: l.id })} className={chip(on)}>
+                  {on && <Icon name="check" className="size-4" strokeWidth={2.25} />}
+                  {l.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div>
-          <p className="pb-1.5 text-caption text-muted">인식 엔진</p>
-          <div role="radiogroup" aria-label="인식 엔진" className="flex flex-wrap gap-2">
-            <button type="button" role="radio" aria-checked={!engine} onClick={() => setVoicePrefs({ sttEngine: null })} className={chip(!engine)}>
-              {!engine ? "✓ " : ""}자동 (추천)
+        <div className="space-y-2">
+          <p className="text-caption font-semibold text-ink-soft">인식 엔진</p>
+          <div role="radiogroup" aria-label="인식 엔진" className="grid gap-2">
+            <button type="button" role="radio" aria-checked={!engine} onClick={() => setVoicePrefs({ sttEngine: null })} className={optionRow(!engine)}>
+              <span className="mt-0.5">
+                <RadioDot on={!engine} />
+              </span>
+              <span className="text-sm font-semibold text-ink">자동 (추천)</span>
             </button>
             {s?.engines.map((e) => {
               const on = engine === e.id;
@@ -100,12 +100,17 @@ export function RecognitionSetting() {
                   disabled={!e.ready}
                   onClick={() => setVoicePrefs({ sttEngine: e.id })}
                   title={e.ready ? e.desc_ko : "서버에 키가 없어서 쓸 수 없어요"}
-                  className={chip(on, !e.ready)}
+                  className={optionRow(on)}
                 >
-                  {on ? "✓ " : ""}
-                  {e.label_ko}
-                  <span className="ml-1 text-caption text-muted">
-                    · {e.ready ? (fits ? e.desc_ko : "한국어 전용") : "키 없음"}
+                  <span className="mt-0.5">
+                    <RadioDot on={on} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink">{e.label_ko}</span>
+                    <span className="flex items-center gap-1 text-caption text-muted">
+                      {!e.ready && <Icon name="key" className="size-3.5 shrink-0" />}
+                      {e.ready ? (fits ? e.desc_ko : "한국어 전용") : "키 없음"}
+                    </span>
                   </span>
                 </button>
               );
@@ -123,7 +128,10 @@ export function RecognitionSetting() {
                 : "준비된 서버 엔진이 아직 없어요. 지금은 브라우저 인식을 써 주세요."}
         </p>
       </div>
-      <p className="text-caption text-muted">녹음은 알아듣는 데만 쓰고 저장하지 않아요. 사투리·외국어는 표준어로 바꿔 묻고, 들은 말도 함께 보여 드려요.</p>
-    </div>
+      <p className="flex items-start gap-1.5 rounded-2xl bg-sunken px-3 py-2.5 text-caption text-ink-soft">
+        <Icon name="info" className="mt-px size-4 shrink-0 text-leaf" />
+        녹음은 알아듣는 데만 쓰고 저장하지 않아요. 사투리·외국어는 표준어로 바꿔 묻고, 들은 말도 함께 보여 드려요.
+      </p>
+    </SettingCard>
   );
 }

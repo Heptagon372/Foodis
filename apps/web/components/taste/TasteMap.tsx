@@ -48,7 +48,7 @@ export function TasteMap(p: { provider: MapProvider; mapKey: string; center: { l
   }, [state, p.pins, p.selected]);
 
   return (
-    <div className="relative h-64 overflow-hidden rounded-2xl bg-line/40">
+    <div className="relative h-64 overflow-hidden rounded-3xl border border-line bg-sunken">
       <div ref={box} className="absolute inset-0" />
       {state !== "ready" && (
         <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted">{state === "loading" ? "지도를 불러오는 중…" : `지도를 띄우지 못했어요. ${msg}`}</p>

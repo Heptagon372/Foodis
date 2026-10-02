@@ -2,9 +2,11 @@
 // 어드민 음식점·혜택 입력 폼 (/admin/places). 카카오에서 받은 이름·주소를 복사해 넣지 말 것 — 사장님에게 직접 받은 정보만.
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { btn } from "@/components/ui";
 import { callApi } from "./ui";
 
-const input = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm";
+// 디자인 v2 입력칸 (FoodEditor 와 같은 모양) — 토큰만 써서 다크에서도 맞는다
+const input = "h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-brand";
 
 export function OfferForm() {
   const router = useRouter();
@@ -13,7 +15,7 @@ export function OfferForm() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <form
-      className="grid gap-2 md:grid-cols-2"
+      className="card grid gap-3 rounded-3xl p-5 md:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
         setMsg("저장 중…");
@@ -50,7 +52,7 @@ export function OfferForm() {
         마감일 {(f.kind === "coupon" || f.kind === "event") && <b className="text-diet-no">*</b>} <input type="date" className={input} value={f.ends_on} onChange={set("ends_on")} />
       </label>
       <div className="flex items-center gap-3 md:col-span-2">
-        <button className="rounded-lg bg-green-800 px-4 py-2 text-sm font-semibold text-ivory">혜택 등록</button>
+        <button className={btn("primary", "sm")}>혜택 등록</button>
         {msg && <span className="whitespace-pre-line text-caption text-muted">{msg}</span>}
       </div>
     </form>
@@ -64,7 +66,7 @@ export function RestaurantForm() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <form
-      className="grid gap-2 md:grid-cols-2"
+      className="card grid gap-3 rounded-3xl p-5 md:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
         setMsg("저장 중…");
@@ -95,7 +97,7 @@ export function RestaurantForm() {
         <input className={input} value={f.food} onChange={set("food")} placeholder="파는 음식 slug (선택 · 메뉴 확인됨)" />
       </div>
       <div className="flex items-center gap-3 md:col-span-2">
-        <button className="rounded-lg bg-green-800 px-4 py-2 text-sm font-semibold text-ivory">음식점 저장</button>
+        <button className={btn("primary", "sm")}>음식점 저장</button>
         {msg && <span className="whitespace-pre-line text-caption text-muted">{msg}</span>}
       </div>
     </form>

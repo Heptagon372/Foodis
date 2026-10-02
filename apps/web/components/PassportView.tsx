@@ -11,6 +11,7 @@ import { ShareCardButton } from "./ShareCardButton";
 import { MyTablePreview } from "./MyTable";
 import { AccountCard, AccountNudge } from "./AccountCard";
 import { useAccount } from "@/lib/client/account";
+import { QuestBoard } from "./QuestBoard";
 
 const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카", oceania: "오세아니아" };
 
@@ -106,6 +107,10 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
 
       <Section title="Food DNA">
         <DnaRadar weights={dna} />
+      </Section>
+
+      <Section title="이번 주 퀘스트">
+        <QuestBoard />
       </Section>
 
       {(["liked", "saved", "tried"] as const).map((st) => {

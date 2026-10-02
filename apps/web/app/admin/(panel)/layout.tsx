@@ -11,6 +11,7 @@ const NAV = [
   ["/admin", "대시보드"],
   ["/admin/foods", "음식"],
   ["/admin/reports", "신고"],
+  ["/admin/places", "음식점"],
   ["/admin/import", "가져오기"],
   ["/admin/logs", "AI 로그"],
   ["/admin/kpi", "KPI"],

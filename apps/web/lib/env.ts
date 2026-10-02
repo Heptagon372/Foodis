@@ -45,4 +45,13 @@ export const env = {
   // ── 운영
   dailyBudgetUsd: Number(str("DAILY_BUDGET_USD", "5")),
   demoMode: str("DEMO_MODE", "false") === "true",
+
+  // ── 지도·음식점 (lib/places/, docs/design/12). 키가 없으면 /taste 화면이 "지도 키 설정 필요" 안내를 띄운다
+  kakaoRestKey: str("KAKAO_REST_API_KEY"), // 로컬 API(키워드·주소 검색) — 서버 전용
+  kakaoMapJsKey: str("NEXT_PUBLIC_KAKAO_MAP_JS_KEY"), // 지도 그리기 — 브라우저에 노출되는 키(도메인 등록으로 보호)
+  mapProvider: (str("NEXT_PUBLIC_MAP_PROVIDER", "kakao") === "naver" ? "naver" : "kakao") as "kakao" | "naver",
+  naverMapClientId: str("NEXT_PUBLIC_NAVER_MAP_CLIENT_ID"), // NCP Maps(Dynamic Map) Client ID
+  googleMapsKey: str("GOOGLE_MAPS_API_KEY"), // Places API (New) 평점 보강 — 선택
+  googlePlacesDailyCap: Number(str("GOOGLE_PLACES_DAILY_CAP", "100")),
+  ftcFranchiseKey: str("FTC_FRANCHISE_API_KEY"), // data.go.kr 공정위 가맹정보 서비스키 — 어드민 동기화에서만
 };

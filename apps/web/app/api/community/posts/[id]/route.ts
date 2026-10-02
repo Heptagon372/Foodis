@@ -4,7 +4,7 @@
 import { jsonError, parseBody, tooMany } from "@/lib/api/http";
 import { getStore, getViewer, recordSignal, toCommentView, toViews } from "@/lib/community/server";
 import { NotFound } from "@/lib/community/store";
-import { PostAction, type SignalKind } from "@/lib/community/types";
+import { buddyState, PostAction, type SignalKind } from "@/lib/community/types";
 import { clientKey, rateLimit } from "@/lib/guard/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +56,7 @@ export async function POST(req: Request, { params }: Ctx) {
       out = { liked: r.on, like_count: r.count };
       if (r.on) signal = "like";
     } else if (a.action === "join") {
-      if (post.category !== "buddy") return jsonError(400, "not_buddy", "밥친구 글에서만 참여할 수 있어요.");
+      if (!buddyState(post)) return jsonError(400, "not_buddy", "밥친구 글·모임 정모에서만 참여할 수 있어요.");
       if (post.author_key === viewer.key) return jsonError(400, "own_post", "내가 쓴 글에는 참여 버튼 대신 댓글로 소식을 전해요.");
       const r = await store.toggleJoin(id, viewer.key);
       if (r === "full") return jsonError(409, "full", "자리가 다 찼거나 약속 시간이 지났어요.");

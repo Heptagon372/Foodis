@@ -2,10 +2,11 @@
 // 모두 지어낸 예시 글이라 화면에 "샘플" 표시가 붙는다 (작성자 이름 끝 · 샘플).
 import type { CategoryKey } from "./categories";
 import type { MemorySeed } from "./store";
-import type { Photo, Poll, PostRow, Signal, SignalKind } from "./types";
+import type { ClubRow, Photo, Poll, PostRow, Signal, SignalKind } from "./types";
 
 type SeedPost = {
   id: string;
+  club?: string;
   category: CategoryKey;
   author: string;
   title: string;
@@ -34,6 +35,22 @@ const POSTS: SeedPost[] = [
   { id: "seed-western-1", category: "western", author: "파스타공방", title: "진짜 카르보나라는 크림을 안 넣어요", body: "달걀노른자 + 페코리노 + 관찰레(없으면 베이컨). 불 끄고 섞는 게 포인트예요. 사진은 오늘 점심!", hoursAgo: 75, photo: "carbonara", foods: ["carbonara"], likes: 9 },
   { id: "seed-etc-1", category: "etc", author: "여행자J", title: "방콕에서 먹은 똠얌 맛 나는 곳 있을까요", body: "새콤하고 매콤한 그 맛이 그리워요. 서울에서 현지 맛에 가까운 태국 식당 추천 부탁해요.", hoursAgo: 90, photo: "tom-yum", foods: ["tom-yum", "pad-thai"], likes: 7 },
   { id: "seed-buddy-2", category: "buddy", author: "새내기", title: "내일 점심 학식 말고 밖에서 드실 분", body: "개강하고 아직 친구가 없어요 ㅠㅠ 메뉴는 같이 정해요. 마라탕이나 돈까스 생각 중!", hoursAgo: 12, place: "온수역 1번 출구", meetInHours: 22, capacity: 2, likes: 4, joins: 0 },
+  // ── 모임 안 글 (카페형 모임: 가입한 사람만 쓴다)
+  { id: "seed-club-halal-1", club: "seed-club-halal", category: "halal", author: "Aisha", title: "[정모] 토요일 이태원 할랄 투어", body: "이번 주 정모는 이태원 할랄 식당 두 곳 돌아요. 케밥 → 바클라바 디저트 코스! 처음 오시는 분도 환영해요.", hoursAgo: 6, place: "이태원역 3번 출구", meetInHours: 44, capacity: 6, photo: "doner-kebab", foods: ["doner-kebab", "baklava"], likes: 12, joins: 3 },
+  { id: "seed-club-halal-2", club: "seed-club-halal", category: "halal", author: "Omar", title: "편의점 할랄 인증 제품 모음", body: "요즘 편의점에도 할랄 인증 제품이 늘었어요. 찾은 것들 사진으로 정리했어요.", hoursAgo: 30, likes: 9 },
+  { id: "seed-club-mala-1", club: "seed-club-mala", category: "chinese", author: "마라중독", title: "마라탕 맵기 단계별 후기 (1~5단계)", body: "학교 근처 마라탕집 3곳 맵기 비교! 3단계부터는 진짜 각오하세요. 마라샹궈는 2단계 추천.", hoursAgo: 3, photo: "mapo-tofu", foods: ["mapo-tofu"], poll: { question: "최애 맵기는?", options: ["1~2단계", "3단계", "4단계 이상"], votes: [8, 15, 6] }, likes: 18 },
+  { id: "seed-club-vegan-1", club: "seed-club-vegan", category: "vegetarian", author: "초록", title: "비건 한 끼 인증 — 차나 마살라", body: "병아리콩 커리로 오늘 점심 해결! 레시피는 댓글에 남길게요.", hoursAgo: 10, photo: "chana-masala", foods: ["chana-masala"], likes: 14 },
+  { id: "seed-club-diet-1", club: "seed-club-diet", category: "diet", author: "헬린이", title: "이번 주 식단 인증 스레드", body: "아침 그릭요거트, 점심 포케, 저녁 월남쌈. 다들 이번 주 식단 남겨 주세요!", hoursAgo: 15, foods: ["goi-cuon"], likes: 10 },
+];
+
+/** 샘플 모임 (카페형). 가입 시각을 펼쳐 놓아 '급상승 모임'이 보이게 */
+const CLUBS: { id: string; name: string; topic: ClubRow["topic"]; owner: string; description: string; daysAgo: number; photo?: string; members: number; recentJoins: number }[] = [
+  { id: "seed-club-halal", name: "성공회대 할랄 밥상", topic: "halal", owner: "Aisha", description: "유학생·내국인 누구나! 학교 근처 할랄 식당을 같이 찾고 한 달에 두 번 정모해요.", daysAgo: 40, photo: "biryani", members: 38, recentJoins: 9 },
+  { id: "seed-club-mala", name: "마라 원정대", topic: "chinese", owner: "마라중독", description: "마라탕·마라샹궈·훠궈 맛집 지도 만드는 중. 맵기 단계 후기 환영.", daysAgo: 25, photo: "hot-pot", members: 52, recentJoins: 12 },
+  { id: "seed-club-vegan", name: "비건 한 끼", topic: "vegetarian", owner: "초록", description: "하루 한 끼라도 비건으로. 레시피·식당·장보기 정보를 나눠요.", daysAgo: 60, photo: "chana-masala", members: 27, recentJoins: 2 },
+  { id: "seed-club-diet", name: "다이어트 식단 인증", topic: "diet", owner: "헬린이", description: "매일 식단 사진 한 장. 세계 음식으로 지루하지 않게 다이어트해요.", daysAgo: 90, photo: "greek-salad", members: 64, recentJoins: 0 },
+  { id: "seed-club-ramen", name: "라멘 순례자들", topic: "japanese", owner: "라멘덕후", description: "돈코츠·쇼유·미소… 서울 라멘집 도장 깨기.", daysAgo: 12, photo: "ramen", members: 19, recentJoins: 1 },
+  { id: "seed-club-collab", name: "퓨전 실험실", topic: "collab", owner: "퓨전셰프", description: "김치 타코, 불고기 반미처럼 세계 음식끼리 섞어 보는 모임.", daysAgo: 8, photo: "kimchi", members: 15, recentJoins: 4 },
 ];
 
 // 지난 2주간의 행동 신호 — 할랄·채식이 최근 급상승, 콜라보·한식은 꾸준히 (브리핑 화면이 뭔가 말할 수 있게)
@@ -62,6 +79,7 @@ export function previewSeed(photoOf: (slug: string) => Photo | null, now = Date.
   const iso = (t: number) => new Date(t).toISOString();
   const posts: PostRow[] = POSTS.map((p) => ({
     id: p.id,
+    club_id: p.club ?? null,
     author_key: `seed:${p.author}`,
     author_name: `${p.author} · 샘플`,
     category: p.category,
@@ -97,5 +115,27 @@ export function previewSeed(photoOf: (slug: string) => Photo | null, now = Date.
     Array.from({ length: n }, (_, i) => ({ kind, category, at: iso(now - ((i + 0.5) / n) * days * 24 * HOUR) })),
   );
   const pollVotes = Object.fromEntries(POSTS.filter((p) => p.poll).map((p) => [p.id, p.poll!.votes]));
-  return { posts, comments, signals, pollVotes };
+  const clubs: ClubRow[] = CLUBS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    topic: c.topic,
+    description: c.description,
+    cover: c.photo ? photoOf(c.photo) : null,
+    owner_key: `seed:${c.owner}`,
+    owner_name: `${c.owner} · 샘플`,
+    member_count: 0,
+    post_count: 0,
+    last_post_at: null,
+    created_at: iso(now - c.daysAgo * 24 * HOUR),
+  }));
+  // 회원: 대부분은 오래전에, recentJoins 명은 최근 48시간 안에 가입 → 급상승 계산이 실제 규칙으로 돈다
+  const members = CLUBS.flatMap((c) =>
+    Array.from({ length: c.members }, (_, i) => ({
+      club_id: c.id,
+      key: `seed:${c.id}:${i}`,
+      // 나머지는 만든 날부터 사흘 전까지 고르게
+      at: iso(i < c.recentJoins ? now - ((i + 1) / (c.recentJoins + 1)) * 40 * HOUR : now - (3 + ((i - c.recentJoins) / Math.max(1, c.members - c.recentJoins)) * (c.daysAgo - 3)) * 24 * HOUR),
+    })),
+  );
+  return { posts, comments, signals, pollVotes, clubs, members };
 }

@@ -1,12 +1,12 @@
 "use client";
-// 글쓰기: 카테고리(밥친구 / 모임 10개) · 제목 · 내용 · 위치 · (밥친구) 만날 시각·인원 · 사진 4장 · 투표.
+// 글쓰기: 게시판(밥친구 / 주제 10개) 또는 ?club=<id> 모임 안 · 제목 · 내용 · 위치 · (밥친구·정모) 만날 시각·인원 · 사진 4장 · 투표.
 // 쓰는 동안 푸디가 제목·내용 단어로 카테고리를 추천한다 (규칙 기반, lib/community/categories.ts). 고르는 건 언제나 사용자
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useMemo, useRef, useState } from "react";
-import { ApiError, createPost, shrinkPhoto, type PhotoUpload } from "@/lib/client/community";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ApiError, createPost, fetchClub, shrinkPhoto, type PhotoUpload } from "@/lib/client/community";
 import { CATEGORIES, CATEGORY, isCategory, suggestCategories, type CategoryKey } from "@/lib/community/categories";
-import { LIMITS } from "@/lib/community/types";
+import { LIMITS, type ClubView } from "@/lib/community/types";
 import { Icon } from "../icons";
 import { TopBar } from "../TopBar";
 import { btn, chip, Eyebrow } from "../ui";
@@ -26,6 +26,9 @@ export function ComposeForm() {
   const router = useRouter();
   const params = useSearchParams();
   const initial = params.get("category");
+  const clubId = params.get("club");
+  const [club, setClub] = useState<ClubView | null>(null);
+  const [meetOn, setMeetOn] = useState(false);
   const [category, setCategory] = useState<CategoryKey | null>(isCategory(initial) ? initial : null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -43,11 +46,24 @@ export function ComposeForm() {
   const fileRef = useRef<HTMLInputElement>(null);
   const ids = { title: useId(), body: useId(), place: useId(), meet: useId(), q: useId() };
 
-  const buddy = category === "buddy";
+  useEffect(() => {
+    if (!clubId) return;
+    fetchClub(clubId).then(
+      (r) => {
+        setClub(r.club);
+        setCategory(r.club.topic);
+      },
+      (e: Error) => setError(e.message),
+    );
+  }, [clubId]);
+
+  const buddy = category === "buddy" && !clubId;
+  // 만날 시각·인원: 밥친구는 항상, 모임 글은 '정모 일정 넣기'를 켰을 때
+  const withMeet = buddy || (Boolean(club) && meetOn);
   const suggestions = useMemo(() => suggestCategories(`${title}\n${body}`).filter((k) => k !== category), [title, body, category]);
   const cleanOptions = options.map((o) => o.trim()).filter(Boolean);
   const pollProblem = pollOn && (cleanOptions.length < 2 ? "투표 선택지를 2개 이상 적어 주세요." : new Set(cleanOptions).size !== cleanOptions.length ? "투표 선택지가 겹쳐요." : null);
-  const ready = category && title.trim().length >= 2 && body.trim().length >= 1 && !pollProblem && !busy && !photoBusy;
+  const ready = category && (!clubId || club?.joined) && title.trim().length >= 2 && body.trim().length >= 1 && !pollProblem && !busy && !photoBusy;
 
   const addPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -76,10 +92,11 @@ export function ComposeForm() {
     try {
       const post = await createPost({
         category,
+        ...(club ? { club_id: club.id } : {}),
         title: title.trim(),
         body: body.trim(),
         place: place.trim() || undefined,
-        ...(buddy ? { meet_at: meet ? new Date(meet).toISOString() : undefined, capacity } : {}),
+        ...(withMeet ? { meet_at: meet ? new Date(meet).toISOString() : undefined, capacity } : {}),
         photos: photos.map((p) => p.upload),
         poll: pollOn ? { question: question.trim() || undefined, options: cleanOptions } : undefined,
       });
@@ -93,55 +110,65 @@ export function ComposeForm() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
-      <TopBar back={{ href: category ? `/community?c=${category}` : "/community", label: "커뮤니티" }} settings={false} />
+      <TopBar back={club ? { href: `/community/clubs/${club.id}`, label: club.name } : { href: category ? `/community?c=${category}` : "/community", label: "커뮤니티" }} settings={false} />
       <div className="space-y-1">
-        <Eyebrow>World Table</Eyebrow>
-        <h1 className="text-h1 font-bold text-ink">글쓰기</h1>
+        <Eyebrow>{club ? `${CATEGORY[club.topic].label} 모임` : "World Table · 게시판"}</Eyebrow>
+        <h1 className="text-h1 font-bold text-ink">{club ? `${club.name}에 글쓰기` : "글쓰기"}</h1>
+        {club && !club.joined && (
+          <p className="text-sm text-diet-warn-ink">
+            모임에 가입해야 글을 쓸 수 있어요.{" "}
+            <Link href={`/community/clubs/${club.id}`} className="font-semibold underline">
+              가입하러 가기
+            </Link>
+          </p>
+        )}
       </div>
 
       <form onSubmit={submit} className="space-y-6">
-        {/* 1. 카테고리 */}
-        <fieldset className="space-y-3">
-          <legend className="mb-2 text-sm font-semibold text-ink">어디에 올릴까요?</legend>
-          <button
-            type="button"
-            onClick={() => setCategory("buddy")}
-            aria-pressed={buddy}
-            className={`flex w-full items-center gap-3 rounded-3xl border p-4 text-left transition active:scale-[0.99] ${buddy ? "border-brand bg-lime-soft" : "card hover:border-leaf/40"}`}
-          >
-            <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${buddy ? "bg-brand text-on-brand" : "bg-lime-soft text-leaf"}`}>
-              <Icon name="utensils" className="size-5" />
-            </span>
-            <span className="flex-1">
-              <span className="block text-[15px] font-semibold text-ink">밥친구 찾기</span>
-              <span className="block text-caption text-muted">시간·장소·인원을 정해 같이 먹을 사람을 모아요</span>
-            </span>
-            {buddy && <Icon name="check-circle" className="size-5 text-leaf" />}
-          </button>
-          <p className="pt-1 text-caption font-semibold text-muted">모임</p>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.filter((c) => c.board === "club").map((c) => (
-              <button key={c.key} type="button" className={chip(category === c.key)} onClick={() => setCategory(c.key)} aria-pressed={category === c.key}>
-                <Icon name={c.icon} className="size-4" />
-                {c.label}
-              </button>
-            ))}
-          </div>
-          {suggestions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-sunken/70 px-3 py-2" aria-live="polite">
-              <span className="inline-flex items-center gap-1 text-caption font-semibold text-leaf">
-                <Icon name="sparkle" className="size-3.5" />
-                푸디 추천
+        {/* 1. 카테고리 (모임 글은 모임 주제로 고정) */}
+        {!clubId && (
+          <fieldset className="space-y-3">
+            <legend className="mb-2 text-sm font-semibold text-ink">어디에 올릴까요?</legend>
+            <button
+              type="button"
+              onClick={() => setCategory("buddy")}
+              aria-pressed={buddy}
+              className={`flex w-full items-center gap-3 rounded-3xl border p-4 text-left transition active:scale-[0.99] ${buddy ? "border-brand bg-lime-soft" : "card hover:border-leaf/40"}`}
+            >
+              <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${buddy ? "bg-brand text-on-brand" : "bg-lime-soft text-leaf"}`}>
+                <Icon name="utensils" className="size-5" />
               </span>
-              {suggestions.map((k) => (
-                <button key={k} type="button" onClick={() => setCategory(k)} className="inline-flex h-8 items-center gap-1 rounded-full border border-brand/30 bg-surface px-3 text-[13px] font-medium text-leaf hover:bg-lime-soft">
-                  <Icon name={CATEGORY[k].icon} className="size-3.5" />
-                  {CATEGORY[k].label}
+              <span className="flex-1">
+                <span className="block text-[15px] font-semibold text-ink">밥친구 찾기</span>
+                <span className="block text-caption text-muted">시간·장소·인원을 정해 같이 먹을 사람을 모아요</span>
+              </span>
+              {buddy && <Icon name="check-circle" className="size-5 text-leaf" />}
+            </button>
+            <p className="pt-1 text-caption font-semibold text-muted">주제 게시판</p>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.filter((c) => c.board === "club").map((c) => (
+                <button key={c.key} type="button" className={chip(category === c.key)} onClick={() => setCategory(c.key)} aria-pressed={category === c.key}>
+                  <Icon name={c.icon} className="size-4" />
+                  {c.label}
                 </button>
               ))}
             </div>
-          )}
-        </fieldset>
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-sunken/70 px-3 py-2" aria-live="polite">
+                <span className="inline-flex items-center gap-1 text-caption font-semibold text-leaf">
+                  <Icon name="sparkle" className="size-3.5" />
+                  푸디 추천
+                </span>
+                {suggestions.map((k) => (
+                  <button key={k} type="button" onClick={() => setCategory(k)} className="inline-flex h-8 items-center gap-1 rounded-full border border-brand/30 bg-surface px-3 text-[13px] font-medium text-leaf hover:bg-lime-soft">
+                    <Icon name={CATEGORY[k].icon} className="size-3.5" />
+                    {CATEGORY[k].label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </fieldset>
+        )}
 
         {/* 2. 제목 · 내용 */}
         <div className="space-y-2">
@@ -176,7 +203,16 @@ export function ComposeForm() {
           </p>
         </div>
 
-        {buddy && (
+        {club && (
+          <label className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Icon name="calendar" className="size-5 text-leaf" />
+              정모 일정 넣기 <span className="font-normal text-muted">(시각 · 인원 · 참여 버튼)</span>
+            </span>
+            <input type="checkbox" checked={meetOn} onChange={(e) => setMeetOn(e.target.checked)} className="size-5 accent-[var(--color-brand)]" />
+          </label>
+        )}
+        {withMeet && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor={ids.meet} className="text-sm font-semibold text-ink">
@@ -280,11 +316,11 @@ export function ComposeForm() {
         )}
 
         <div className="flex gap-2 pb-4">
-          <Link href="/community" className={`${btn("outline")} flex-1`}>
+          <Link href={club ? `/community/clubs/${club.id}` : "/community"} className={`${btn("outline")} flex-1`}>
             취소
           </Link>
           <button type="submit" disabled={!ready} className={`${btn("lime")} flex-[2]`}>
-            {busy ? "올리는 중…" : category ? `${CATEGORY[category].label}에 올리기` : "카테고리를 골라 주세요"}
+            {busy ? "올리는 중…" : club ? "모임에 올리기" : category ? `${CATEGORY[category].label}에 올리기` : "카테고리를 골라 주세요"}
           </button>
         </div>
         <p className="-mt-4 pb-6 text-center text-caption text-muted">연락처·오픈채팅 주소는 글에 적지 말고, 댓글로 약속을 정해요. 신고가 3번 쌓인 글은 자동으로 가려져요.</p>

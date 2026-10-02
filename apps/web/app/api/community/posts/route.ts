@@ -1,10 +1,10 @@
-// GET  /api/community/posts?filter=all|club|<카테고리>&sort=foryou|latest|popular&offset=0&i=halal:1,korean:0.4
-//      피드. sort=foryou 는 i(브라우저가 쌓은 내 관심, 0~1) + 모두의 트렌드로 순서를 정하고 "왜 이 글?" 이유를 붙인다.
+// GET  /api/community/posts?filter=all|<카테고리>&sort=foryou|latest|popular&offset=0&i=halal:1,korean:0.4[&club=<모임 id>]
+//      피드. club 이 없으면 게시판 글만, 있으면 그 모임 글만. sort=foryou 는 i(브라우저가 쌓은 내 관심, 0~1) + 모두의 트렌드로 순서를 정하고 "왜 이 글?" 이유를 붙인다.
 // POST /api/community/posts — 글쓰기 (운영: 로그인 필요). 사진·투표·위치 포함. 사전 필터 → 음식 태그 → 저장 → 신호 기록
 import { jsonError, parseBody, tooMany } from "@/lib/api/http";
 import { filterCategories, isCategory, type FeedFilter } from "@/lib/community/categories";
 import { moderate } from "@/lib/community/moderation";
-import { getStore, getViewer, recordSignal, tagVocab, toViews, trendsOf } from "@/lib/community/server";
+import { getStore, getViewer, invalidateClubHeat, recordSignal, tagVocab, toViews, trendsOf } from "@/lib/community/server";
 import { matchTags } from "@/lib/community/tags";
 import { decodeInterest, popularity, rankForYou } from "@/lib/community/trends";
 import { NewPostInput, SORTS, type Sort } from "@/lib/community/types";
@@ -25,11 +25,13 @@ export async function GET(req: Request) {
   const s = url.searchParams.get("sort") as Sort | null;
   const sort: Sort = s && (SORTS as readonly string[]).includes(s) ? s : "foryou";
   const offset = Math.max(0, Math.min(Number(url.searchParams.get("offset")) || 0, POOL));
+  const clubParam = url.searchParams.get("club");
+  const club = clubParam && /^[A-Za-z0-9-]{1,64}$/.test(clubParam) ? clubParam : null;
 
   try {
     const store = await getStore();
     const viewer = await getViewer(req, store.mode === "live");
-    const pool = await store.listPosts({ categories: filterCategories(filter), limit: POOL });
+    const pool = await store.listPosts({ categories: club ? null : filterCategories(filter), limit: POOL, club });
     let rows = pool;
     let reasons: Map<string, string | null> | undefined;
     if (sort === "foryou") {
@@ -63,6 +65,14 @@ export async function POST(req: Request) {
   if (!body.ok) return body.res;
   const p = body.data;
   if (p.meet_at && new Date(p.meet_at).getTime() < Date.now() - 10 * 60_000) return jsonError(400, "meet_in_past", "만날 시각이 이미 지났어요.");
+  // 모임 글: 모임이 있고 · 가입한 사람만 · 카테고리는 모임 주제로 고정
+  let category = p.category;
+  if (p.club_id) {
+    const club = await store.getClub(p.club_id).catch(() => null);
+    if (!club) return jsonError(404, "club_not_found", "모임을 찾을 수 없어요.");
+    if (!(await store.memberOf(viewer.key, [club.id])).has(club.id)) return jsonError(403, "not_member", "모임에 가입한 뒤에 글을 쓸 수 있어요.");
+    category = club.topic;
+  }
 
   const text = [p.title, p.body, p.place, p.poll?.question, ...(p.poll?.options ?? [])].filter(Boolean).join("\n");
   const repo = await getRepo();
@@ -76,7 +86,8 @@ export async function POST(req: Request) {
     const row = await store.createPost({
       author_key: viewer.key,
       author_name: viewer.name,
-      category: p.category,
+      club_id: p.club_id ?? null,
+      category,
       title: p.title,
       body: p.body,
       place: p.place ?? null,
@@ -87,6 +98,7 @@ export async function POST(req: Request) {
       ...tags,
     });
     await recordSignal(store, viewer, "post", row.category, row.id);
+    if (row.club_id) invalidateClubHeat();
     const [view] = await toViews(store, [row], viewer);
     return Response.json({ post: view }, { status: 201 });
   } catch (e) {

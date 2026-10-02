@@ -15,7 +15,7 @@ export function CategoryBadge({ category, className = "" }: { category: Category
   return (
     <span className={`inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold ${buddy ? "bg-lime text-on-lime" : "bg-lime-soft text-leaf"} ${className}`}>
       <Icon name={c.icon} className="size-3.5" strokeWidth={2} />
-      {buddy ? c.label : `${c.label} 모임`}
+      {c.label}
     </span>
   );
 }

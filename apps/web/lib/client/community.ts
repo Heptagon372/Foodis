@@ -6,7 +6,10 @@ import { useSyncExternalStore } from "react";
 import type { Briefing, HotFood } from "@/lib/community/briefing";
 import type { CategoryKey, FeedFilter } from "@/lib/community/categories";
 import { bumpInterest, encodeInterest, normalizeInterest, type InterestMap, type Trend } from "@/lib/community/trends";
-import type { CommentView, PostView, SignalKind, Sort } from "@/lib/community/types";
+import type { ClubView, CommentView, PostView, SignalKind, Sort } from "@/lib/community/types";
+import type { NewsArticle } from "@/lib/news/store";
+import type { NewsCategory } from "@/lib/news/sources";
+import type { RisingItem } from "@/lib/trends/rising";
 import { anonId, trackingAllowed } from "./track";
 
 export class ApiError extends Error {
@@ -34,8 +37,9 @@ export type FeedPage = { posts: PostView[]; next: number | null; mode: "live" | 
 export type PostPage = { post: PostView; comments: CommentView[]; mode: "live" | "preview"; can_write: boolean };
 export type BriefingPage = { briefing: Briefing; trends: Trend[]; hot_foods: HotFood[]; mode: "live" | "preview" };
 
-export const fetchFeed = (filter: FeedFilter, sort: Sort, offset = 0) => {
+export const fetchFeed = (filter: FeedFilter, sort: Sort, offset = 0, club?: string) => {
   const q = new URLSearchParams({ filter, sort, offset: String(offset) });
+  if (club) q.set("club", club);
   if (sort === "foryou") {
     const i = encodeInterest(normalizeInterest(getInterest()));
     if (i) q.set("i", i);
@@ -48,6 +52,7 @@ export const fetchBriefing = () => api<BriefingPage>("/api/community/briefing");
 export type PhotoUpload = { media_type: "image/jpeg"; data: string };
 export type Draft = {
   category: CategoryKey;
+  club_id?: string;
   title: string;
   body: string;
   place?: string;
@@ -77,6 +82,40 @@ export async function addComment(post: Pick<PostView, "id" | "category">, body: 
 }
 export const deleteComment = (postId: string, commentId: string) =>
   api<{ ok: true }>(`/api/community/posts/${encodeURIComponent(postId)}/comments?comment=${encodeURIComponent(commentId)}`, { method: "DELETE" });
+
+// ── 모임
+export type ClubsPage = { clubs: ClubView[]; mine: ClubView[]; mode: "live" | "preview"; can_write: boolean };
+export const fetchClubs = (topic: CategoryKey | null) => api<ClubsPage>(`/api/community/clubs${topic ? `?topic=${topic}` : ""}`);
+export const fetchClub = (id: string) => api<{ club: ClubView; mode: "live" | "preview"; can_write: boolean }>(`/api/community/clubs/${encodeURIComponent(id)}`);
+export async function createClub(d: { name: string; topic: CategoryKey; description: string; cover?: PhotoUpload }) {
+  return (await api<{ club: ClubView }>("/api/community/clubs", { method: "POST", body: JSON.stringify(d) })).club;
+}
+export async function toggleClub(club: Pick<ClubView, "id" | "topic">) {
+  const r = await api<{ joined: boolean; member_count: number }>(`/api/community/clubs/${encodeURIComponent(club.id)}`, { method: "POST" });
+  if (r.joined) bump(club.topic, "join", null, false);
+  return r;
+}
+export const deleteClub = (id: string) => api<{ ok: true }>(`/api/community/clubs/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+// ── 지금 뜨는 음식 · 뉴스
+export type TrendingPage = { items: RisingItem[]; counts: { news: number; community: number }; updated_at: string };
+export const fetchTrending = () => api<TrendingPage>("/api/trending");
+export type NewsItem = NewsArticle & { hot: boolean };
+export type NewsPage = {
+  articles: NewsItem[];
+  rising: RisingItem[];
+  counts: Record<NewsCategory, number>;
+  provider: "naver" | "google_rss" | "none";
+  mode: "live" | "preview";
+  updated_at: string | null;
+  next_update_at: string | null;
+};
+export const fetchNews = (category: NewsCategory | null, term: string | null) => {
+  const q = new URLSearchParams();
+  if (category) q.set("category", category);
+  if (term) q.set("term", term);
+  return api<NewsPage>(`/api/news${q.size ? `?${q}` : ""}`);
+};
 
 // ── 내 관심 (localStorage)
 const KEY = "foodis:community";

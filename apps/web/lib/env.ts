@@ -75,4 +75,9 @@ export const env = {
   googleMapsKey: str("GOOGLE_MAPS_API_KEY"), // Places API (New) 평점 보강 — 선택
   googlePlacesDailyCap: Number(str("GOOGLE_PLACES_DAILY_CAP", "100")),
   ftcFranchiseKey: str("FTC_FRANCHISE_API_KEY"), // data.go.kr 공정위 가맹정보 서비스키 — 어드민 동기화에서만
+
+  // ── 음식 뉴스 (lib/news/, docs/design/15). 네이버 개발자센터 '검색' API 애플리케이션 — 지도(NCP) 키와 다르다
+  naverClientId: str("NAVER_CLIENT_ID"),
+  naverClientSecret: str("NAVER_CLIENT_SECRET"),
+  cronSecret: str("CRON_SECRET"), // /api/news/crawl 을 스케줄러(Vercel Cron 등)가 부를 때 Bearer 토큰
 };

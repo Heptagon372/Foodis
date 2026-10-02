@@ -102,7 +102,7 @@ export function PostDetail({ id, initial }: { id: string; initial: PostPage | nu
     if (!window.confirm("이 글을 지울까요? 댓글·투표도 함께 사라져요.")) return;
     void run("delete", async () => {
       await deletePost(post.id);
-      router.push(`/community?c=${post.category}`);
+      router.push(post.club_id ? `/community/clubs/${post.club_id}` : `/community?c=${post.category}`);
     });
   };
   const send = (e: React.FormEvent) => {
@@ -129,12 +129,18 @@ export function PostDetail({ id, initial }: { id: string; initial: PostPage | nu
 
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
-      <TopBar back={{ href: `/community?c=${post.category}`, label: CATEGORY[post.category].label }} />
+      <TopBar back={post.club_id ? { href: `/community/clubs/${post.club_id}`, label: "모임" } : { href: `/community?c=${post.category}`, label: CATEGORY[post.category].label }} />
 
       <article className="space-y-5">
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-1.5">
             <CategoryBadge category={post.category} />
+            {post.club_id && (
+              <Link href={`/community/clubs/${post.club_id}`} className="inline-flex h-7 items-center gap-1 rounded-full border border-line px-2.5 text-[12px] font-semibold text-ink-soft hover:text-ink">
+                <Icon name="users" className="size-3.5" />
+                모임 글
+              </Link>
+            )}
             <BuddyPill post={post} />
           </div>
           <h1 className="text-h1 font-bold text-ink">{post.title}</h1>

@@ -12,13 +12,21 @@ import { displayName, memoryStore, type CommunityStore } from "./store";
 import { supabaseStore } from "./supabase-store";
 import type { TagVocab } from "./tags";
 import { computeTrends, TREND_WINDOW_MS, type Trend } from "./trends";
-import type { CommentRow, CommentView, PostRow, PostView, SignalKind, TagLink } from "./types";
+import { clubHeat, rankRising, RISING, type Mention, type RisingItem } from "@/lib/trends/rising";
+import { extractFoodTerms } from "@/lib/trends/keywords";
+import type { ClubRow, ClubView, CommentRow, CommentView, PostRow, PostView, SignalKind, TagLink } from "./types";
 
 // ── 저장소: 키 + 0006 테이블이 있으면 Supabase, 아니면 메모리(샘플 글). 1분마다 다시 확인
 let checked: { at: number; live: boolean; reason: string } | null = null;
 // 미리보기 메모리는 globalThis 에 하나만: next dev 는 라우트·페이지마다 모듈을 따로 올려서, 모듈 변수면 글쓰기 라우트와 상세 화면이 서로 다른 저장소를 본다
 type TrendCache = { at: number; mode: string; trends: Trend[]; hotFoods: HotFood[]; recent: PostRow[] };
-type Shared = { store?: CommunityStore; photos: Map<string, { media_type: string; data: string }>; trends?: TrendCache | null };
+type Shared = {
+  store?: CommunityStore;
+  photos: Map<string, { media_type: string; data: string }>;
+  trends?: TrendCache | null;
+  clubHeat?: { at: number; mode: string; heat: Map<string, { recent: number; rising: boolean }> } | null;
+  rising?: { at: number; key: string; items: RisingItem[]; counts: { news: number; community: number } } | null;
+};
 const g = globalThis as typeof globalThis & { __foodisCommunity?: Shared };
 const mem: Shared = (g.__foodisCommunity ??= { photos: new Map() });
 const photos = mem.photos;
@@ -109,7 +117,7 @@ export async function trendsOf(store: CommunityStore) {
   const hit = mem.trends;
   if (hit && hit.mode === store.mode && Date.now() - hit.at < 120_000) return hit;
   const since = new Date(Date.now() - TREND_WINDOW_MS).toISOString();
-  const [signals, recent, { names }] = await Promise.all([store.recentSignals(since), store.listPosts({ categories: null, limit: 200 }), tagVocab()]);
+  const [signals, recent, { names }] = await Promise.all([store.recentSignals(since), store.listPosts({ categories: null, limit: 200, club: "any" }), tagVocab()]);
   const fresh = recent.filter((p) => p.created_at >= since);
   const counts = new Map<string, number>();
   for (const p of fresh) for (const s of p.food_slugs) counts.set(s, (counts.get(s) ?? 0) + 1 + Math.min(p.like_count, 20) / 10);
@@ -140,4 +148,59 @@ export async function briefingOf(store: CommunityStore): Promise<{ briefing: Bri
   briefings.set(key, { at: Date.now(), b: briefing });
   if (briefings.size > 50) briefings.delete(briefings.keys().next().value!);
   return { briefing, trends: t.trends, hotFoods: t.hotFoods };
+}
+
+// ── 모임 화면용 (가입 여부 · 급상승)
+export async function clubHeatOf(store: CommunityStore) {
+  const hit = mem.clubHeat;
+  if (hit && hit.mode === store.mode && Date.now() - hit.at < 120_000) return hit.heat;
+  const since = new Date(Date.now() - RISING.recentMs - RISING.baseMs).toISOString();
+  const heat = clubHeat(await store.clubActivity(since));
+  mem.clubHeat = { at: Date.now(), mode: store.mode, heat };
+  return heat;
+}
+export const invalidateClubHeat = () => void (mem.clubHeat = null);
+
+export async function toClubViews(store: CommunityStore, rows: ClubRow[], viewer: Viewer): Promise<ClubView[]> {
+  const [joined, heat] = await Promise.all([store.memberOf(viewer.key, rows.map((r) => r.id)), clubHeatOf(store)]);
+  return rows.map(({ owner_key, ...c }) => ({
+    ...c,
+    mine: Boolean(viewer.key && owner_key === viewer.key),
+    joined: joined.has(c.id),
+    rising: heat.get(c.id)?.rising ?? false,
+    recent: heat.get(c.id)?.recent ?? 0,
+  }));
+}
+
+// ── 지금 뜨는 음식: 뉴스 제목 + 커뮤니티 글(게시판·모임)의 음식 언급 → 급상승 순위 (5분 캐시)
+/** 커뮤니티 글 1개의 무게: 뉴스 기사 1건 = 1 → 글 1.5 + 따봉 반영(최대 +1) */
+const postWeight = (p: PostRow) => 1.5 + Math.min(p.like_count, 10) / 10;
+
+export async function risingFoods(news: { title: string; terms: string[]; food_slugs: string[]; published_at: string }[], newsKey: string): Promise<{ items: RisingItem[]; counts: { news: number; community: number } }> {
+  const store = await getStore();
+  const key = `${store.mode}:${newsKey}`;
+  const hit = mem.rising;
+  if (hit && hit.key === key && Date.now() - hit.at < 300_000) return hit;
+  const since = new Date(Date.now() - RISING.recentMs - RISING.baseMs).toISOString();
+  const [posts, { v, names }] = await Promise.all([store.listPosts({ categories: null, limit: 500, club: "any" }), tagVocab()]);
+  const vocab = { foods: v.foods };
+  const slugOf = new Map([...names].map(([slug, name]) => [name, slug]));
+  const mentions: Mention[] = [];
+  for (const a of news) {
+    const at = Date.parse(a.published_at);
+    for (const term of a.terms) mentions.push({ term, slug: slugOf.get(term) ?? null, at, weight: 1, source: "news" });
+  }
+  let community = 0;
+  for (const p of posts) {
+    if (p.created_at < since) continue;
+    community++;
+    const at = Date.parse(p.created_at);
+    // 태그(DB 음식) + 제목의 새 음식 키워드
+    const terms = new Map<string, string | null>(p.food_slugs.flatMap((s) => (names.has(s) ? [[names.get(s)!, s] as [string, string]] : [])));
+    for (const t of extractFoodTerms(p.title, vocab, 3)) if (!terms.has(t.term)) terms.set(t.term, t.slug);
+    for (const [term, slug] of terms) mentions.push({ term, slug, at, weight: postWeight(p), source: "community" });
+  }
+  const out = { at: Date.now(), key, items: rankRising(mentions), counts: { news: news.length, community } };
+  mem.rising = out;
+  return out;
 }

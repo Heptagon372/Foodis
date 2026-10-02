@@ -15,6 +15,7 @@ const H = 3_600_000;
 const ago = (h: number) => new Date(NOW - h * H).toISOString();
 
 const post = (o: Partial<PostRow> & Pick<PostRow, "id" | "category">): PostRow => ({
+  club_id: null,
   author_key: "u1",
   author_name: "a",
   title: "제목",
@@ -171,6 +172,7 @@ describe("글 입력 검증", () => {
 
 describe("메모리 저장소", () => {
   const draft = (o: Partial<NewPost> = {}): NewPost => ({
+    club_id: null,
     author_key: "me",
     author_name: "나",
     category: "buddy",

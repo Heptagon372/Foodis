@@ -13,7 +13,8 @@ import { activeHref, isBareRoute, NAV_GROUPS, type NavItem } from "./nav";
 const pick = (href: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === href)!;
 // 내 기록(My Table·퀘스트)은 Passport 탭이 켜진다
 const LEFT: NavItem[] = [pick("/"), pick("/map")];
-const RIGHT: NavItem[] = [pick("/community"), { ...pick("/passport"), also: ["/passport", "/quests"] }];
+// 음식 뉴스는 커뮤니티 탭이 켜진다 (같은 '함께' 묶음)
+const RIGHT: NavItem[] = [{ ...pick("/community"), also: ["/news"] }, { ...pick("/passport"), also: ["/passport", "/quests"] }];
 
 export function TabBar() {
   const path = usePathname();

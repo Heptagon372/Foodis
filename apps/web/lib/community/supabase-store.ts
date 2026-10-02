@@ -3,15 +3,18 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HIDE_AFTER_REPORTS, NotFound, type CommunityStore } from "./store";
-import { buddyState, type CommentRow, type Photo, type PostRow, type Signal } from "./types";
+import { buddyState, type ClubRow, type CommentRow, type Photo, type PostRow, type Signal } from "./types";
 
-const POST_COLS = "id, author_id, author_name, category, title, body, place, meet_at, capacity, photos, poll, food_slugs, country_codes, like_count, comment_count, join_count, created_at";
+const POST_COLS = "id, club_id, author_id, author_name, category, title, body, place, meet_at, capacity, photos, poll, food_slugs, country_codes, like_count, comment_count, join_count, created_at";
 const BUCKET = "community";
 
 type DbPost = Omit<PostRow, "author_key" | "photos"> & { author_id: string; photos: (Photo & { path?: string })[] };
 const toRow = ({ author_id, photos, ...p }: DbPost): PostRow => ({ ...p, author_key: author_id, photos: (photos ?? []).map(({ url, credit }) => ({ url, credit: credit ?? null })) });
 type DbComment = Omit<CommentRow, "author_key"> & { author_id: string };
 const toComment = ({ author_id, ...c }: DbComment): CommentRow => ({ ...c, author_key: author_id });
+const CLUB_COLS = "id, name, topic, description, cover, owner_id, owner_name, member_count, post_count, last_post_at, created_at";
+type DbClub = Omit<ClubRow, "owner_key" | "cover"> & { owner_id: string; cover: (Photo & { path?: string }) | null };
+const toClub = ({ owner_id, cover, ...c }: DbClub): ClubRow => ({ ...c, owner_key: owner_id, cover: cover ? { url: cover.url } : null });
 
 const must = <T>(r: { data: T | null; error: { message: string } | null }): T => {
   if (r.error) throw new Error(r.error.message);
@@ -31,9 +34,11 @@ export function supabaseStore(db: SupabaseClient): CommunityStore {
 
   return {
     mode: "live",
-    async listPosts({ categories, limit }) {
+    async listPosts({ categories, limit, club = null }) {
       let q = db.from("community_posts").select(POST_COLS).eq("status", "visible").order("created_at", { ascending: false }).limit(limit);
       if (categories) q = q.in("category", categories);
+      if (club === null) q = q.is("club_id", null);
+      else if (club !== "any") q = q.eq("club_id", club);
       return (must(await q) as DbPost[]).map(toRow);
     },
     getPost: post,
@@ -135,6 +140,68 @@ export function supabaseStore(db: SupabaseClient): CommunityStore {
     },
     async addSignals(rows) {
       if (rows.length) must(await db.from("community_signals").insert(rows));
+    },
+    async listClubs({ topic, limit }) {
+      let q = db.from("community_clubs").select(CLUB_COLS).eq("status", "visible").order("member_count", { ascending: false }).order("created_at", { ascending: false }).limit(limit);
+      if (topic) q = q.eq("topic", topic);
+      return (must(await q) as DbClub[]).map(toClub);
+    },
+    async getClub(id) {
+      const d = must(await db.from("community_clubs").select(CLUB_COLS).eq("id", id).eq("status", "visible").maybeSingle()) as DbClub | null;
+      return d ? toClub(d) : null;
+    },
+    async createClub({ cover, owner_key, ...c }) {
+      const id = crypto.randomUUID();
+      let stored: { url: string; path: string } | null = null;
+      if (cover) {
+        const path = `clubs/${id}/cover.${cover.media_type === "image/png" ? "png" : cover.media_type === "image/webp" ? "webp" : "jpg"}`;
+        const { error } = await db.storage.from(BUCKET).upload(path, Buffer.from(cover.data, "base64"), { contentType: cover.media_type });
+        if (error) throw new Error(`사진 올리기 실패: ${error.message}`);
+        stored = { path, url: db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
+      }
+      const ins = await db.from("community_clubs").insert({ ...c, id, owner_id: owner_key, cover: stored }).select(CLUB_COLS).single();
+      if (ins.error) {
+        if (stored) await db.storage.from(BUCKET).remove([stored.path]).catch(() => {});
+        if (isDup(ins.error)) return "duplicate";
+        throw new Error(ins.error.message);
+      }
+      must(await db.from("community_club_members").insert({ club_id: id, user_id: owner_key, role: "owner" }));
+      return toClub({ ...(ins.data as DbClub), member_count: 1 });
+    },
+    async deleteClub(id, ownerKey) {
+      const d = must(await db.from("community_clubs").delete().eq("id", id).eq("owner_id", ownerKey).select("cover")) as { cover: { path?: string } | null }[];
+      if (!d.length) return false;
+      if (d[0].cover?.path) await db.storage.from(BUCKET).remove([d[0].cover.path]).catch(() => {});
+      return true;
+    },
+    async toggleMember(id, key) {
+      const club = await this.getClub(id);
+      if (!club) throw new NotFound();
+      const cur = must(await db.from("community_club_members").select("role").eq("club_id", id).eq("user_id", key).maybeSingle()) as { role: string } | null;
+      if (cur?.role === "owner") return "owner";
+      if (cur) must(await db.from("community_club_members").delete().eq("club_id", id).eq("user_id", key));
+      else {
+        const ins = await db.from("community_club_members").insert({ club_id: id, user_id: key });
+        if (ins.error && !isDup(ins.error)) throw new Error(ins.error.message);
+      }
+      const after = must(await db.from("community_clubs").select("member_count").eq("id", id).maybeSingle()) as { member_count: number } | null;
+      return { on: !cur, count: after?.member_count ?? club.member_count };
+    },
+    async memberOf(key, ids) {
+      if (!key || (ids && !ids.length)) return new Set();
+      let q = db.from("community_club_members").select("club_id").eq("user_id", key).limit(500);
+      if (ids) q = q.in("club_id", ids);
+      return new Set((must(await q) as { club_id: string }[]).map((r) => r.club_id));
+    },
+    async clubActivity(since) {
+      const [joins, ps] = await Promise.all([
+        db.from("community_club_members").select("club_id, joined_at").gte("joined_at", since).limit(5000),
+        db.from("community_posts").select("club_id, created_at").not("club_id", "is", null).eq("status", "visible").gte("created_at", since).limit(5000),
+      ]);
+      return [
+        ...(must(joins) as { club_id: string; joined_at: string }[]).map((r) => ({ club_id: r.club_id, at: Date.parse(r.joined_at), kind: "join" as const })),
+        ...(must(ps) as { club_id: string; created_at: string }[]).map((r) => ({ club_id: r.club_id, at: Date.parse(r.created_at), kind: "post" as const })),
+      ];
     },
     async recentSignals(since) {
       // 2주 창 · 최대 2만 줄 (1,000줄씩). 베타 규모 넘어가면 SQL 집계 뷰로 옮긴다

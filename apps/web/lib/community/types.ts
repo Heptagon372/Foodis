@@ -12,6 +12,8 @@ export type Poll = { question: string | null; options: string[] };
 /** 저장소 행 (작성자 key 는 서버 안에서만 — 화면으로 내보내지 않는다) */
 export type PostRow = {
   id: string;
+  /** 모임 안 글이면 모임 id, 게시판 글이면 null */
+  club_id: string | null;
   author_key: string;
   author_name: string;
   category: CategoryKey;
@@ -58,6 +60,7 @@ const oneLine = (max: number) => z.string().trim().min(1).max(max).transform((s)
 export const NewPostInput = z
   .object({
     category: z.enum(CATEGORY_KEYS),
+    club_id: z.string().regex(/^[A-Za-z0-9-]{1,64}$/).optional(),
     title: z.string().trim().min(2, "제목은 2자 이상").max(LIMITS.title),
     body: z.string().trim().min(1, "내용을 적어 주세요").max(LIMITS.body),
     place: oneLine(LIMITS.place).optional(),
@@ -76,7 +79,8 @@ export const NewPostInput = z
       .optional(),
   })
   .refine((p) => !p.poll || new Set(p.poll.options).size === p.poll.options.length, { message: "투표 선택지가 겹쳐요", path: ["poll", "options"] })
-  .refine((p) => p.category === "buddy" || (p.meet_at === undefined && p.capacity === undefined), { message: "만날 시각·인원은 밥친구 글에서만", path: ["meet_at"] });
+  // 만날 시각·인원: 밥친구 글 또는 모임 안 글(정모)에서만
+  .refine((p) => p.category === "buddy" || p.club_id !== undefined || (p.meet_at === undefined && p.capacity === undefined), { message: "만날 시각·인원은 밥친구·모임 글에서만", path: ["meet_at"] });
 export type NewPostInput = z.infer<typeof NewPostInput>;
 
 export const PostAction = z.discriminatedUnion("action", [
@@ -93,10 +97,36 @@ export const SORTS = ["foryou", "latest", "popular"] as const;
 export type Sort = (typeof SORTS)[number];
 export const SORT_LABEL: Record<Sort, string> = { foryou: "AI 맞춤", latest: "최신", popular: "인기" };
 
-/** 밥친구 모집 상태 */
-export function buddyState(p: Pick<PostRow, "category" | "meet_at" | "capacity" | "join_count">, now = Date.now()): "open" | "full" | "past" | null {
-  if (p.category !== "buddy") return null;
+/** 밥친구 글·모임 정모(만날 시각이 있는 모임 글)의 모집 상태 */
+export function buddyState(p: Pick<PostRow, "category" | "meet_at" | "capacity" | "join_count"> & { club_id?: string | null }, now = Date.now()): "open" | "full" | "past" | null {
+  if (p.category !== "buddy" && !(p.club_id && p.meet_at)) return null;
   if (p.meet_at && new Date(p.meet_at).getTime() < now - 60 * 60_000) return "past";
   if (p.capacity != null && p.join_count >= p.capacity) return "full";
   return "open";
 }
+
+// ── 모임 (카페형): 만들고 → 가입하고 → 안에서 글쓰기
+export type ClubRow = {
+  id: string;
+  name: string;
+  topic: CategoryKey;
+  description: string;
+  cover: Photo | null;
+  owner_key: string;
+  owner_name: string;
+  member_count: number;
+  post_count: number;
+  last_post_at: string | null;
+  created_at: string;
+};
+export type ClubView = Omit<ClubRow, "owner_key"> & { mine: boolean; joined: boolean; rising: boolean; recent: number };
+
+export const CLUB_LIMITS = { name: 30, description: 300 } as const;
+
+export const NewClubInput = z.object({
+  name: z.string().trim().min(2, "모임 이름은 2자 이상").max(CLUB_LIMITS.name).transform((s) => s.replace(/\s+/g, " ")),
+  topic: z.enum(CATEGORY_KEYS).refine((k) => k !== "buddy", "모임 주제를 골라 주세요"),
+  description: z.string().trim().min(1, "모임 소개를 적어 주세요").max(CLUB_LIMITS.description),
+  cover: z.object({ media_type: z.enum(["image/jpeg", "image/png", "image/webp"]), data: z.string().min(16).max(Math.ceil((PHOTO_MAX_BYTES * 4) / 3) + 8) }).optional(),
+});
+export type NewClubInput = z.infer<typeof NewClubInput>;

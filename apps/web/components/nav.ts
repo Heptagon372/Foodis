@@ -15,7 +15,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "함께",
-    items: [{ href: "/community", label: "커뮤니티", icon: "users" }],
+    items: [
+      { href: "/community", label: "커뮤니티", icon: "users" },
+      { href: "/news", label: "음식 뉴스", icon: "newspaper" },
+    ],
   },
   {
     title: "내 기록",

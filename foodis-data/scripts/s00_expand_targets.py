@@ -85,6 +85,9 @@ FOOD = "Q2095"
 EXCLUDE_ROOTS = {"Q154": "술", "Q11004": "채소", "Q3314483": "과일", "Q12117": "곡물"}
 # 상품·품종 (P31 값으로 판정)
 EXCLUDE_INSTANCE = {"Q431289": "상표", "Q167270": "상표", "Q2424752": "상품", "Q4886": "품종", "Q16521": "분류군"}
+# 나라별 음식 수 범위: 최소 5개(후보가 되는 만큼), 최대 100개
+MIN_PER_COUNTRY = 5
+MAX_PER_COUNTRY = 100
 TITLE_SKIP = re.compile(r"^(List of|Lists of|Outline of|Index of)|cuisine|Cuisine|restaurant|Restaurant|\bchef\b", re.I)
 
 
@@ -167,13 +170,14 @@ def strip_paren(title: str) -> str:
 
 
 def allocate(by_country: dict[str, list[dict]], existing: Counter, total: int) -> tuple[float, dict[str, list[dict]]]:
-    """나라별 몫 = min(가용, k·√가용) — 요리가 풍부한 나라는 더 많이, 작은 나라는 있는 만큼 다.
+    """나라별 몫 = min(가용, k·√가용) — 최소 MIN_PER_COUNTRY(가용이 되는 만큼), 최대 MAX_PER_COUNTRY — 요리가 풍부한 나라는 더 많이, 작은 나라는 있는 만큼 다.
     (기존 + 새로) 합이 total 에 닿는 가장 작은 k 를 찾는다."""
     def picked(k: float) -> dict[str, list[dict]]:
         out = {}
         for cc, rows in by_country.items():
             pool = existing[cc] + len(rows)
-            quota = min(pool, max(existing[cc], math.ceil(k * math.sqrt(pool))))
+            quota = max(existing[cc], math.ceil(k * math.sqrt(pool)), MIN_PER_COUNTRY)
+            quota = min(pool, max(existing[cc], min(quota, MAX_PER_COUNTRY)))
             out[cc] = rows[:max(0, quota - existing[cc])]
         return out
     k = 0.5

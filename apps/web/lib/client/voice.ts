@@ -2,7 +2,9 @@
 // Voice 모듈 (11 문서 §4·§6).
 // 듣기: Web Speech API(무료·저지연) → 미지원/실패 시 녹음 후 /api/foodi/stt (GPT Transcribe + 음식명 힌트)
 // 말하기: /api/foodi/tts 스트림을 받는 대로 재생 → 실패 시 브라우저 speechSynthesis. 자막은 항상 화면에 있다.
+import { isVoiceId } from "@/lib/voice/catalog";
 import { attachResponse } from "./stream-audio";
+import { getVoicePrefs } from "./voice-prefs";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -126,7 +128,7 @@ export function stopSpeaking() {
  */
 const FIRST_AUDIO_TIMEOUT_MS = 8_000;
 
-export async function speak(text: string, onEnd: () => void, prefetched?: Blob | null): Promise<"cached" | "server" | "browser" | "none"> {
+export async function speak(text: string, onEnd: () => void, prefetched?: Blob | null, opts?: { lang?: string }): Promise<"cached" | "server" | "browser" | "none"> {
   stopSpeaking();
   beforeSpeak.forEach((f) => f());
   const my = seq;
@@ -151,7 +153,10 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
       release = () => URL.revokeObjectURL(url);
     } else {
       const ctrl = (pending = new AbortController());
-      const res = await Promise.race([fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal: ctrl.signal }), deadline]);
+      // 설정에서 고른 푸디 목소리 (없거나 카탈로그에서 빠진 id 면 서버 기본). lang = 현지 발음 (design/11 문서 §3)
+      const voice = getVoicePrefs().ttsVoice;
+      const body = { text, ...(isVoiceId(voice) ? { voice } : {}), ...(opts?.lang ? { lang: opts.lang } : {}) };
+      const res = await Promise.race([fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal }), deadline]);
       if (!res.ok) throw new Error(String(res.status));
       const att = await Promise.race([attachResponse(res, audio), deadline]);
       release = att.release;
@@ -198,7 +203,7 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
       return "none";
     }
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR";
+    u.lang = opts?.lang ?? "ko-KR";
     u.rate = 1.05;
     u.onend = u.onerror = () => {
       if (ownUtterance === u) ownUtterance = null;

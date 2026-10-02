@@ -6,9 +6,11 @@
 import { useSyncExternalStore } from "react";
 import type { Episode } from "@/lib/radio/script";
 import { sentences } from "@/lib/radio/script";
+import { hostForSegment, isVoiceId } from "@/lib/voice/catalog";
 import { exploredCountries, getState, record } from "./passport";
 import { attachResponse, canStreamAudio, type AttachedAudio } from "./stream-audio";
 import { beforeSpeak, stopSpeaking } from "./voice";
+import { getVoicePrefs } from "./voice-prefs";
 import { questEvent } from "./quest";
 import { track } from "./track";
 
@@ -85,18 +87,24 @@ function unlock() {
 }
 
 const key = (ep: number, seg: number) => `${st.channel}:${st.episodes[ep]?.food.slug}:${seg}`;
-const ttsInit = (text: string, signal: AbortSignal): RequestInit => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal });
+/** 2인 진행 (design/11 문서 §4): 이야기 구간은 진행자 A(이야기꾼), 오프닝·연결·클로징은 B. 고른 짝이 없으면 서버가 준비된 목소리로 자동 짝 */
+function hostVoice(kind: string): { voice: string; role: "story" | "mc" } {
+  const role = hostForSegment(kind);
+  const picked = getVoicePrefs().radioHosts?.[role === "host-a" ? 0 : 1];
+  return { voice: isVoiceId(picked) ? picked : role, role: role === "host-a" ? "story" : "mc" };
+}
+const ttsInit = (text: string, signal: AbortSignal, kind = "summary"): RequestInit => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, ...hostVoice(kind) }), signal });
 
 /** 미리 받기(다음 구간)·다시 듣기용: blob 을 다 받아 둔다 — 재생 중에 받으니 첫 소리 지연과 무관 */
 function fetchSeg(ep: number, seg: number): Promise<string | null> {
   const k = key(ep, seg);
-  const text = st.episodes[ep]?.segments[seg]?.text;
-  if (!text) return Promise.resolve(null);
+  const s = st.episodes[ep]?.segments[seg];
+  if (!s?.text) return Promise.resolve(null);
   if (!blobs.has(k)) {
     blobs.set(
       k,
       // 8초 안에 음성이 안 오면 브라우저 음성으로 — 라디오가 멈춰 있는 것처럼 보이지 않게
-      fetch("/api/foodi/tts", ttsInit(text, AbortSignal.timeout(8000)))
+      fetch("/api/foodi/tts", ttsInit(s.text, AbortSignal.timeout(8000), s.kind))
         .then(async (r) => (r.ok ? URL.createObjectURL(await r.blob()) : null))
         .catch(() => null),
     );
@@ -121,7 +129,7 @@ async function streamSeg(my: number, ep: number, seg: number): Promise<"playing"
   const timer = setTimeout(() => ctrl.abort(), 8000);
   let att: AttachedAudio | null = null;
   try {
-    const res = await fetch("/api/foodi/tts", ttsInit(text, ctrl.signal));
+    const res = await fetch("/api/foodi/tts", ttsInit(text, ctrl.signal, st.episodes[ep].segments[seg].kind));
     if (my !== gen) return (ctrl.abort(), "failed");
     if (!res.ok) return "failed";
     att = await attachResponse(res, el);

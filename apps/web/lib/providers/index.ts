@@ -3,7 +3,7 @@
 export { getLLM, llmStatus } from "./registry/llm";
 export { getEmbedder, embedStatus } from "./registry/embed";
 export { getSTT, sttStatus } from "./registry/stt";
-export { getTTSChain, ttsStatus } from "./registry/tts";
+export { defaultChain, ttsAttempts, ttsReady, ttsStatus } from "./registry/tts";
 export type { ProviderStatus } from "./registry/lazy";
 
 export * from "./types";

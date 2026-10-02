@@ -22,6 +22,7 @@ import { BENCH_SENTENCES, FIRST_AUDIO_TARGET_MS } from "@/lib/bench/sentences";
 import { charErrorRate, fmtMs, markdownTable, mp3DurationSec, summarize } from "@/lib/bench/stats";
 import type { TTSProvider, Usage } from "@/lib/providers/types";
 import type { FoodisRepo } from "@/lib/foodi/repo";
+import { isWav, readWavHeader } from "@/lib/voice/wav";
 
 // ── 가격 (USD). 2026-10 확인 필요 — 목록가 기준, 월 무료 구간은 빼고 계산한다
 // Google Cloud TTS: https://cloud.google.com/text-to-speech/pricing  (WaveNet·Standard 월 400만 자, Neural2·Chirp 3 HD 월 100만 자 무료)
@@ -142,6 +143,7 @@ async function main() {
     skip: has.openai ? undefined : "키 없음 — 건너뜀",
     make: openaiTTS, usdFor: (_c, sec) => (sec / 60) * OPENAI_TTS_PER_MIN, samples: [],
   });
+  candidates.push(...(await catalogTtsCandidates()));
 
   // ── 2. TTS 측정: 후보마다 워밍업 1회(콜드 스타트·TLS 제외) 후 데모 문장 10개를 순서대로
   for (const c of candidates) {
@@ -160,9 +162,10 @@ async function main() {
     for (const [i, s] of BENCH_SENTENCES.entries()) {
       try {
         const r = await synth(tts, s.answer, c.voice);
-        const file = `${c.key}-${String(i + 1).padStart(2, "0")}.mp3`;
+        const wav = isWav(r.bytes); // Gemini 는 WAV
+        const file = `${c.key}-${String(i + 1).padStart(2, "0")}.${wav ? "wav" : "mp3"}`;
         writeFileSync(path.join(OUT_DIR, file), r.bytes);
-        c.samples.push({ id: s.id, chars: s.answer.length, ttfb: r.ttfb, total: r.total, bytes: r.bytes.length, sec: mp3DurationSec(r.bytes), file });
+        c.samples.push({ id: s.id, chars: s.answer.length, ttfb: r.ttfb, total: r.total, bytes: r.bytes.length, sec: wav ? (readWavHeader(r.bytes)?.seconds ?? 0) : mp3DurationSec(r.bytes), file });
       } catch (e) {
         c.samples.push({ id: s.id, error: redact((e as Error).message) });
       }
@@ -406,6 +409,27 @@ const START = "<!-- bench:start -->";
 const END = "<!-- bench:end -->";
 
 /** 자동 생성 구역만 교체. 사람이 쓴 청취 메모·결정은 그대로 둔다 */
+/**
+ * 목소리 카탈로그의 다른 제공자 (docs/design/11_목소리_카탈로그.md) — 키가 없으면 "키 없음 — 건너뜀" 행만 남는다.
+ * 환경변수를 읽은 뒤(main 안에서) 불러야 한다: lib/env.ts 가 import 시점에 process.env 를 읽는다.
+ * MP3 제공자를 앞에 둔다 — STT 측정은 measured[0] 의 음성을 audio/mpeg 로 보낸다 (Gemini 는 WAV).
+ */
+async function catalogTtsCandidates(): Promise<Candidate[]> {
+  const [{ elevenlabsTTS }, { clovaTTS }, { geminiTTS }, { ttsCostUsd }] = await Promise.all([
+    import("@/lib/providers/elevenlabs-tts"),
+    import("@/lib/providers/clova-tts"),
+    import("@/lib/providers/gemini-tts"),
+    import("@/lib/voice/pricing"),
+  ]);
+  const skip = (...keys: string[]) => (keys.every((k) => process.env[k]) ? undefined : "키 없음 — 건너뜀");
+  const geminiModel = process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts";
+  return [
+    { key: "elevenlabs-flash", label: "ElevenLabs Flash v2.5", voice: "Talia", skip: skip("ELEVENLABS_API_KEY"), make: () => elevenlabsTTS(), usdFor: (c) => ttsCostUsd("elevenlabs", "eleven_flash_v2_5", c), samples: [] },
+    { key: "clova-premium", label: "NAVER CLOVA Voice Premium", voice: "vara", skip: skip("CLOVA_VOICE_KEY_ID", "CLOVA_VOICE_KEY"), make: () => clovaTTS(), usdFor: (c) => ttsCostUsd("clova", "vara", c), samples: [] },
+    { key: "gemini-tts", label: `Gemini TTS (${geminiModel})`, voice: "Sulafat", skip: skip("GEMINI_API_KEY"), make: () => geminiTTS(), usdFor: (c) => ttsCostUsd("gemini", geminiModel, c), samples: [] },
+  ];
+}
+
 function writeDoc(block: string) {
   const auto = `${START}\n<!-- 이 구역은 pnpm --filter web bench:voice 가 덮어쓴다. 직접 고치지 말 것 -->\n\n${block}\n\n${END}`;
   const cur = existsSync(DOC) ? readFileSync(DOC, "utf8") : "";

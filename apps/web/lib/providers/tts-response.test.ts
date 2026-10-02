@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { peekFirst, ttsResponse } from "./tts-response";
+import { collect, peekFirst, ttsResponse } from "./tts-response";
 import { ProviderError, type TTSProvider, type Usage } from "./types";
 
 const usage = (provider: string): Usage => ({ provider, operation: "tts", units: 3, unitType: "chars", costUsd: 0 });
@@ -123,5 +123,24 @@ describe("peekFirst", () => {
     const { body: b } = await peekFirst(src.stream);
     await b.cancel("client gone");
     expect(src.cancelled()).toBe("client gone");
+  });
+});
+
+describe("collect (캐시에 넣을 바이트 모으기)", () => {
+  it("끝까지 오면 전체 바이트 · 흘려보내는 내용은 그대로", async () => {
+    let got: number[] | null = null;
+    const out = collect(chunks([bytes(1, 2), bytes(3)]).stream, (b) => (got = [...b]));
+    expect([...new Uint8Array(await new Response(out).arrayBuffer())]).toEqual([1, 2, 3]);
+    expect(got).toEqual([1, 2, 3]);
+  });
+
+  it("한도를 넘으면 모으기만 그만둔다 (재생은 계속) · 오류면 모으지 않는다", async () => {
+    let called = false;
+    const out = collect(chunks([bytes(1, 2), bytes(3, 4)]).stream, () => (called = true), 3);
+    expect([...new Uint8Array(await new Response(out).arrayBuffer())]).toEqual([1, 2, 3, 4]);
+    expect(called).toBe(false);
+    const broken = collect(chunks([bytes(1)], 1).stream, () => (called = true));
+    await expect(new Response(broken).arrayBuffer()).rejects.toThrow();
+    expect(called).toBe(false);
   });
 });

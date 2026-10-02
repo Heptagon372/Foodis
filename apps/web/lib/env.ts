@@ -25,11 +25,19 @@ export const env = {
   // ── STT (registry/stt.ts)
   sttModel: str("STT_MODEL", "gpt-transcribe")!,
 
-  // ── TTS (registry/tts.ts)
-  ttsProvider: str("TTS_PROVIDER", "google") as "google" | "openai",
+  // ── TTS (registry/tts.ts · 목소리 카탈로그 lib/voice/catalog.ts · design/11 문서)
+  // 기본 체인의 1순위. 사용자가 목소리를 고르면 그 제공자가 먼저, 실패하면 이 순서로
+  ttsProvider: str("TTS_PROVIDER", "google") as "google" | "openai" | "gemini" | "elevenlabs" | "clova",
   googleTtsCredentials: str("GOOGLE_TTS_CREDENTIALS_JSON"),
   googleTtsVoice: str("GOOGLE_TTS_VOICE", "ko-KR-Wavenet-A")!, // P3 에서 Chirp 3 HD 한국어 확인 후 교체
   openaiTtsVoice: str("OPENAI_TTS_VOICE", "coral")!,
+  geminiApiKey: str("GEMINI_API_KEY"),
+  geminiTtsModel: str("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")!,
+  elevenlabsApiKey: str("ELEVENLABS_API_KEY"),
+  // "Talia=voice_id,Darian=voice_id" — 비우면 이름으로 이 계정의 음성을 찾는다 (첫 요청 때 한 번)
+  elevenlabsVoiceIds: str("ELEVENLABS_VOICE_IDS"),
+  clovaKeyId: str("CLOVA_VOICE_KEY_ID"),
+  clovaKey: str("CLOVA_VOICE_KEY"),
 
   // ── 운영
   dailyBudgetUsd: Number(str("DAILY_BUDGET_USD", "5")),

@@ -40,11 +40,23 @@ export interface STTProvider {
 
 export type TTSStream = { stream: ReadableStream<Uint8Array>; contentType: string; usage: Usage };
 
+/** 목소리 카탈로그(lib/voice/catalog.ts) 한 줄을 제공자 호출로 옮긴 값. 없는 값은 제공자 기본 */
+export type TTSOptions = {
+  /** 제공자 음성 이름 (Google "ko-KR-Chirp3-HD-Aoede", OpenAI "marin", ElevenLabs "Talia" 또는 voice_id …) */
+  voice?: string;
+  /** 제공자 모델 id (gpt-4o-mini-tts, eleven_flash_v2_5, gemini-3.8-flash-tts …) */
+  model?: string;
+  /** 말할 언어 (BCP-47). 현지 발음용 — 없으면 한국어 */
+  lang?: string;
+  /** 말투 지시 (OpenAI instructions · Gemini style). 지원하지 않는 제공자는 무시 */
+  style?: string;
+};
+
 export interface TTSProvider {
-  /** 끝까지 합성한 뒤 돌려준다 — 실패를 응답 전에 알 수 있어 fallback 이 확실하다 */
-  synthesize(text: string, opts?: { voice?: string }): Promise<{ audio: ReadableStream<Uint8Array>; usage: Usage }>;
+  /** 끝까지 합성한 뒤 돌려준다 — 실패를 응답 전에 알 수 있어 fallback 이 확실하다. contentType 이 없으면 audio/mpeg */
+  synthesize(text: string, opts?: TTSOptions): Promise<{ audio: ReadableStream<Uint8Array>; usage: Usage; contentType?: string }>;
   /** 합성되는 대로 흘려보낸다 (첫 음성 지연 단축, 08 문서). 지원하는 제공자만 — 없으면 /api/foodi/tts 가 synthesize 로 간다 */
-  stream?(text: string, opts?: { voice?: string }): Promise<TTSStream>;
+  stream?(text: string, opts?: TTSOptions): Promise<TTSStream>;
 }
 
 export class ProviderError extends Error {

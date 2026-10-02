@@ -1,6 +1,8 @@
 import OpenAI, { toFile } from "openai";
 import { env } from "@/lib/env";
-import { ProviderError, type Embedder, type STTProvider, type TTSProvider, type Usage } from "./types";
+import { ttsCostUsd } from "@/lib/voice/pricing";
+import { SPEECH_STYLE } from "@/lib/voice/styles";
+import { ProviderError, type Embedder, type STTProvider, type TTSOptions, type TTSProvider, type Usage } from "./types";
 
 let shared: OpenAI | undefined;
 const client = () => (shared ??= new OpenAI({ timeout: 8_000, maxRetries: 1 }));
@@ -50,37 +52,50 @@ export function openaiSTT(): STTProvider {
   };
 }
 
-// TTS 후보 B: gpt-4o-mini-tts. 말투 지시로 "호기심 많은 여행 친구" 페르소나 연출 (09 문서 §5.4)
+// TTS 후보 B: gpt-4o-mini-tts. 말투 지시(instructions)로 "따뜻한 여행 가이드" 페르소나 연출 (09 문서 §5.4)
+// 목소리 13개 중 공식 추천은 marin · cedar (developers.openai.com/api/docs/guides/text-to-speech, 확인 2026-10-02)
+const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
+
+/** audio.speech.create 파라미터 (테스트에서 모양 확인). instructions 는 gpt-4o-mini-tts 계열만 받는다 (tts-1 은 무시가 아니라 거절될 수 있어 뺀다) */
+export function openaiSpeechParams(text: string, opts?: TTSOptions) {
+  const model = opts?.model ?? DEFAULT_TTS_MODEL;
+  return {
+    model,
+    voice: opts?.voice ?? env.openaiTtsVoice,
+    input: text,
+    ...(model.startsWith("gpt-") ? { instructions: opts?.style ?? SPEECH_STYLE.foodi } : {}),
+    response_format: "mp3" as const,
+  };
+}
+
 export function openaiTTS(): TTSProvider {
   // 헤더가 오면 곧바로 Response 를 준다 — 본문(MP3)은 합성되는 대로 이어서 들어온다
-  const open = (text: string, voice?: string) =>
+  const open = (text: string, opts?: TTSOptions) =>
     wrap(async () => {
-      const res = await client().audio.speech.create({
-        model: "gpt-4o-mini-tts",
-        voice: voice ?? env.openaiTtsVoice,
-        input: text,
-        instructions: "밝고 호기심 많은 여행 친구처럼, 또박또박 자연스러운 한국어로 말한다.",
-        response_format: "mp3",
-      });
+      const res = await client().audio.speech.create(openaiSpeechParams(text, opts));
       if (!res.body) throw new ProviderError("openai", "TTS 응답 본문 없음", true);
       return res;
     });
-  const usage = (text: string): Usage => {
-    const seconds = text.length / 15; // 한국어 약 15자/초
-    return { provider: "openai", operation: "tts", units: text.length, unitType: "chars", costUsd: (seconds / 60) * 0.015 };
-  };
+  // 비용: 분당 $0.015 공식 추정치를 한국어 말 속도로 글자당 값으로 (lib/voice/pricing.ts)
+  const usage = (text: string, opts?: TTSOptions): Usage => ({
+    provider: "openai",
+    operation: "tts",
+    units: text.length,
+    unitType: "chars",
+    costUsd: ttsCostUsd("openai", opts?.model ?? DEFAULT_TTS_MODEL, text.length),
+  });
   return {
     async synthesize(text, opts) {
-      const res = await open(text, opts?.voice);
+      const res = await open(text, opts);
       // 끝까지 받아 둔다: 본문이 중간에 끊기면 여기서 throw → 다음 제공자로 (응답을 내보낸 뒤엔 되돌릴 수 없다)
       const bytes = await res.arrayBuffer().catch((e: Error) => {
         throw new ProviderError("openai", `TTS 본문 수신 실패: ${e.message}`, true);
       });
-      return { audio: new Blob([bytes]).stream(), usage: usage(text) };
+      return { audio: new Blob([bytes]).stream(), contentType: "audio/mpeg", usage: usage(text, opts) };
     },
     async stream(text, opts) {
-      const res = await open(text, opts?.voice);
-      return { stream: res.body as ReadableStream<Uint8Array>, contentType: "audio/mpeg", usage: usage(text) };
+      const res = await open(text, opts);
+      return { stream: res.body as ReadableStream<Uint8Array>, contentType: "audio/mpeg", usage: usage(text, opts) };
     },
   };
 }

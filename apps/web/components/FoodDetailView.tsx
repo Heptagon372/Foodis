@@ -7,6 +7,7 @@ import { startRadio } from "@/lib/client/radio";
 import { track } from "@/lib/client/track";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
+import { localSpeech } from "@/lib/voice/local";
 import { ALLERGEN_LABEL, DIET_LABEL, DietBadge } from "./DietBadge";
 import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
@@ -45,6 +46,13 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
     void speak(text, () => setTelling(false));
   };
 
+  // 현지 발음 (design/11 문서 §3): 현지 이름을 그 나라 말 목소리로. 짧아서 누를 때마다 처음부터
+  const local = localSpeech(food);
+  const sayLocal = () => {
+    setTelling(false);
+    void speak(local.text, () => {}, null, { lang: local.lang });
+  };
+
   const byType = (Object.keys(RELATION_LABEL) as RelationType[]).map((t) => ({ t, items: food.relations.filter((r) => r.type === t) })).filter((g) => g.items.length);
 
   return (
@@ -69,7 +77,12 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               🎧 라디오로 듣기
             </button>
           </div>
-          <h1 className="font-display text-[2rem] font-semibold leading-tight">{food.name_ko}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-[2rem] font-semibold leading-tight">{food.name_ko}</h1>
+            <button type="button" onClick={sayLocal} className="shrink-0 rounded-full bg-mint-100 px-2.5 py-1 text-caption font-semibold text-green-800 transition active:scale-95" aria-label={`${local.text} ${local.native ? "현지" : "영어"} 발음 듣기`}>
+              🔈 {local.native ? "현지 발음" : "영어 발음"}
+            </button>
+          </div>
           <p className="text-muted">
             {food.name_en}
             {food.name_local && food.name_local !== food.name_ko ? ` · ${food.name_local}` : ""}

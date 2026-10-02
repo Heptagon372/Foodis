@@ -91,7 +91,8 @@ def build(drafts: dict[str, dict], country: dict[str, str], themes: list[dict], 
 
 
 def main() -> None:
-    drafts = {s: v["draft"] for s, v in read_json(DRAFT / "foods_draft.json", {}).items()}
+    # 스키마 오류로 검수 표시된 초안(needs_review)은 재료 구조를 믿을 수 없어 관계 후보에서 뺀다
+    drafts = {s: v["draft"] for s, v in read_json(DRAFT / "foods_draft.json", {}).items() if not v.get("needs_review")}
     country = {t["slug"]: t["country_code"] for t in read_csv(SEED / "dish_targets.csv") if t["slug"] in drafts}
     themes = read_csv(SEED / "relation_themes.csv")
     rels = build(drafts, country, themes)

@@ -17,7 +17,7 @@ foodis-data/                         (스키마는 루트 ../supabase/migrations
 ├─ data/raw/    ← s01~s04 수집 결과 (git 제외)
 ├─ data/draft/  ← s05~s07 초안·검수 시트
 ├─ data/final/  ← 검수 승인본 (적재 대상)
-├─ scripts/     s01 ~ s09
+├─ scripts/     s01 ~ s09 + llm.py (LLM 제공자 선택: Gemini · GPT · Claude)
 └─ tests/       가짜 HTTP로 전체 파이프라인 E2E 검증 (네트워크·API 키 불필요)
 ```
 
@@ -36,9 +36,13 @@ python scripts/s02_wikipedia.py     # 위키백과 ko/en 요약 + 공용 이미�
 python scripts/s03_themealdb.py     # (선택) 재료 교차검증
 python scripts/s04_hansik800.py     # (선택) 한식 표기 표준 — data/raw/hansik800.xlsx 필요
 
-# 2) 초안 (ANTHROPIC_API_KEY)
-python scripts/s05_llm_draft.py     # 280건, 중단돼도 이어서 실행됨. 특정 음식만: s05_llm_draft.py kimchi injera
-python scripts/s06_relations.py     # 관계 후보 + relations_review.csv
+# 2) 초안 (기본 GEMINI_API_KEY — 아래 "LLM 제공자 고르기")
+python scripts/s05_llm_draft.py --dry-run   # 비용 추정 + 제공자별 비교표 (키 불필요, 호출 안 함)
+python scripts/s05_llm_draft.py --demo      # 데모 필수 16건만 먼저 → 품질 확인
+python scripts/s05_llm_draft.py --yes       # 남은 전체. --yes 없으면 추정만 보여 주고 멈춤(실수로 돈 쓰지 않게)
+                                    # 중단돼도 이어서 실행됨. 특정 음식만: s05_llm_draft.py kimchi injera
+                                    # 스키마 오류로 '검수 필요' 표시된 것만 더 똑똑한 모델로: --needs-review --smart
+python scripts/s06_relations.py     # 관계 후보 + relations_review.csv (규칙 기반, LLM 안 씀)
 
 # 3) 사람 검수
 python scripts/s07_review.py export # data/draft/review_sheet.csv 를 엑셀로 열어 검수
@@ -48,16 +52,46 @@ python scripts/s07_review.py export # data/draft/review_sheet.csv 를 엑셀로 
 #   - relations_review.csv 도 approve=Y 표시
 python scripts/s07_review.py import # 모순(동물성 재료인데 vegan=yes 등)은 자동 차단
 
-# 4) 적재 + 임베딩 (SUPABASE_*, OPENAI_API_KEY)
+# 4) 적재 + 임베딩 (SUPABASE_*, OPENAI_API_KEY 또는 GEMINI_API_KEY)
 python scripts/s08_load.py --dry-run
 python scripts/s08_load.py
-python scripts/s09_embed.py
+python scripts/s09_embed.py         # 앱과 같은 임베딩 제공자·모델인지 꼭 확인 (아래 "임베딩")
 ```
+
+## LLM 제공자 고르기 (s05)
+
+`.env` 의 `DATA_LLM_PROVIDER` 하나로 바꾼다. 프롬프트·해요체 규칙·JSON 스키마는 세 곳 모두 같다 (`scripts/llm.py`).
+
+| 제공자 | 키 | draft (기본) | smart (`--smart`) | 구조화 출력 방식 |
+|---|---|---|---|---|
+| `gemini` (기본) | `GEMINI_API_KEY` | `gemini-3.5-flash-lite` | `gemini-3.8-flash` | generateContent + `responseJsonSchema` |
+| `openai` | `OPENAI_API_KEY` | `gpt-6-luna` | `gpt-6.1-sol` | Responses API + `json_schema` (strict) |
+| `anthropic` (선택) | `ANTHROPIC_API_KEY` | `claude-haiku-4-5` | `claude-sonnet-5` | tool_use 강제 |
+
+- 모델만 바꾸기: `DATA_LLM_MODEL=…` (draft), `DATA_LLM_MODEL_SMART=…`. 다른 제공자 모델을 적으면 실행 전에 멈춘다. 가격표에 없는 모델이면 `DATA_LLM_PRICE="입력,출력"`(USD/100만 토큰)으로 추정에 쓸 가격을 준다.
+- 반값: `DATA_LLM_SERVICE_TIER=flex` 또는 `--flex` → Gemini·OpenAI 의 Flex 처리(표준의 50%). 한 건에 몇 분 걸릴 수 있고 혼잡하면 503 → 자동 재시도(타임아웃 15분). Anthropic 은 Flex 가 없다.
+- 생각량: `DATA_LLM_EFFORT=low|medium|high` (비우면 모델 기본). 생각 토큰도 출력 요금이라 비용에 바로 반영된다.
+- 안전장치: 응답을 JSON 스키마로 검증 → 틀리면 오류를 알려 주고 1회 다시 요청 → 그래도 틀리면 `needs_review` 로 저장. 검수 시트 `auto_flags` 에 "AI 초안 스키마 오류" 가 뜨고, 승인해도 import 에서 막힌다. 429·5xx 는 지수 백오프로 재시도.
+- 스키마는 세 제공자 공통 부분집합으로만 쓴다: 모든 object 에 `additionalProperties:false`, 모든 속성 required(OpenAI strict 규칙), null 은 `["string","null"]`, null 이 섞인 enum 은 `anyOf`. `oneOf`·`allOf`·`$ref` 금지 (테스트가 확인).
+- Gemini 무료 등급은 입력이 제품 개선에 쓰일 수 있다(가격표 "Used to improve our products: Yes"). 위키백과 요약이라 민감하진 않지만, 유료 등급이면 해당 없음.
+
+## 임베딩 (s09) — 앱과 반드시 같게
+
+`DATA_EMBED_PROVIDER=openai|gemini` (비우면 앱 설정 이름인 `EMBED_PROVIDER` 를 따름, 기본 openai). DB 는 `vector(1536)` 이라 두 경로 모두 1536차원으로 저장한다.
+
+| 제공자 | 모델 (EMBEDDING_MODEL 비우면) | 1536차원 만드는 법 | 검색어(앱 쪽) 형식 |
+|---|---|---|---|
+| openai | `text-embedding-3-small` | 기본 1536 (`dimensions=1536`) | 그대로 |
+| gemini | `gemini-embedding-2` | `outputDimensionality=1536`, 결과를 L2 정규화 | `task: search result \| query: {검색어}` (문서는 `title: {이름} \| text: {내용}` 으로 저장됨) |
+
+**앱(apps/web)의 `EMBED_PROVIDER` · `EMBEDDING_MODEL` 과 다르면 에러 없이 검색 결과만 엉망이 된다.** 제공자를 바꾸면 기존 `food_embeddings` 를 전부 다시 만들 것 (두 모델의 벡터가 섞이면 안 됨). s09 는 실행할 때마다 이 경고를 크게 출력하고, 제공자와 모델이 서로 안 맞으면(예: gemini + text-embedding-3-small) 돈 쓰기 전에 멈춘다. `gemini-embedding-001` 을 쓰면 task_type `RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY` 방식이다.
 
 ## 검증
 
 ```bash
 python -m pytest tests -q   # 오프라인 E2E: s01→s09 전 구간, 검수 규칙(출처 2개·모순 차단) 포함
+                            # s05 는 가짜 Gemini·OpenAI·Anthropic 각각, 스키마 오류→재요청→검수 표시, 429 재시도, Flex
+                            # s09 는 가짜 OpenAI·Gemini (1536차원·L2 정규화) — 실제 API 는 부르지 않는다
 ```
 
 ## 라이선스 메모
@@ -75,6 +109,20 @@ python -m pytest tests -q   # 오프라인 E2E: s01→s09 전 구간, 검수 규
 
 ## 비용 (280건 기준 추정)
 
-- s05 LLM 초안: 280 × (입력 ~3k + 출력 ~1.5k 토큰) → Sonnet급 약 6~8달러 (심화 30개국 180건만 먼저: 약 4~5달러)
-- s09 임베딩: ~7만 토큰 → 1센트 미만
+s05 초안: 실제 수집한 근거로 `s05_llm_draft.py --dry-run` 을 돌린 값. 1건당 입력 ~1.5k 토큰(시스템 프롬프트 + 스키마 + 근거), 출력은 보이는 답 ~1.5k + 생각 ~1.5k 로 넉넉히 잡았다(Anthropic 은 생각을 켜지 않아 1.5k). 실제 청구는 실행 끝에 토큰 수와 함께 출력된다.
+
+| 제공자 · 등급 | 모델 | 가격 (입력 / 출력, USD per 1M) | 280건 표준 | 280건 Flex(50%) |
+|---|---|---|---|---|
+| gemini draft (기본) | gemini-3.5-flash-lite | $0.30 / $2.50 | **약 $2.2** | 약 $1.1 |
+| gemini smart | gemini-3.8-flash | $0.75 / $3.75 (2027-01-01 부터 $1.50 / $7.50) | 약 $3.5 | 약 $1.7 |
+| openai draft | gpt-6-luna | $0.10 / $0.50 | **약 $0.5** | 약 $0.2 |
+| openai smart | gpt-6.1-sol | $2.00 / $10.00 | 약 $9.2 | 약 $4.6 |
+| anthropic draft | claude-haiku-4-5 | $1.00 / $5.00 | 약 $2.5 | (Flex 없음) |
+| anthropic smart | claude-sonnet-5 | $2.00 / $10.00 | 약 $5.0 | (Flex 없음) |
+
+- 권장 순서: `--demo` 16건(약 $0.1)으로 draft 모델 품질 확인 → 괜찮으면 `--yes`(필요하면 `--flex`) → 검수에서 걸린 것만 `--needs-review --smart`.
+- Batch API(Gemini·OpenAI·Anthropic 모두 50%)는 이 스크립트에서 쓰지 않는다. 같은 할인을 동기 호출로 받는 Flex 로 대신한다.
+- Gemini 무료 등급(결제 미설정 키)이면 gemini-3.5-flash-lite·3.8-flash 도 $0 이다. 대신 분당·일일 요청 한도가 낮아(한도는 AI Studio 에서 확인) 429 가 나면 응답의 retryDelay 만큼 기다렸다 재시도하고, 입력이 제품 개선에 쓰일 수 있다. 다 못 끝내면 다음 날 그대로 다시 실행하면 이어서 한다.
+- s09 임베딩: ~11만 토큰 → openai `text-embedding-3-small`($0.02/1M) 약 $0.002, gemini `gemini-embedding-2`($0.20/1M) 약 $0.02
 - s01~s04: 무료 (Wikimedia는 연락처가 있는 User-Agent 필수)
+- 가격 출처 (확인일 2026-10-02): [Gemini](https://ai.google.dev/gemini-api/docs/pricing) · [OpenAI](https://developers.openai.com/api/docs/pricing) · [Anthropic](https://platform.claude.com/docs/en/about-claude/pricing). 바뀌면 `scripts/llm.py` 의 `PRICES` 만 고치면 된다.

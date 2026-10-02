@@ -263,8 +263,10 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
                   <Icon name="arrow-right" className="size-4 text-muted" />
                 </Link>
               )}
-              <Link href={`/taste/${food.slug}`} className="flex w-full items-center justify-center rounded-2xl border border-line bg-surface py-3 text-sm font-semibold text-green-800 transition active:scale-[0.98]">
-                📍 한국에서 맛보기
+              <Link href={`/taste/${food.slug}`} className={`${btn("outline", "md")} w-full`}>
+                <Icon name="pin" className="size-5 text-leaf" />
+                한국에서 맛보기
+                <Icon name="arrow-right" className="size-4 text-muted" />
               </Link>
               <RelationRow label={`같은 나라 · ${food.country.name_ko}`} foods={food.sameCountry} />
               {!byType.length && !food.sameCountry.length && <p className="text-sm text-muted">아직 검수된 연결이 없어요.</p>}

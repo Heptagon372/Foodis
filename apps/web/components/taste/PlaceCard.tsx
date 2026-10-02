@@ -7,6 +7,8 @@ import { franchiseLabel } from "@/lib/places/franchise";
 import { formatDistance } from "@/lib/places/geo";
 import { offerBadge } from "@/lib/places/offers";
 import type { RankedPlace } from "@/lib/places/types";
+import { Icon } from "../icons";
+import { btn } from "../ui";
 import { RateForm, ReportPlaceForm } from "./PlaceForms";
 
 export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void }) {
@@ -18,16 +20,16 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
   const fr = franchiseLabel(x.franchise);
   const verifiedOffers = x.offers.filter((o) => o.verified);
   const pendingKinds = [...new Set(x.offers.filter((o) => !o.verified).map((o) => o.kind))];
-  const link = "rounded-full border border-line bg-surface px-3 py-1.5 text-caption font-semibold text-charcoal/80 transition active:scale-95";
+  const link = btn("outline", "sm");
 
   return (
-    <article id={`place-${x.id}`} className={`space-y-2.5 rounded-2xl bg-surface p-4 shadow-sm transition ${p.selected ? "ring-2 ring-green-800" : ""}`} onClick={p.onSelect}>
+    <article id={`place-${x.id}`} className={`card space-y-3 rounded-3xl p-4 transition ${p.selected ? "border-brand ring-2 ring-brand" : ""}`} onClick={p.onSelect}>
       <div className="flex items-start gap-3">
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-green-800 text-caption font-bold text-ivory" aria-hidden>
+        <span className={`grid size-8 shrink-0 place-items-center rounded-full text-caption font-bold tabular-nums ${p.selected ? "bg-lime text-on-lime" : "bg-brand text-on-brand"}`} aria-hidden>
           {p.index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold">{x.name}</h3>
+          <h3 className="truncate text-title font-bold text-ink">{x.name}</h3>
           <p className="text-caption text-muted">
             {formatDistance(x.distance)}
             {p.fromLabel ? ` · ${p.fromLabel}에서` : ""}
@@ -38,27 +40,32 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
 
       <p className="text-caption">
         {x.match === "confirmed" ? (
-          <span className="rounded-full bg-mint-100 px-2 py-0.5 font-semibold text-green-800">✔ {p.foodName} 메뉴 확인됨</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-lime-soft px-2.5 py-1 font-semibold text-leaf">
+            <Icon name="check" className="size-3.5" strokeWidth={2.25} />
+            {p.foodName} 메뉴 확인됨
+          </span>
         ) : x.match === "dish" ? (
           <span className="text-muted">&lsquo;{p.foodName}&rsquo; 검색 결과 · 메뉴는 가게에 확인해 주세요</span>
         ) : (
-          <span className="text-[#7a5a10]">{p.countryName} 음식점 · {p.foodName} 메뉴는 확인 필요</span>
+          <span className="text-diet-warn-ink">{p.countryName} 음식점 · {p.foodName} 메뉴는 확인 필요</span>
         )}
       </p>
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink">
         {g && (
-          <span>
-            <b className="text-diet-warn">★</b> {g.rating.toFixed(1)} <span className="text-caption text-muted">Google 리뷰 {g.count.toLocaleString("ko-KR")}개</span>
+          <span className="inline-flex items-center gap-1">
+            <Icon name="star" className="size-4 text-diet-warn" fill="currentColor" />
+            <span className="font-semibold tabular-nums">{g.rating.toFixed(1)}</span> <span className="text-caption text-muted">Google 리뷰 {g.count.toLocaleString("ko-KR")}개</span>
           </span>
         )}
         {a && (
-          <span>
-            <b className="text-green-800">★</b> {a.avg.toFixed(1)} <span className="text-caption text-muted">푸디 이용자 {a.count}명</span>
+          <span className="inline-flex items-center gap-1">
+            <Icon name="star" className="size-4 text-leaf" fill="currentColor" />
+            <span className="font-semibold tabular-nums">{a.avg.toFixed(1)}</span> <span className="text-caption text-muted">푸디 이용자 {a.count}명</span>
           </span>
         )}
         {!g && !a && <span className="text-caption text-muted">평점 정보가 아직 없어요</span>}
-        {(g || a) && x.fewRatings && <span className="text-caption text-[#7a5a10]">평가가 아직 적어요</span>}
+        {(g || a) && x.fewRatings && <span className="text-caption text-diet-warn-ink">평가가 아직 적어요</span>}
       </div>
 
       <div className="flex flex-wrap gap-1.5 text-caption">
@@ -88,31 +95,36 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
         </p>
       )}
 
-      <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
         {x.place_url && (
           <a href={x.place_url} target="_blank" rel="noreferrer" className={link}>
+            <Icon name="external" className="size-4 text-leaf" />
             카카오맵에서 보기
           </a>
         )}
         {x.phone && (
           <a href={`tel:${x.phone.replace(/[^\d+]/g, "")}`} className={link}>
+            <Icon name="phone" className="size-4 text-leaf" />
             전화
           </a>
         )}
         {!p.example && (
           <a href={directionsUrl(x)} target="_blank" rel="noreferrer" className={link}>
+            <Icon name="navigation" className="size-4 text-leaf" />
             길찾기
           </a>
         )}
-        <button type="button" onClick={() => setOpen(open === "rate" ? null : "rate")} className={link}>
+        <button type="button" aria-expanded={open === "rate"} onClick={() => setOpen(open === "rate" ? null : "rate")} className={link}>
+          <Icon name="star" className="size-4 text-leaf" />
           평점 남기기
         </button>
-        <button type="button" onClick={() => setOpen(open === "report" ? null : "report")} className={link}>
+        <button type="button" aria-expanded={open === "report"} onClick={() => setOpen(open === "report" ? null : "report")} className={link}>
+          <Icon name="flag" className="size-4 text-leaf" />
           정보 제보
         </button>
       </div>
       {open && (
-        <div className="rounded-xl border border-line p-3" onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-2xl bg-sunken p-3.5" onClick={(e) => e.stopPropagation()}>
           {open === "rate" ? <RateForm target={{ id: x.id, name: x.name, example: p.example }} foodSlug={p.foodSlug} onDone={() => undefined} /> : <ReportPlaceForm target={{ id: x.id, name: x.name, example: p.example }} onDone={() => undefined} />}
         </div>
       )}
@@ -121,7 +133,7 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
 }
 
 function Badge({ children, tone, title }: { children: React.ReactNode; tone: "mint" | "warn" | "plain"; title?: string }) {
-  const cls = { mint: "bg-mint-100 text-green-800", warn: "bg-diet-warn/15 text-[#7a5a10]", plain: "border border-line text-charcoal/75" }[tone];
+  const cls = { mint: "bg-lime-soft text-leaf", warn: "bg-diet-warn/15 text-diet-warn-ink", plain: "border border-line text-ink-soft" }[tone];
   return (
     <span title={title} className={`rounded-full px-2.5 py-1 font-medium ${cls}`}>
       {children}

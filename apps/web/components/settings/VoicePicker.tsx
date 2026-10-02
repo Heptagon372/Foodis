@@ -18,13 +18,13 @@ export function VoicePicker() {
 
   if (data === undefined)
     return (
-      <SettingCard icon="volume" title="푸디 목소리">
+      <SettingCard icon="volume-on" title="푸디 목소리">
         <div className="h-24 animate-pulse rounded-2xl bg-sunken" aria-busy="true" aria-label="목소리 목록 불러오는 중" />
       </SettingCard>
     );
   if (data === null)
     return (
-      <SettingCard icon="volume" title="푸디 목소리">
+      <SettingCard icon="volume-on" title="푸디 목소리">
         <p className="text-sm text-muted">목소리 목록을 불러오지 못했어요. 잠시 후 다시 열어 주세요.</p>
       </SettingCard>
     );
@@ -35,7 +35,7 @@ export function VoicePicker() {
 
   return (
     <>
-      <SettingCard icon="volume" title="푸디 목소리" desc="목소리마다 쓰는 TTS 모델이 달라요. 재생 버튼으로 먼저 들어 보세요.">
+      <SettingCard icon="volume-on" title="푸디 목소리" desc="목소리마다 쓰는 TTS 모델이 달라요. 재생 버튼으로 먼저 들어 보세요.">
         {!anyReady && (
           <p className="flex items-start gap-1.5 rounded-2xl bg-sunken px-3 py-2.5 text-caption text-ink-soft">
             <Icon name="info" className="mt-px size-4 shrink-0 text-leaf" />

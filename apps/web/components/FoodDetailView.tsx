@@ -176,6 +176,11 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               {byType.map(({ t, items }) => (
                 <RelationRow key={t} label={RELATION_LABEL[t]} note={items[0].description} foods={items.map((r) => r.food)} />
               ))}
+              {food.relations.some((r) => r.type === "historical_link" || r.type === "regional_variant") && (
+                <Link href={`/journey/${food.slug}`} className="flex w-full items-center justify-center rounded-2xl border border-mint-500 bg-mint-100 py-3 text-sm font-semibold text-green-800 transition active:scale-[0.98]">
+                  🗺 이 음식의 여정 보기 →
+                </Link>
+              )}
               <RelationRow label={`같은 나라 · ${food.country.name_ko}`} foods={food.sameCountry} />
               {!byType.length && !food.sameCountry.length && <p className="text-sm text-muted">아직 검수된 연결이 없어요.</p>}
               <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, question: "비슷한 음식 있어?" })} className="w-full rounded-2xl border border-mint-500/60 py-3 text-sm font-semibold text-green-800">

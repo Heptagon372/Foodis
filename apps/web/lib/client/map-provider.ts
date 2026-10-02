@@ -15,6 +15,8 @@ export interface MapHandle {
   setCenter(p: MapPoint): void;
   setMe(p: MapPoint | null): void;
   setPins(pins: MapPin[], onPick: (id: string) => void): void;
+  /** 그릇 크기를 다시 재고, 점들이 다 보이게 확대·이동 (점이 하나면 그 점으로 이동만) */
+  fit(points: MapPoint[]): void;
   destroy(): void;
 }
 
@@ -48,11 +50,13 @@ const el = (html: string) => {
 // ── 카카오 (필요한 만큼만 타입을 적는다)
 type KLatLng = object;
 type KOverlay = { setMap(m: KMap | null): void };
-type KMap = { setCenter(c: KLatLng): void };
+type KMap = { setCenter(c: KLatLng): void; relayout(): void; setBounds(b: KBounds): void };
+type KBounds = { extend(p: KLatLng): void };
 type KakaoNS = {
   maps: {
     load(cb: () => void): void;
     LatLng: new (lat: number, lng: number) => KLatLng;
+    LatLngBounds: new () => KBounds;
     Map: new (el: HTMLElement, o: { center: KLatLng; level: number }) => KMap;
     CustomOverlay: new (o: { position: KLatLng; content: HTMLElement; yAnchor?: number; zIndex?: number; clickable?: boolean }) => KOverlay;
     MarkerClusterer?: new (o: { map: KMap; averageCenter: boolean; minLevel: number }) => { addMarkers(m: KOverlay[]): void; clear(): void };
@@ -66,7 +70,7 @@ async function kakaoMap(key: string, box: HTMLElement, center: MapPoint): Promis
   await new Promise<void>((r) => kakao.maps.load(r));
   const k = kakao.maps;
   const map = new k.Map(box, { center: new k.LatLng(center.lat, center.lng), level: 5 });
-  const cluster = k.MarkerClusterer ? new k.MarkerClusterer({ map, averageCenter: true, minLevel: 7 }) : null;
+  const cluster = k.MarkerClusterer ? new k.MarkerClusterer({ map, averageCenter: true, minLevel: 10 }) : null;
   let pins: KOverlay[] = [];
   let me: KOverlay | null = null;
   return {
@@ -87,6 +91,14 @@ async function kakaoMap(key: string, box: HTMLElement, center: MapPoint): Promis
       if (cluster) cluster.addMarkers(pins);
       else pins.forEach((o) => o.setMap(map));
     },
+    fit(points) {
+      map.relayout();
+      if (points.length === 1) return map.setCenter(new k.LatLng(points[0].lat, points[0].lng));
+      if (!points.length) return;
+      const b = new k.LatLngBounds();
+      points.forEach((p) => b.extend(new k.LatLng(p.lat, p.lng)));
+      map.setBounds(b);
+    },
     destroy() {
       cluster?.clear();
       pins.forEach((o) => o.setMap(null));
@@ -98,11 +110,12 @@ async function kakaoMap(key: string, box: HTMLElement, center: MapPoint): Promis
 
 // ── 네이버 (마커 표시까지)
 type NMarker = { setMap(m: NMap | null): void };
-type NMap = { setCenter(c: object): void; destroy?: () => void };
+type NMap = { setCenter(c: object): void; fitBounds(b: object): void; autoResize?: () => void; destroy?: () => void };
 type NaverNS = {
   maps: {
     LatLng: new (lat: number, lng: number) => object;
     Point: new (x: number, y: number) => object;
+    LatLngBounds: new (sw: object, ne: object) => object;
     Map: new (el: HTMLElement, o: { center: object; zoom: number }) => NMap;
     Marker: new (o: { position: object; map: NMap; icon: { content: string; anchor: object }; zIndex?: number }) => NMarker;
     Event: { addListener(t: NMarker, ev: string, fn: () => void): void };
@@ -130,6 +143,14 @@ async function naverMap(clientId: string, box: HTMLElement, center: MapPoint): P
         n.Event.addListener(m, "click", () => onPick(p.id));
         return m;
       });
+    },
+    fit(points) {
+      map.autoResize?.();
+      if (points.length === 1) return map.setCenter(new n.LatLng(points[0].lat, points[0].lng));
+      if (!points.length) return;
+      const lats = points.map((p) => p.lat);
+      const lngs = points.map((p) => p.lng);
+      map.fitBounds(new n.LatLngBounds(new n.LatLng(Math.min(...lats), Math.min(...lngs)), new n.LatLng(Math.max(...lats), Math.max(...lngs))));
     },
     destroy() {
       pins.forEach((m) => m.setMap(null));

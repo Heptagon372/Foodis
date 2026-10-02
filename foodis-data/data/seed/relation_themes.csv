@@ -6,11 +6,14 @@ theme,type,slug,note
 만두 로드,historical_link,manti,
 만두 로드,historical_link,khinkali,
 만두 로드,historical_link,pierogi,
+만두 로드,historical_link,pelmeni,근거: en:Pelmeni — 얇은 무발효 반죽에 소를 싼 러시아 만두
+만두 로드,historical_link,khuushuur,근거: en:Khuushuur — 밀가루 반죽을 반으로 접어 고기 소를 싼 몽골 음식
 커피 하우스,historical_link,turkish-coffee,오스만 제국의 커피 문화와 유럽 카페 문화의 연결 (전파 경로는 여러 설)
 커피 하우스,historical_link,viennese-coffee,
 필라프 계열,historical_link,plov,쌀을 기름·육수와 함께 짓는 필라프 계열 쌀 요리
 필라프 계열,historical_link,biryani,
 필라프 계열,historical_link,paella,
+필라프 계열,historical_link,kabuli-palaw,근거: en:Kabuli pulao — 중앙아시아 필라프의 한 갈래
 꼬치 구이,same_technique,shashlik,고기를 꼬치에 꿰어 불에 굽는 조리법
 꼬치 구이,same_technique,souvlaki,
 꼬치 구이,same_technique,satay,
@@ -24,22 +27,262 @@ theme,type,slug,note
 발효의 세계,same_technique,tempeh,
 발효의 세계,same_technique,gundruk,
 발효의 세계,same_technique,miso-soup,
+발효의 세계,same_technique,skyr,근거: en:Skyr — 아이슬란드 전통 발효 유제품
+발효의 세계,same_technique,kisra,근거: en:Kisra — 수단의 얇은 발효 빵
+발효의 세계,same_technique,attieke,근거: en:Acheke — 발효한 카사바 과육으로 만듦
+발효의 세계,same_technique,zurek,근거: en:Sour cereal soup — 곡물을 발효한 국물 바탕
+발효의 세계,same_technique,mansaf,근거: en:Mansaf — 발효해 말린 요구르트 소스
 납작빵,same_technique,injera,곡물 반죽을 얇고 넓게 구워 다른 음식과 함께 먹는 빵
 납작빵,same_technique,lahmacun,
 납작빵,same_technique,manakish,
 납작빵,same_technique,msemen,
 납작빵,same_technique,khachapuri,
 납작빵,same_technique,taco,
+납작빵,same_technique,arepa,근거: en:Arepa — 옥수수 반죽 납작빵
+납작빵,same_technique,pupusa,근거: en:Pupusa — 옥수수 가루로 만든 두툼한 납작빵
+납작빵,same_technique,doubles,근거: en:Doubles (food) — 튀긴 납작빵 두 장에 병아리콩 커리
+납작빵,same_technique,baleada,근거: en:Baleada — 밀가루 토르티야에 콩·크림·치즈
 스페인어권 영향,historical_link,lechon,스페인 식민 시기를 거치며 이어진 요리 전통
 스페인어권 영향,historical_link,empanada,
 스페인어권 영향,historical_link,saltena,
 스페인어권 영향,historical_link,adobo,
+스페인어권 영향,historical_link,ropa-vieja,근거: en:Ropa vieja — 스페인에서 비롯돼 쿠바의 국민 음식이 됨
+스페인어권 영향,historical_link,churros,근거: en:Churro — 스페인·포르투갈 음식으로 중남미·필리핀에도 퍼짐
 프랑스 제빵 영향,historical_link,banh-mi,프랑스식 빵 문화가 현지 식문화와 결합
 프랑스 제빵 영향,historical_link,croissant,
 중국계 이민 요리,historical_link,lomo-saltado,중국계 이민자의 볶음 조리법이 현지 재료와 결합 (페루 치파 요리 등)
 중국계 이민 요리,historical_link,kung-pao-chicken,
 중국계 이민 요리,historical_link,pancit,
+중국계 이민 요리,historical_link,hainanese-chicken-rice,근거: en:Hainanese chicken rice — 하이난 출신 이주민이 만듦
 병아리콩,shares_ingredient,chana-masala,병아리콩을 주재료로 하는 음식
 병아리콩,shares_ingredient,hummus,
 병아리콩,shares_ingredient,falafel,
 병아리콩,shares_ingredient,koshary,
+병아리콩,shares_ingredient,doubles,근거: en:Doubles (food) — 병아리콩 커리
+병아리콩,shares_ingredient,shiro,근거: en:Shiro (food) — 병아리콩 가루 스튜
+한 솥 토마토 쌀밥,same_technique,jollof-rice,"쌀을 토마토 소스와 함께 한 솥에서 짓는 서아프리카 쌀 요리 (근거: en:Jollof rice 'in a single pot', en:Thieboudienne 'cooked in one pot')"
+한 솥 토마토 쌀밥,same_technique,thieboudienne,
+싸라기 쌀,shares_ingredient,com-tam,"부서진 쌀(싸라기)을 주재료로 쓰는 음식 (근거: en:Cơm tấm 'broken rice', en:Thieboudienne 'broken rice')"
+싸라기 쌀,shares_ingredient,thieboudienne,
+양고기와 쌀,shares_ingredient,mansaf,"양고기를 쌀과 함께 내는 음식 (근거: en:Mansaf, en:Quzi, en:Tavë kosi, Wikidata 재료 — Kabuli pulao·Pilaf)"
+양고기와 쌀,shares_ingredient,shuwa,
+양고기와 쌀,shares_ingredient,kabuli-palaw,
+양고기와 쌀,shares_ingredient,tave-kosi,
+양고기와 쌀,shares_ingredient,plov,
+중앙아시아 필라프,regional_variant,plov,중앙아시아 필라프의 지역 변형 (근거: en:Kabuli pulao — 우즈베키스탄·타지키스탄에서는 오시 팔로브라고 부름)
+중앙아시아 필라프,regional_variant,kabuli-palaw,
+스펀지 납작빵,same_technique,injera,"반죽을 얇게 구워 스펀지처럼 폭신한 납작빵 (근거: en:Injera 'spongy', en:Lahoh 'spongy', en:Kisra 'similar to injera')"
+스펀지 납작빵,same_technique,canjeero,
+스펀지 납작빵,same_technique,kisra,
+옥수수 반죽,shares_ingredient,arepa,"옥수수 가루·반죽을 바탕으로 한 아메리카 대륙 음식 (근거: en:Arepa, en:Pupusa, en:Tamale, en:Taco, en:Pastel de choclo, en:Pozole)"
+옥수수 반죽,shares_ingredient,pupusa,
+옥수수 반죽,shares_ingredient,tamale,
+옥수수 반죽,shares_ingredient,taco,
+옥수수 반죽,shares_ingredient,pastel-de-choclo,
+옥수수 반죽,shares_ingredient,pozole,
+스왈로우 주식,same_technique,ugali,"곡물·뿌리 가루를 끓는 물에 개거나 찧어 반죽처럼 만들어 스튜에 찍어 먹는 아프리카 주식 (근거: en:Funge 'African swallow', en:Ugali, fr:Sadza 'équivalent du fufu', en:Fufu, en:Genfo, en:Bazin (bread))"
+스왈로우 주식,same_technique,sadza,
+스왈로우 주식,same_technique,funge,
+스왈로우 주식,same_technique,fufu,
+스왈로우 주식,same_technique,genfo,
+스왈로우 주식,same_technique,bazeen,
+카사바,shares_ingredient,attieke,"카사바 뿌리나 잎을 주재료로 쓰는 음식 (근거: en:Acheke, en:Fufu, en:Funge, en:Matapa, en:Isombe, Wikidata 재료 — Pão de queijo)"
+카사바,shares_ingredient,fufu,
+카사바,shares_ingredient,funge,
+카사바,shares_ingredient,pao-de-queijo,
+카사바,shares_ingredient,matapa,
+카사바,shares_ingredient,isombe,
+땅콩 소스·스튜,shares_ingredient,tigadegena,"땅콩을 갈아 소스·국물의 바탕으로 쓰는 음식 (근거: en:Peanut stew, en:Ndolé, en:Matapa, en:Isombe, es:Sopa de maní (Bolivia), en:Kare-kare, en:Gado-gado)"
+땅콩 소스·스튜,shares_ingredient,ndole,
+땅콩 소스·스튜,shares_ingredient,matapa,
+땅콩 소스·스튜,shares_ingredient,isombe,
+땅콩 소스·스튜,shares_ingredient,sopa-de-mani,
+땅콩 소스·스튜,shares_ingredient,kare-kare,
+땅콩 소스·스튜,shares_ingredient,gado-gado,
+땅속 화덕,same_technique,hangi,"땅을 파고 달군 돌로 음식을 익히는 조리법 (근거: en:Earth oven — 마오리 항이·파푸아뉴기니 무무·안데스 파차망카, en:Quzi — 오만의 슈와는 땅속 화덕에서 익힘)"
+땅속 화덕,same_technique,mumu,
+땅속 화덕,same_technique,pachamanca,
+땅속 화덕,same_technique,shuwa,
+태평양·인도양 코코넛,shares_ingredient,kokoda,"코코넛 과육·밀크를 주재료로 쓰는 섬나라 음식 (근거: en:'Ota 'ika, en:'otai, en:Lūʻau (food), en:Lamington, en:Mas huni)"
+태평양·인도양 코코넛,shares_ingredient,otai,
+태평양·인도양 코코넛,shares_ingredient,palusami,
+태평양·인도양 코코넛,shares_ingredient,lamington,
+태평양·인도양 코코넛,shares_ingredient,mas-huni,
+코코넛 밀크 커리·밥,shares_ingredient,nasi-lemak,"코코넛 밀크로 맛을 내는 동남아시아 요리 (근거: en:Nasi lemak, en:Fish amok, en:Rendang, en:Massaman curry, Wikidata 재료 — Green curry)"
+코코넛 밀크 커리·밥,shares_ingredient,fish-amok,
+코코넛 밀크 커리·밥,shares_ingredient,rendang,
+코코넛 밀크 커리·밥,shares_ingredient,green-curry,
+코코넛 밀크 커리·밥,shares_ingredient,massaman-curry,
+시트러스 날생선,same_technique,ceviche,"날생선을 시트러스 즙에 재워 익히는 요리 (근거: en:Ceviche, en:'Ota 'ika)"
+시트러스 날생선,same_technique,kokoda,
+불에 굽는 고기 잔치,same_technique,khorovats,"고기를 숯불·그릴에 구워 여럿이 나눠 먹는 음식 (근거: en:Khorovats, en:Asado, en:Ćevapi, en:Masgouf, en:Shashlik, en:Bulgogi)"
+불에 굽는 고기 잔치,same_technique,asado,
+불에 굽는 고기 잔치,same_technique,cevapi,
+불에 굽는 고기 잔치,same_technique,masgouf,
+불에 굽는 고기 잔치,same_technique,shashlik,
+불에 굽는 고기 잔치,same_technique,bulgogi,
+뵈레크 계열,historical_link,burek,"얇은 필로 계열 반죽에 소를 넣어 굽거나 튀기는 파이 (근거: en:Börek, en:Brik 'North African version of borek', en:Banitsa, en:Savory spinach pie, en:Pastilla)"
+뵈레크 계열,historical_link,brik,
+뵈레크 계열,historical_link,banitsa,
+뵈레크 계열,historical_link,spanakopita,
+뵈레크 계열,historical_link,pastilla,
+중앙아시아 고기 파이,same_technique,samsa,"얇은 밀가루 반죽에 고기 소를 넣어 굽거나 지지는 페이스트리 (근거: en:Samsa (food), en:Ishlykly, en:Qutab, en:Khuushuur)"
+중앙아시아 고기 파이,same_technique,ishlekli,
+중앙아시아 고기 파이,same_technique,qutab,
+중앙아시아 고기 파이,same_technique,khuushuur,
+양배추 잎 말이,regional_variant,golabki,"삶은 양배추 잎에 다진 고기와 쌀을 싸서 익히는 음식 (근거: en:Gołąbki, fr:Sarmale)"
+양배추 잎 말이,regional_variant,sarmale,
+시큼한 국물,similar_taste,borscht,"신맛이 중심인 국물 요리 (근거: en:Borscht 'sour soup', en:Sour cereal soup, en:Sinigang 'sour broth', en:Tom yum 'hot and sour')"
+시큼한 국물,similar_taste,zurek,
+시큼한 국물,similar_taste,sinigang,
+시큼한 국물,similar_taste,tom-yum,
+감자 덤플링,shares_ingredient,cepelinai,"감자 반죽으로 빚는 덤플링 (근거: en:Cepelinai 'potato dumplings', Wikidata — Bryndzové halušky 'potato-dough dumpling')"
+감자 덤플링,shares_ingredient,bryndzove-halusky,
+요구르트·발효유,shares_ingredient,tzatziki,"요구르트나 발효유 제품을 주재료로 쓰는 음식 (근거: en:Tzatziki, en:Skyr, en:Tavë kosi, en:Mansaf, en:Banitsa, en:Qurutob, en:İskender kebap)"
+요구르트·발효유,shares_ingredient,skyr,
+요구르트·발효유,shares_ingredient,tave-kosi,
+요구르트·발효유,shares_ingredient,mansaf,
+요구르트·발효유,shares_ingredient,banitsa,
+요구르트·발효유,shares_ingredient,qurutob,
+요구르트·발효유,shares_ingredient,iskender-kebap,
+치즈빵,regional_variant,chipa,"반죽에 치즈를 넣어 구운 빵 (근거: en:Chipa, en:Pão de queijo, en:Khachapuri)"
+치즈빵,regional_variant,pao-de-queijo,
+치즈빵,regional_variant,khachapuri,
+치즈가 주인공,shares_ingredient,cheese-fondue,"치즈를 주재료로 하는 음식 (근거: en:Fondue, en:Halloumi, en:Ema datshi, en:Poutine 'cheese curds', en:Bryndzové halušky 'bryndza')"
+치즈가 주인공,shares_ingredient,halloumi,
+치즈가 주인공,shares_ingredient,ema-datshi,
+치즈가 주인공,shares_ingredient,poutine,
+치즈가 주인공,shares_ingredient,bryndzove-halusky,
+쌀과 콩,shares_ingredient,gallo-pinto,"쌀과 콩을 한 끼에 함께 먹는 음식 (근거: en:Gallo pinto, en:Casado, en:Feijoada, en:Dal bhat, en:Koshary)"
+쌀과 콩,shares_ingredient,casado,
+쌀과 콩,shares_ingredient,feijoada,
+쌀과 콩,shares_ingredient,dal-bhat,
+쌀과 콩,shares_ingredient,koshary,
+소금으로 절여 보존,same_technique,ackee-and-saltfish,"소금으로 절이거나 말려 오래 두고 먹는 고기·생선 (근거: en:Ackee and saltfish 'salted codfish', en:Gravlax 'cured', en:Biltong 'air-dried, cured', en:Jamón ibérico 'cured')"
+소금으로 절여 보존,same_technique,gravlax,
+소금으로 절여 보존,same_technique,biltong,
+소금으로 절여 보존,same_technique,jamon-iberico,
+날고기 요리,same_technique,kibbeh-nayyeh,"다진 날고기에 향신료를 섞어 먹는 음식 (근거: en:Kibbeh nayyeh 'raw lamb', en:Kitfo 'minced raw beef')"
+날고기 요리,same_technique,kitfo,
+키베,regional_variant,kibbeh,"다진 고기와 불구르로 만드는 키베의 변형 (근거: en:Kibbeh nayyeh 'raw kibbeh', en:Kibbeh)"
+키베,regional_variant,kibbeh-nayyeh,
+튀긴 반죽 간식,same_technique,mandazi,"반죽을 기름에 튀긴 간식 (근거: en:Mandazi 'fried bread', en:Sel roti, en:Churro, en:Pączki)"
+튀긴 반죽 간식,same_technique,sel-roti,
+튀긴 반죽 간식,same_technique,churros,
+튀긴 반죽 간식,same_technique,paczki,
+이주민이 만든 맛,historical_link,doubles,"이주민 공동체가 새 고향에서 만들어 낸 음식 (근거: en:Doubles 'Indo-Trinidadian', en:Bunny chow 'Indian South Africans', en:Hainanese chicken rice, en:Sabich 'Iraqi Jewish immigrant', en:Milanesa 'Italian diaspora')"
+이주민이 만든 맛,historical_link,bunny-chow,
+이주민이 만든 맛,historical_link,hainanese-chicken-rice,
+이주민이 만든 맛,historical_link,sabich,
+이주민이 만든 맛,historical_link,milanesa,
+포르투갈의 흔적,historical_link,pastel-de-nata,"포르투갈과의 교류를 거쳐 퍼지거나 영향을 받은 음식 (근거: en:Pastel de nata '옛 포르투갈 식민지', en:Feijoada 'Portuguese-speaking world', en:Tempura 'Portuguese Jesuits', en:Chakalaka 'Portuguese-style relish')"
+포르투갈의 흔적,historical_link,feijoada,
+포르투갈의 흔적,historical_link,tempura,
+포르투갈의 흔적,historical_link,chakalaka,
+감자튀김,shares_ingredient,fish-and-chips,"감자튀김을 곁들이거나 함께 섞는 음식 (근거: en:Fish and chips, en:Moules-frites, en:Poutine, en:Salchipapa, en:Lomo saltado, en:Pique macho, en:Chivito)"
+감자튀김,shares_ingredient,moules-frites,
+감자튀김,shares_ingredient,poutine,
+감자튀김,shares_ingredient,salchipapas,
+감자튀김,shares_ingredient,lomo-saltado,
+감자튀김,shares_ingredient,pique-a-lo-macho,
+감자튀김,shares_ingredient,chivito,
+호밀·보리 북유럽,shares_ingredient,smorrebrod,"호밀·보리 가루를 쓰는 북유럽·발트 음식 (근거: en:Kama (food), Wikidata 재료 — Karelian pasty 호밀가루·Smørrebrød 호밀빵)"
+호밀·보리 북유럽,shares_ingredient,karelian-pasty,
+호밀·보리 북유럽,shares_ingredient,kama,
+핀란드·에스토니아,historical_link,kama,"핀란드와 에스토니아에서 함께 먹는 음식 (근거: en:Kama (food) 'Estonia and Finland', en:Karelian pasty 'Finland … Estonia')"
+핀란드·에스토니아,historical_link,karelian-pasty,
+북유럽 공유 음식,historical_link,smorrebrod,"북유럽 여러 나라가 함께 먹는 음식 (근거: en:Smørrebrød 'Denmark, Norway and Sweden', en:Gravlax 'Nordic dish')"
+북유럽 공유 음식,historical_link,gravlax,
+양고기 스튜,shares_ingredient,farikal,"양고기를 채소와 오래 끓이는 스튜 (근거: en:Fårikål, en:Irish stew)"
+양고기 스튜,shares_ingredient,irish-stew,
+파프리카,shares_ingredient,goulash,"파프리카로 맛과 색을 내는 음식 (근거: en:Goulash, en:Patatas bravas, Wikidata 재료 — Ćevapi)"
+파프리카,shares_ingredient,patatas-bravas,
+파프리카,shares_ingredient,cevapi,
+생선 수프·스튜,shares_ingredient,mohinga,"생선으로 국물을 내는 수프·스튜 (근거: en:Mohinga, en:Encebollado, en:Bouillabaisse, en:Moqueca)"
+생선 수프·스튜,shares_ingredient,encebollado,
+생선 수프·스튜,shares_ingredient,bouillabaisse,
+생선 수프·스튜,shares_ingredient,moqueca,
+쌀국수,shares_ingredient,mohinga,"쌀국수를 쓰는 음식 (근거: en:Mohinga, en:Pho, en:Pad thai, en:Bun cha)"
+쌀국수,shares_ingredient,pho,
+쌀국수,shares_ingredient,pad-thai,
+쌀국수,shares_ingredient,bun-cha,
+유목민의 양고기,shares_ingredient,beshbarmak,"양고기를 중심으로 한 중앙아시아·몽골 음식 (근거: en:Khuushuur 'mutton', Wikidata 재료 — Beshbarmak·Kuurdak 양고기)"
+유목민의 양고기,shares_ingredient,kuurdak,
+유목민의 양고기,shares_ingredient,khuushuur,
+중앙아시아 국수,historical_link,beshbarmak,"고기·국수를 함께 내는 중앙아시아 국수 요리 (근거: en:Beshbarmak, en:Laghman (food))"
+중앙아시아 국수,historical_link,lagman,
+빵 조각 요리,same_technique,fatta,"빵·납작빵을 찢거나 잘라 소스·채소와 섞는 요리 (근거: en:Fatteh, en:Qurutob 'bread salad', en:Fattoush, en:Chakhchoukha 'torn … semolina dough', en:Kottu 'chopped roti')"
+빵 조각 요리,same_technique,qurutob,
+빵 조각 요리,same_technique,fattoush,
+빵 조각 요리,same_technique,chakhchoukha,
+빵 조각 요리,same_technique,kottu,
+메소아메리카 전통,historical_link,tamale,"콜럼버스 이전 메소아메리카 전통에 뿌리를 둔 음식 (근거: en:Tamale 'Mesoamerican', en:Pozole, en:Pupusa 'Pre-Columbian Mesoamerica', en:Pepián 'indigenous cuisine')"
+메소아메리카 전통,historical_link,pozole,
+메소아메리카 전통,historical_link,pupusa,
+메소아메리카 전통,historical_link,pepian,
+안데스 전통,historical_link,locro,"안데스 원주민 전통에 뿌리를 둔 음식 (근거: en:Locro 'Native Andean', en:Anticucho 'Andes … pre-Columbian', en:Pachamanca)"
+안데스 전통,historical_link,anticuchos,
+안데스 전통,historical_link,pachamanca,
+라마단 식탁,historical_link,harees,"라마단 기간에 즐겨 먹는 음식 (근거: en:Harees, en:Harira, en:Om Ali 'iftar', en:Mandazi 'Iftar meal in Ramadan')"
+라마단 식탁,historical_link,harira,
+라마단 식탁,historical_link,om-ali,
+라마단 식탁,historical_link,mandazi,
+스펀지 케이크,same_technique,lamington,"스펀지 케이크에 초콜릿을 입힌 디저트 (근거: en:Lamington, en:Sachertorte)"
+스펀지 케이크,same_technique,sachertorte,
+로티·차파티,shares_ingredient,rolex-uganda,"로티·차파티 같은 납작빵을 말거나 썰어 만든 음식 (근거: en:Rolex (food) 'chapati', en:Kottu 'roti')"
+로티·차파티,shares_ingredient,kottu,
+보리 가루,shares_ingredient,genfo,"보리 가루를 바탕으로 한 음식 (근거: en:Bazin (bread), en:Kama (food), Wikidata 재료 — Genfo 보리)"
+보리 가루,shares_ingredient,bazeen,
+보리 가루,shares_ingredient,kama,
+마그레브 식탁,historical_link,chakhchoukha,"북아프리카 마그레브 지역이 함께 나누는 음식 (근거: en:Couscous 'North African', en:Brik 'Algeria and Libya', en:Harira 'Morocco, Tunisia, Algeria, Libya', en:Chakhchoukha, en:Bazin (bread))"
+마그레브 식탁,historical_link,brik,
+마그레브 식탁,historical_link,bazeen,
+마그레브 식탁,historical_link,couscous,
+마그레브 식탁,historical_link,harira,
+걸프 지역 잔칫상,historical_link,kabsa,"페르시아만 아랍 국가들이 함께 먹는 음식 (근거: en:Kabsa 'Gulf Cooperation Council', en:Harees 'Arab states of the Persian Gulf', en:Quzi)"
+걸프 지역 잔칫상,historical_link,harees,
+걸프 지역 잔칫상,historical_link,shuwa,
+말레이 세계의 쌀 요리,historical_link,nasi-lemak,"말레이 세계(말레이시아·인도네시아 등)에 함께 퍼진 음식 (근거: en:Nasi lemak 'Malay world', en:Nasi goreng, en:Rendang 'Indonesia, Malaysia, Singapore')"
+말레이 세계의 쌀 요리,historical_link,nasi-goreng,
+말레이 세계의 쌀 요리,historical_link,rendang,
+라오스·이산,historical_link,larb,"라오스에서 비롯돼 태국 이산 지방에서도 먹는 음식 (근거: en:Larb, en:Green papaya salad 'created by Lao people')"
+라오스·이산,historical_link,som-tam,
+티베트 식문화,historical_link,ema-datshi,"티베트 음식 전통에 뿌리를 둔 히말라야 음식 (근거: en:Ema datshi 'roots in Tibetan culinary traditions', en:Thukpa, en:Momo (food))"
+티베트 식문화,historical_link,thukpa,
+티베트 식문화,historical_link,momo,
+무굴 궁정 요리,historical_link,nihari,"무굴 제국 시대에 발달한 것으로 알려진 음식 (근거: en:Nihari 'Mughal Empire', en:Biryani 'Mughal court kitchens')"
+무굴 궁정 요리,historical_link,biryani,
+왓(wat) 계열,regional_variant,zigni,"베르베레 향신료로 끓이는 에티오피아·에리트레아 스튜 (근거: en:Wat (food), en:Zigni 'kai wat', en:Shiro (food) 'shiro wat')"
+왓(wat) 계열,regional_variant,doro-wat,
+왓(wat) 계열,regional_variant,shiro,
+샌드위치,same_technique,sabich,"빵에 재료를 얹거나 끼워 먹는 샌드위치 (근거: en:Sabich, en:Chivito (sandwich), en:Bánh mì, en:Smørrebrød 'open-faced sandwich')"
+샌드위치,same_technique,chivito,
+샌드위치,same_technique,banh-mi,
+샌드위치,same_technique,smorrebrod,
+소고기 국수,shares_ingredient,beef-noodle-soup,"소고기 국물에 국수를 만 음식 (근거: en:Taiwanese beef noodle soup, en:Pho 'usually beef')"
+소고기 국수,shares_ingredient,pho,
+잔치 돼지고기,shares_ingredient,griot,"모임·잔치 때 내는 돼지고기 요리 (근거: en:Griot (food) 'served at parties', en:Suckling pig 'special occasions and gatherings')"
+잔치 돼지고기,shares_ingredient,lechon,
+앙골라·콩고 식탁,historical_link,moambe-chicken,"앙골라와 콩고 지역에서 함께 먹는 음식 (근거: en:Moambe chicken 'Angola, the Republic of the Congo, and the DRC', en:Funge 'mfundi (Congo)', en:Isombe 'originated in the DRC')"
+앙골라·콩고 식탁,historical_link,funge,
+앙골라·콩고 식탁,historical_link,isombe,
+퍼프 페이스트리,shares_ingredient,pastizz,켜켜이 부푸는 퍼프 페이스트리 반죽을 쓰는 음식 (근거: Wikidata 재료 — Pastizz·Pastel de nata·Croissant 'puff pastry')
+퍼프 페이스트리,shares_ingredient,pastel-de-nata,
+퍼프 페이스트리,shares_ingredient,croissant,
+잎채소 스튜,shares_ingredient,romazava,"카사바·타로·황마 같은 잎채소를 듬뿍 넣고 끓이는 음식 (근거: en:Romazava 'greens', en:Ndolé 'ndoleh leaves', en:Mulukhiyah, en:Lūʻau (food) 'taro leaves', en:Matapa, en:Isombe)"
+잎채소 스튜,shares_ingredient,ndole,
+잎채소 스튜,shares_ingredient,molokhia,
+잎채소 스튜,shares_ingredient,palusami,
+잎채소 스튜,shares_ingredient,matapa,
+잎채소 스튜,shares_ingredient,isombe,
+호로파(페누그릭),shares_ingredient,saltah,"호로파(페누그릭)로 향을 내는 음식 (근거: en:Saltah 'fenugreek froth', en:Satsivi 'fenugreek', Wikidata 재료 — Ghormeh sabzi)"
+호로파(페누그릭),shares_ingredient,satsivi,
+호로파(페누그릭),shares_ingredient,ghormeh-sabzi,
+고기와 덩이줄기 스튜,same_technique,sancocho,"고기와 감자·덩이줄기를 큼직하게 넣고 오래 끓이는 스튜 (근거: en:Sancocho 'meat, tubers', en:Locro 'squash or potato stew', en:Irish stew 'root vegetables')"
+고기와 덩이줄기 스튜,same_technique,locro,
+고기와 덩이줄기 스튜,same_technique,irish-stew,
+생선 커리,shares_ingredient,shorshe-ilish,"생선을 양념 소스에 익힌 남·동남아시아 생선 요리 (근거: en:Shorshe ilish 'mustard gravy', en:Fish amok 'steamed fish curry')"
+생선 커리,shares_ingredient,fish-amok,
+중부 유럽 소고기 찜,shares_ingredient,svickova,"소고기를 오래 끓이거나 찌는 중부 유럽 요리 (근거: en:Svíčková, en:Tafelspitz 'boiled veal or beef', en:Goulash 'Central Europe')"
+중부 유럽 소고기 찜,shares_ingredient,tafelspitz,
+중부 유럽 소고기 찜,shares_ingredient,goulash,

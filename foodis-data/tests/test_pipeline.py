@@ -31,8 +31,19 @@ def test_full_pipeline(tmp_path):
     assert len(wd) == n and "needs_review" in wd["pique-a-lo-macho"]
     assert all(v.get("origin_mismatch") for v in wd.values())  # 가짜 원산지 XX → 모두 불일치 경고
 
-    run(tmp, "s02_wikipedia.py"); wp = json.loads((tmp / "data/raw/wikipedia.json").read_text(encoding="utf-8"))
+    # 이미지 교체 지정: 무무는 자유 라이선스 파일로 교체, 부렉은 NC 파일이라 거절 → P18 유지
+    (tmp / "data/seed/image_overrides.csv").write_text(
+        "slug,commons_file,reason\nmumu,Mumu PNG.jpg,파푸아뉴기니 무무 사진\nburek,Burek NC.jpg,비자유 라이선스 거절 확인\n", encoding="utf-8")
+    out = run(tmp, "s02_wikipedia.py"); print(out); wp = json.loads((tmp / "data/raw/wikipedia.json").read_text(encoding="utf-8"))
     assert wp["kimchi"]["en"]["extract"] and wp["kimchi"]["image"]["license"] == "CC BY-SA 4.0" and wp["kimchi"]["image"]["artist"] == "Someone"
+    assert wp["kimchi"]["image"]["source"] == "p18"
+    img = lambda s: wp[s]["image"] or {}
+    assert img("yomari")["source"] == "pageimage" and img("yomari")["file"] == "Yomari double.jpg" and img("yomari")["article"] == "en:Yomari"
+    assert img("poutine")["source"] == "pageimage" and img("poutine")["file"] == "Poutine in Montreal.jpg"  # P18 GFDL 단독 → 거절
+    assert wp["khorovats"]["image"] is None and wp["matapa"]["image"] is None  # NC 라이선스 · 공용에 없는 로컬 파일 → 거절
+    assert img("mumu")["source"] == "override" and img("mumu")["file"] == "Mumu PNG.jpg" and img("mumu")["reason"]
+    assert img("burek")["source"] == "p18" and "NC" not in img("burek")["license"]
+    assert "Burek NC.jpg" in out and "CC BY-NC-SA 4.0" in out and "이미지 없음 2건" in out
 
     run(tmp, "s03_themealdb.py"); assert set(json.loads((tmp / "data/raw/themealdb.json").read_text(encoding="utf-8"))) == {"kimchi", "injera"}
     run(tmp, "s04_hansik800.py"); hs = json.loads((tmp / "data/raw/hansik800.json").read_text(encoding="utf-8"))

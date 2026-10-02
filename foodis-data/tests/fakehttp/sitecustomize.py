@@ -6,6 +6,14 @@ import requests
 def qid(title): return "Q" + str(int(hashlib.md5(title.encode()).hexdigest()[:6], 16))
 MISSING = {"Pique macho"}          # 일부러 해석 실패 → 검색 fallback 경로 검증
 ORIGIN_MISMATCH = {"Falafel": "EG"}  # 원산지 불일치 경고 경로 검증
+# 이미지 경로 검증: P18 없음 → 문서 대표 이미지(pageimage), 자유 라이선스가 아닌 파일은 거절
+NO_P18 = {qid(t) for t in ("Yomari", "Khorovats", "Matapa")}
+P18_FILE = {qid("Poutine"): "GFDL%20photo.jpg"}                       # P18 이 GFDL 단독 → 거절 → pageimage
+PAGEIMAGE = {"Yomari": "Yomari_double.jpg", "Poutine": "Poutine_in_Montreal.jpg",
+             "Khorovats": "Khorovats_NC.jpg",                          # CC BY-NC → 거절
+             "Matapa": "Matapa_fairuse.jpg"}                           # 공용에 없는 로컬 파일 → 거절
+def commons_license(t):
+    return "GFDL 1.2" if "GFDL" in t else ("CC BY-NC-SA 4.0" if " NC" in t else "CC BY-SA 4.0")
 
 class R:
     def __init__(self, obj, status=200):
@@ -39,6 +47,9 @@ def route(method, url, params=None, json_body=None):
     u, p = urlparse(url), {k: v for k, v in (params or {}).items()}
     if "wikipedia.org/w/api.php" in url and p.get("list") == "search":
         return {"query": {"search": [{"title": "Pique a lo macho"}]}}
+    if "wikipedia.org/w/api.php" in url and p.get("prop") == "pageimages":
+        t = p["titles"]
+        return {"query": {"pages": [{"title": t, **({"pageimage": PAGEIMAGE[t]} if t in PAGEIMAGE else {})}]}}
     if "wikipedia.org/w/api.php" in url:
         titles = p["titles"].split("|"); pages = []
         for t in titles:
@@ -48,8 +59,9 @@ def route(method, url, params=None, json_body=None):
     if "query.wikidata.org" in url:
         qs = re.findall(r"wd:(Q\d+)", p["query"]); b = []
         for q in qs:
+            img = {} if q in NO_P18 else {"image": {"value": "http://commons.wikimedia.org/wiki/Special:FilePath/" + P18_FILE.get(q, f"{q}%20dish.jpg")}}
             b.append({"item": {"value": f"http://www.wikidata.org/entity/{q}"}, "labelEn": {"value": q}, "labelKo": {"value": q + "ko"},
-                      "originCode": {"value": "XX"}, "image": {"value": f"http://commons.wikimedia.org/wiki/Special:FilePath/{q}%20dish.jpg"},
+                      "originCode": {"value": "XX"}, **img,
                       "materials": {"value": "rice|onion"}, "materialQids": {"value": "http://www.wikidata.org/entity/Q1|http://www.wikidata.org/entity/Q2"},
                       "instanceOf": {"value": "food"}})
         return {"results": {"bindings": b}}
@@ -57,8 +69,9 @@ def route(method, url, params=None, json_body=None):
         t = u.path.rsplit("/", 1)[-1]
         return {"type": "standard", "title": t, "extract": f"{t} extract.", "content_urls": {"desktop": {"page": f"https://{u.netloc}/wiki/{t}"}}}
     if "commons.wikimedia.org" in url:
-        return {"query": {"pages": [{"title": t, "imageinfo": [{"thumburl": "https://upload.wikimedia.org/x.jpg", "descriptionurl": "https://commons.wikimedia.org/wiki/" + t,
-                 "extmetadata": {"Artist": {"value": "<a>Someone</a>"}, "LicenseShortName": {"value": "CC BY-SA 4.0"}}}]} for t in p["titles"].split("|")]}}
+        return {"query": {"pages": [{"title": t, "missing": True} if "fairuse" in t else
+                {"title": t, "imageinfo": [{"thumburl": "https://upload.wikimedia.org/x.jpg", "descriptionurl": "https://commons.wikimedia.org/wiki/" + t,
+                 "extmetadata": {"Artist": {"value": "<a>Someone</a>"}, "LicenseShortName": {"value": commons_license(t)}}}]} for t in p["titles"].split("|")]}}
     if "themealdb.com" in url:
         return {"meals": [{"idMeal": "1", "strMeal": p["s"], "strArea": "X", "strIngredient1": "Onion", "strIngredient2": ""}]} if p.get("s") in ("Injera", "Kimchi") else {"meals": None}
     if "api.anthropic.com" in url:

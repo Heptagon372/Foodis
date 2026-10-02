@@ -12,7 +12,8 @@ foodis-data/                         (스키마는 루트 ../supabase/migrations
 │   ├─ countries.csv          130개국 (ISO 코드, 국기, 대륙 그룹 5개, Accent 컬러). 이름은 CLDR 한국어 표기
 │   ├─ dish_targets.csv       280개 음식 목표 리스트 (위키백과 제목 힌트, 기원 메모, 데모 필수 16개 표시)
 │   │                         제목 힌트는 영어 위키 기준. 영어 문서가 없거나 엉뚱하면 "es:Majadito" 처럼 언어를 붙인다 (en·ko·es·pt·fr)
-│   └─ relation_themes.csv    역사·조리법 테마 (만두 로드, 커피 하우스, 필라프 계열 …)
+│   ├─ relation_themes.csv    역사·조리법 테마 (만두 로드, 커피 하우스, 필라프 계열 …)
+│   └─ image_overrides.csv    대표 이미지 교체 지정 (slug, 공용 파일명, 근거). 다른 나라 사진·비자유 라이선스 대신 쓸 파일
 ├─ data/raw/    ← s01~s04 수집 결과 (git 제외)
 ├─ data/draft/  ← s05~s07 초안·검수 시트
 ├─ data/final/  ← 검수 승인본 (적재 대상)
@@ -31,6 +32,7 @@ cp .env.example .env            # 키 입력
 # 1) 근거 수집 (API 키 불필요)
 python scripts/s01_wikidata.py      # 위키백과 제목 → Wikidata QID, 원산지·재료·이미지
 python scripts/s02_wikipedia.py     # 위키백과 ko/en 요약 + 공용 이미지 작가·라이선스
+                                    #   이미지: 교체 지정 → P18 → 문서 대표 이미지 순, 자유 라이선스(CC0·PD·CC BY·BY-SA)만
 python scripts/s03_themealdb.py     # (선택) 재료 교차검증
 python scripts/s04_hansik800.py     # (선택) 한식 표기 표준 — data/raw/hansik800.xlsx 필요
 

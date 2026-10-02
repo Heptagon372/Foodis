@@ -13,6 +13,13 @@ import { startRadio } from "@/lib/client/radio";
 import { VoiceButton } from "./VoiceButton";
 import { QuestHomeCard } from "./QuestBoard";
 
+const SHORTCUTS: [string, string, string][] = [
+  ["/map", "🗺", "세계 지도"],
+  ["/radio", "🎧", "라디오"],
+  ["/passport/table", "🍽", "My Table"],
+  ["/passport#quest", "🏅", "퀘스트"],
+];
+
 /** 날짜로 고정되는 '오늘의 탐험' — 같은 날엔 모두 같은 음식 (공유·대화 소재) */
 const todayIndex = (n: number) => {
   const d = new Date();
@@ -85,6 +92,18 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
           “푸디야, 무엇이든 물어보세요” · 글로 입력
         </button>
       </section>
+
+      {/* 새 탐험 도구로 바로 — 탭 바는 3개로 유지하고 홈에서 한 줄로 연다 */}
+      <nav className="grid grid-cols-4 gap-2" aria-label="탐험 도구">
+        {SHORTCUTS.map(([href, icon, label]) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-1.5 rounded-2xl bg-surface py-3 text-caption font-medium text-charcoal/80 shadow-sm transition active:scale-95">
+            <span className="text-2xl leading-none" aria-hidden>
+              {icon}
+            </span>
+            {label}
+          </Link>
+        ))}
+      </nav>
 
       {today && (
         <Section title="오늘의 탐험">

@@ -1,6 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
+"use client";
+// 고른 식단 조건(useGuard)을 보고 테두리를 바꾸므로 클라이언트 컴포넌트
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { DietKey, DietLevel } from "@/lib/foodi/schema";
 import { DietBadges } from "./DietBadge";
+import { GuardTag, guardRing, useGuard } from "./DietGuard";
 import { ImageCredit } from "./ImageCredit";
 import { Icon } from "./icons";
 import { TrackLink as Link } from "./TrackLink";
@@ -18,6 +21,10 @@ export type CardFood = {
   /** 취향 엔진 신호용 (있으면 카드 클릭을 기록) */
   country_code?: string;
   taste_tags?: string[];
+  /** 식단 카테고리 경고 근거 (있으면 더 정확) */
+  name_en?: string;
+  allergens?: string[];
+  ingredient_names?: string[];
 };
 
 /**
@@ -37,22 +44,36 @@ export const accentBg = (accent: string, image?: string | null): CSSProperties =
  */
 export function FoodCard({ food, size = "M", reason, action, fluid = false, badge, src }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode; src?: string }) {
   const href = `/food/${food.slug}`;
+  const guardFood = useMemo(() => ({ ...food, ingredients: food.ingredient_names }), [food]);
+  const guard = useGuard(guardFood);
+  const ring = guardRing(guard);
   if (size === "S") {
     return (
-      <Link food={food} src={src} href={href} className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-ink transition active:scale-[0.97]">
+      <Link food={food} src={src} href={href} title={guard.hits[0] ? `내 식단: ${guard.hits[0].label}` : undefined} className={`glass inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-ink transition active:scale-[0.97] ${ring}`}>
         <span aria-hidden>{food.flag}</span>
         {food.name_ko}
+        {guard.hits[0] && (
+          <>
+            <Icon name={guard.level === "danger" ? "close" : "warn"} className={`size-4 ${guard.level === "danger" ? "text-diet-no" : "text-diet-warn-ink"}`} strokeWidth={2.5} />
+            <span className="sr-only">{guard.level === "danger" ? "(내 식단에 위험)" : "(내 식단에 주의)"}</span>
+          </>
+        )}
       </Link>
     );
   }
   if (size === "M") {
     return (
-      <Link food={food} src={src} href={href} className={`card block rounded-[24px] p-1.5 transition active:scale-[0.98] ${fluid ? "w-full" : "w-40"}`}>
+      <Link food={food} src={src} href={href} className={`card block rounded-[24px] p-1.5 transition active:scale-[0.98] ${fluid ? "w-full" : "w-40"} ${ring}`}>
         <div className={`relative flex items-end justify-between overflow-hidden rounded-[18px] p-2.5 ${food.image_url ? (fluid ? "h-32" : "h-28") : "h-24"}`} style={accentBg(food.accent, food.image_url)}>
           <span className="text-[1.75rem] leading-none drop-shadow-sm" aria-hidden>
             {food.flag}
           </span>
           {badge}
+          {guard.hits[0] && (
+            <span className="absolute inset-x-2 top-2 flex">
+              <GuardTag r={guard} />
+            </span>
+          )}
         </div>
         <div className="px-2 pb-2 pt-2.5">
           <p className="text-[15px] font-semibold leading-tight text-ink">{food.name_ko}</p>
@@ -68,7 +89,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
     );
   }
   return (
-    <article className="card overflow-hidden rounded-[28px]">
+    <article className={`card overflow-hidden rounded-[28px] ${ring}`}>
       <Link food={food} src={src} href={href} className="block">
         <div className={`relative flex items-end justify-between p-4 ${food.image_url ? "h-48" : "h-32"}`} style={accentBg(food.accent, food.image_url)}>
           {food.country_name && (
@@ -93,6 +114,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
               {reason}
             </p>
           )}
+          {guard.hits[0] && <GuardTag r={guard} size="md" />}
           <DietBadges diet={food.diet} />
         </div>
       </Link>

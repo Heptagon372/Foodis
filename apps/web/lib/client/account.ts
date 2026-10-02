@@ -167,7 +167,7 @@ export function startAccount() {
 export async function signOut() {
   await supabaseBrowser().auth.signOut();
   writeMark(null);
-  update((s) => ({ ...s, diet: [], allergens: [], tastes: [], entries: {} }));
+  update((s) => ({ ...s, diet: [], guards: [], allergens: [], tastes: [], entries: {} }));
 }
 
 /** 회원 탈퇴: 계정과 계정의 모든 기록 삭제 (서버) → 로그아웃 */

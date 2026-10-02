@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FoodSummary } from "@/lib/content/types";
-import { exploredCountries, foodDna, update, useHydrated, useLocal } from "@/lib/client/passport";
+import { exploredCountries, update, useHydrated, useLocal } from "@/lib/client/passport";
+import { impress, useTaste } from "@/lib/client/taste";
+import { buildProfile, rankFoods } from "@/lib/taste/engine";
 import { speak } from "@/lib/client/voice";
 import { FoodCard } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
@@ -20,7 +22,7 @@ const todayIndex = (n: number) => {
   return n ? (seed * 2654435761) % n : 0;
 };
 
-export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: boolean }) {
+export function HomeView({ foods, continents, preview }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean }) {
   const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
@@ -44,20 +46,32 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
   const onboarded = useLocal((s) => s.onboarded);
   const diet = useLocal((s) => s.diet);
   const countries = useLocal(exploredCountries);
-  const dna = useLocal(foodDna);
+  const tastes = useLocal((s) => s.tastes);
+  const signals = useTaste((s) => s.signals);
+  const features = useTaste((s) => s.features);
+  const ignored = useTaste((s) => s.impressions);
   const recent = useLocal((s) => Object.entries(s.entries).sort((a, b) => b[1].at - a[1].at).slice(0, 8));
 
   const allergens = useLocal((s) => s.allergens ?? []);
   const fits = (f: FoodSummary) => diet.every((k) => f.diet[k] === "yes" || f.diet[k] === "depends") && !f.allergens.some((a) => (allergens as string[]).includes(a));
   const pool = foods.filter(fits);
-  const today = pool[todayIndex(pool.length)] ?? foods[0];
-  // 나를 위한 추천: 안 가본 나라 우선 → Food DNA 태그 점수 (match_foods 와 같은 취지의 클라이언트 근사)
-  const picks = pool
-    .filter((f) => f.id !== today?.id)
-    .map((f) => ({ f, s: (countries.includes(f.country_code) ? 0 : 3) + f.taste_tags.reduce((a, t) => a + (dna[t] ?? 0), 0) * 0.5 }))
-    .sort((a, b) => b.s - a.s)
-    .slice(0, 6)
-    .map((x) => x.f);
+  // 오늘의 탐험: 각 나라의 1위 대표 음식 중에서 날짜로 고른다 (사진 있는 것 우선)
+  const signature = pool.filter((f) => f.fame_rank === 1 && f.image_url);
+  const todayPool = signature.length ? signature : pool;
+  const today = todayPool[todayIndex(todayPool.length)] ?? foods[0];
+  // 나를 위한 추천: 취향 엔진 (lib/taste/engine.ts). 초반엔 나라별 대표 음식, 신호가 쌓이면 취향 순
+  const continentOf = (cc: string) => continents[cc];
+  const profile = useMemo(() => buildProfile(signals, features, (cc) => continents[cc], Date.now(), { tastes }), [signals, features, continents, tastes]);
+  const ranked = rankFoods(pool, profile, continentOf, { limit: 6, exclude: new Set(today ? [today.id] : []), ignored });
+  const picks = ranked.map((r) => r.food);
+  const learning = profile.confidence < 0.3;
+  // 노출 기록 (지나친 추천을 알기 위해) — 화면에 들어올 때 한 번
+  const shown = useRef(false);
+  useEffect(() => {
+    if (!hydrated || shown.current || !picks.length) return;
+    shown.current = true;
+    impress(picks);
+  }, [hydrated, picks]);
 
   const finishIntro = () => {
     update((s) => ({ ...s, introSeen: true }));
@@ -91,6 +105,8 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
           <FoodCard
             size="L"
             food={{ ...today, country_name: today.country_name }}
+            src="home_today"
+            reason={today.fame_rank === 1 ? `${today.country_name}의 대표 음식` : undefined}
             action={
               <>
                 <button type="button" onClick={() => today.summary && speak(`${today.country_name}의 ${today.name_ko}. ${today.summary}`, () => {})} className="rounded-full bg-mint-100 px-3 py-1.5 text-sm font-medium text-green-800">
@@ -129,10 +145,18 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
       <QuestHomeCard />
 
       {picks.length > 0 && (
-        <Section title="나를 위한 추천" more={diet.length > 0 ? <span className="text-caption text-muted">식이 조건 반영</span> : undefined}>
+        <Section
+          title={learning ? "먼저 만나 볼 나라별 대표 음식" : "나를 위한 추천"}
+          more={
+            <Link href="/passport#taste" className="text-caption text-muted">
+              {learning ? "볼수록 취향을 배워요" : `취향 반영 ${Math.round(profile.confidence * 100)}%`}
+              {diet.length > 0 && " · 식이 조건 반영"}
+            </Link>
+          }
+        >
           <div className="snap-row -mx-5 px-5 pb-2">
-            {picks.map((f) => (
-              <FoodCard key={f.id} food={f} size="M" />
+            {ranked.map((r) => (
+              <FoodCard key={r.food.id} food={r.food} size="M" reason={r.reason} src="home_rec" />
             ))}
           </div>
         </Section>

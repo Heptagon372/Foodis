@@ -1,9 +1,10 @@
 "use client";
 // 국가·재료 페이지 공용: 히어로 + 내 탐험 진행 + 사진 카드 그리드 (탐험한 음식은 ✓). 막다른 화면 없이 다음 탐험으로
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { useLocal } from "@/lib/client/passport";
+import { signal } from "@/lib/client/taste";
 import { FoodCard, accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner } from "./bits";
@@ -21,8 +22,13 @@ export function ExploreHub(p: {
   ask?: { label: string; question: string };
   preview: boolean;
   footer?: ReactNode;
+  /** 국가 페이지면 나라 코드 — 방문을 취향 신호로 남긴다 */
+  countryCode?: string;
 }) {
   const { open } = useFoodi();
+  useEffect(() => {
+    if (p.countryCode) signal("country", null, { cc: p.countryCode, src: "country_page" });
+  }, [p.countryCode]);
   const explored = useLocal((s) => Object.keys(s.entries));
   const done = p.foods.filter((f) => explored.includes(f.id)).length;
   // 안 가본 음식 먼저 — 다음 탐험이 위에
@@ -67,7 +73,14 @@ export function ExploreHub(p: {
                 food={f}
                 size="M"
                 fluid
-                badge={explored.includes(f.id) ? <span className="rounded-full bg-surface/90 px-2 py-0.5 text-caption font-semibold text-green-800">✓ 탐험</span> : undefined}
+                src={p.countryCode ? "country_page" : "hub"}
+                badge={
+                  explored.includes(f.id) ? (
+                    <span className="rounded-full bg-surface/90 px-2 py-0.5 text-caption font-semibold text-green-800">✓ 탐험</span>
+                  ) : p.countryCode && (f.fame_rank ?? 99) <= 3 ? (
+                    <span className="rounded-full bg-green-800/90 px-2 py-0.5 text-caption font-semibold text-ivory">★ 대표</span>
+                  ) : undefined
+                }
               />
             ))}
           </div>

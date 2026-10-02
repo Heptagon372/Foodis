@@ -16,7 +16,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
   const data = await content.getCountry((await params).code.toUpperCase());
   if (!data) notFound();
   const { country, foods } = data;
-  // 아직 검수된 음식이 없는 나라(130개국 중 일부)는 막다른 화면 대신 가까운 나라 음식으로 잇는다: 같은 지역 → 같은 대륙
+  // 아직 검수된 음식이 없는 나라(150개국 중 일부)는 막다른 화면 대신 가까운 나라 음식으로 잇는다: 같은 지역 → 같은 대륙
   let nearby: Awaited<ReturnType<typeof content.listFoods>> = [];
   if (!foods.length) {
     const [all, countries] = await Promise.all([content.listFoods(), content.listCountries()]);
@@ -39,6 +39,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
       emptyText={`${country.name_ko} 음식은 지금 근거를 모으고 검수하는 중이에요. 출처를 확인한 음식만 지도에 올라와요.`}
       ask={foods.length ? { label: `푸디에게 ${country.name_ko} 음식 추천받기`, question: `${country.name_ko} 음식 추천해줘` } : undefined}
       footer={!foods.length && nearby.length ? <NearbyFoods foods={nearby} /> : undefined}
+      countryCode={country.code}
       preview={content.mode === "preview"}
     />
   );

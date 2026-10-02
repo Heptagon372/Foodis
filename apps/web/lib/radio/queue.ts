@@ -52,7 +52,8 @@ export async function buildRadio(
   const ch = CHANNELS[opts.channel];
   const [foods, countries] = await Promise.all([content.listFoods(), ch.continent ? content.listCountries() : Promise.resolve([])]);
   const inChannel = ch.continent ? new Set(countries.filter((c) => c.continent_group === ch.continent).map((c) => c.code)) : null;
-  const pool = foods.filter((f) => !inChannel || inChannel.has(f.country_code));
+  // 라디오는 검수된 이야기가 있는 음식만 (이름·사진만 있는 카탈로그 음식은 들려줄 내용이 없다)
+  const pool = foods.filter((f) => f.summary && (!inChannel || inChannel.has(f.country_code)));
   const rand = seeded(`${opts.day ?? new Date().toISOString().slice(0, 10)}:${opts.channel}`);
 
   // 안 가본 나라 우선, 그 안에서 날짜 시드

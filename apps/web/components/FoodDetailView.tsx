@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from "@/lib/content/types";
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
 import { startRadio } from "@/lib/client/radio";
+import { noteFeature, signal } from "@/lib/client/taste";
 import { track } from "@/lib/client/track";
 import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
@@ -34,13 +35,24 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   useEffect(() => {
     record({ id: food.id, slug: food.slug, name_ko: food.name_ko, flag: food.flag, country_code: food.country_code, taste_tags: food.taste_tags }, "explored");
     track("detail_view", { food_id: food.id }); // KPI Hops: 세션 안 연속 상세 진입
-    return () => stopSpeaking();
+    // 취향 엔진: 상세 열기 + 머문 시간 (떠날 때 한 번)
+    const sf = { slug: food.slug, country_code: food.country_code, taste_tags: food.taste_tags };
+    signal("view", sf);
+    const t0 = Date.now();
+    return () => {
+      stopSpeaking();
+      signal("dwell", sf, { ms: Date.now() - t0 });
+    };
   }, [food.id, food.slug, food.name_ko, food.flag, food.country_code, food.taste_tags]);
+  const sf = { slug: food.slug, country_code: food.country_code, taste_tags: food.taste_tags };
+  const askFoodi = (o: Parameters<typeof open>[0]) => (signal("ask", sf), open(o));
 
   const tell = () => {
     if (telling) return (stopSpeaking(), setTelling(false));
     const text = food.culture_story ?? food.summary;
     if (!text) return;
+    signal("listen", sf);
+    noteFeature("listen");
     setTelling(true);
     void speak(text, () => setTelling(false));
   };
@@ -65,9 +77,11 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               {food.flag} {food.country.name_ko}
               {food.region_in_country ? ` · ${food.region_in_country}` : ""} ›
             </Link>
-            <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className="shrink-0 rounded-full border border-line bg-surface px-3 py-1 text-caption font-semibold text-green-800 transition active:scale-95" aria-label={`${food.name_ko} 이야기부터 라디오로 듣기`}>
-              🎧 라디오로 듣기
-            </button>
+            {food.summary && (
+              <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className="shrink-0 rounded-full border border-line bg-surface px-3 py-1 text-caption font-semibold text-green-800 transition active:scale-95" aria-label={`${food.name_ko} 이야기부터 라디오로 듣기`}>
+                🎧 라디오로 듣기
+              </button>
+            )}
           </div>
           <h1 className="font-display text-[2rem] font-semibold leading-tight">{food.name_ko}</h1>
           <p className="text-muted">
@@ -99,14 +113,14 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               </button>
             );
           })}
-          <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, listen: true })} className="ml-auto grid size-10 shrink-0 place-items-center rounded-full bg-mint-500 text-green-800" aria-label="이 음식에 대해 푸디에게 묻기">
+          <button type="button" onClick={() => askFoodi({ contextFoodId: food.id, contextName: food.name_ko, listen: true })} className="ml-auto grid size-10 shrink-0 place-items-center rounded-full bg-mint-500 text-green-800" aria-label="이 음식에 대해 푸디에게 묻기">
             <MicIcon className="size-5" />
           </button>
         </div>
 
         <nav className="sticky top-0 z-10 -mx-5 flex border-b border-line bg-ivory/95 px-5 backdrop-blur" role="tablist">
           {TABS.map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`flex-1 border-b-2 py-3 text-sm font-semibold transition ${tab === t ? "border-green-800 text-green-800" : "border-transparent text-muted"}`}>
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => (setTab(t), t !== "기본" && (signal("tab", sf, { src: t }), noteFeature(`tab:${t}`)))} className={`flex-1 border-b-2 py-3 text-sm font-semibold transition ${tab === t ? "border-green-800 text-green-800" : "border-transparent text-muted"}`}>
               {t}
             </button>
           ))}
@@ -115,26 +129,39 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
         <div className="min-h-48 animate-rise space-y-5" key={tab} role="tabpanel">
           {tab === "기본" && (
             <>
-              {food.summary && <p className="text-[17px] leading-relaxed">{food.summary}</p>}
-              <Facts label="주요 재료 · 눌러서 같은 재료 음식 보기">
-                <div className="flex flex-wrap gap-1.5">
-                  {food.ingredients.map((i) => (
-                    <Link key={i.slug} href={`/ingredient/${encodeURIComponent(i.slug)}`} className={`rounded-full px-3 py-1 text-sm transition active:scale-95 ${i.role === "main" ? "bg-surface font-medium shadow-sm" : "bg-line/50 text-charcoal/75"}`}>
-                      {i.name_ko} <span className="text-muted">›</span>
-                    </Link>
-                  ))}
-                </div>
-              </Facts>
+              {food.summary ? (
+                <p className="text-[17px] leading-relaxed">{food.summary}</p>
+              ) : (
+                <p className="rounded-2xl bg-surface px-4 py-3.5 text-[15px] leading-relaxed shadow-sm">
+                  📚 {food.country.name_ko}의 <b>{food.name_ko}</b>
+                  {food.name_en !== food.name_ko && <span className="text-muted"> ({food.name_en})</span>}
+                  <br />
+                  <span className="text-sm text-muted">소개 글은 출처를 확인하며 준비하고 있어요. 지금은 이름·나라·사진만 확인된 음식이에요.</span>
+                </p>
+              )}
+              {food.ingredients.length > 0 && (
+                <Facts label="주요 재료 · 눌러서 같은 재료 음식 보기">
+                  <div className="flex flex-wrap gap-1.5">
+                    {food.ingredients.map((i) => (
+                      <Link key={i.slug} href={`/ingredient/${encodeURIComponent(i.slug)}`} className={`rounded-full px-3 py-1 text-sm transition active:scale-95 ${i.role === "main" ? "bg-surface font-medium shadow-sm" : "bg-line/50 text-charcoal/75"}`}>
+                        {i.name_ko} <span className="text-muted">›</span>
+                      </Link>
+                    ))}
+                  </div>
+                </Facts>
+              )}
               {food.cooking_method && <Facts label="조리법">{METHOD_LABEL[food.cooking_method] ?? food.cooking_method}</Facts>}
-              <Facts label="맛">
-                <div className="flex flex-wrap gap-1.5">
-                  {food.taste_tags.map((t) => (
-                    <span key={t} className="rounded-full bg-mint-100 px-3 py-1 text-sm text-green-800">
-                      {TASTE_LABEL[t] ?? t}
-                    </span>
-                  ))}
-                </div>
-              </Facts>
+              {food.taste_tags.length > 0 && (
+                <Facts label={food.summary ? "맛" : "분류 (이름으로 추정)"}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {food.taste_tags.map((t) => (
+                      <span key={t} className="rounded-full bg-mint-100 px-3 py-1 text-sm text-green-800">
+                        {TASTE_LABEL[t] ?? t}
+                      </span>
+                    ))}
+                  </div>
+                </Facts>
+              )}
             </>
           )}
 
@@ -183,7 +210,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
               )}
               <RelationRow label={`같은 나라 · ${food.country.name_ko}`} foods={food.sameCountry} />
               {!byType.length && !food.sameCountry.length && <p className="text-sm text-muted">아직 검수된 연결이 없어요.</p>}
-              <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, question: "비슷한 음식 있어?" })} className="w-full rounded-2xl border border-mint-500/60 py-3 text-sm font-semibold text-green-800">
+              <button type="button" onClick={() => askFoodi({ contextFoodId: food.id, contextName: food.name_ko, question: "비슷한 음식 있어?" })} className="w-full rounded-2xl border border-mint-500/60 py-3 text-sm font-semibold text-green-800">
                 푸디에게 비슷한 음식 물어보기
               </button>
             </>

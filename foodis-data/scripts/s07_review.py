@@ -113,7 +113,7 @@ def do_import() -> None:
             **d, "diet_note": row.get("diet_note") or None, "diet_sources": row.get("diet_sources"),
             "wikidata_qid": (wd.get(row["slug"]) or {}).get("qid"),
             "wikipedia": {lang: url for lang in WIKI_LANGS if (url := ((wp.get(row["slug"]) or {}).get(lang) or {}).get("url"))},
-            "image_url": img.get("url"), "image_page": img.get("page"), "image_credit": f"{img.get('artist') or '작자 미상'} / {img.get('license') or '라이선스 확인 필요'} / {img.get('page') or ''}" if img else None,
+            "image_url": img.get("url"), "image_page": img.get("page"), "image_source": img.get("source"), "image_credit": f"{img.get('artist') or '작자 미상'} / {img.get('license') or '라이선스 확인 필요'} / {img.get('page') or ''}" if img else None,
             "reviewer": row.get("reviewer"),
             "evidence_used": d.get("used_evidence", []),
         }

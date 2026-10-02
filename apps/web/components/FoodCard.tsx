@@ -1,8 +1,8 @@
-import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { DietKey, DietLevel } from "@/lib/foodi/schema";
 import { DietBadges } from "./DietBadge";
 import { ImageCredit } from "./ImageCredit";
+import { TrackLink as Link } from "./TrackLink";
 
 export type CardFood = {
   slug: string;
@@ -14,6 +14,9 @@ export type CardFood = {
   image_url: string | null;
   image_credit?: string | null;
   diet: Record<DietKey, DietLevel>;
+  /** 취향 엔진 신호용 (있으면 카드 클릭을 기록) */
+  country_code?: string;
+  taste_tags?: string[];
 };
 
 /** 국가 Accent 그라데이션 — 사진이 없을 때도 '그 나라 색'이 카드를 지배하게 (05 문서 §7) */
@@ -28,11 +31,11 @@ export const accentBg = (accent: string, image?: string | null): CSSProperties =
  * - M: 가로 스크롤 추천 — 국기 + 이름 + 한 줄
  * - S: 연결 행·최근 탐험 칩 — 국기 + 이름
  */
-export function FoodCard({ food, size = "M", reason, action, fluid = false, badge }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode }) {
+export function FoodCard({ food, size = "M", reason, action, fluid = false, badge, src }: { food: CardFood; size?: "L" | "M" | "S"; reason?: string; action?: ReactNode; fluid?: boolean; badge?: ReactNode; src?: string }) {
   const href = `/food/${food.slug}`;
   if (size === "S") {
     return (
-      <Link href={href} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium active:scale-[0.97] transition" style={{ borderColor: `${food.accent}40` }}>
+      <Link food={food} src={src} href={href} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium active:scale-[0.97] transition" style={{ borderColor: `${food.accent}40` }}>
         <span aria-hidden>{food.flag}</span>
         {food.name_ko}
       </Link>
@@ -40,13 +43,14 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
   }
   if (size === "M") {
     return (
-      <Link href={href} className={`block overflow-hidden rounded-2xl bg-surface shadow-[0_1px_0_#0000000a,0_6px_16px_-10px_#00000040] active:scale-[0.98] transition ${fluid ? "w-full" : "w-40"}`}>
+      <Link food={food} src={src} href={href} className={`block overflow-hidden rounded-2xl bg-surface shadow-[0_1px_0_#0000000a,0_6px_16px_-10px_#00000040] active:scale-[0.98] transition ${fluid ? "w-full" : "w-40"}`}>
         <div className={`relative flex items-end justify-between p-3 ${food.image_url ? (fluid ? "h-28" : "h-24") : "h-20"}`} style={accentBg(food.accent, food.image_url)}>
           <span className="text-3xl drop-shadow-sm" aria-hidden>{food.flag}</span>
           {badge}
         </div>
         <div className="p-3">
           <p className="font-semibold leading-tight">{food.name_ko}</p>
+          {reason && <p className="mt-1 line-clamp-1 text-[12px] font-medium text-green-800">✦ {reason}</p>}
           {food.summary && <p className="mt-1 line-clamp-2 text-caption text-muted">{food.summary}</p>}
         </div>
       </Link>
@@ -54,7 +58,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
   }
   return (
     <article className="overflow-hidden rounded-3xl bg-surface shadow-[0_1px_0_#0000000a,0_12px_28px_-16px_#00000055]">
-      <Link href={href} className="block">
+      <Link food={food} src={src} href={href} className="block">
         <div className={`relative flex items-end justify-between p-4 ${food.image_url ? "h-40" : "h-28"}`} style={accentBg(food.accent, food.image_url)}>
           <ImageCredit credit={food.image_credit} link={false} className="absolute right-3 top-3" />
           <span className="text-5xl drop-shadow" aria-hidden>{food.flag}</span>

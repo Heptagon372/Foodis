@@ -1171,5 +1171,185 @@ export const PREVIEW_COUNTRIES: Country[] = [
     "continent_group": "oceania",
     "flag_emoji": "🇹🇴",
     "accent_color": "#C8383A"
+  },
+  {
+    "code": "KP",
+    "name_ko": "북한",
+    "name_en": "North Korea",
+    "region": "East Asia",
+    "continent_group": "asia",
+    "flag_emoji": "🇰🇵",
+    "accent_color": "#2F4F90"
+  },
+  {
+    "code": "BN",
+    "name_ko": "브루나이",
+    "name_en": "Brunei",
+    "region": "Southeast Asia",
+    "continent_group": "asia",
+    "flag_emoji": "🇧🇳",
+    "accent_color": "#C9A227"
+  },
+  {
+    "code": "SI",
+    "name_ko": "슬로베니아",
+    "name_en": "Slovenia",
+    "region": "Central Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇸🇮",
+    "accent_color": "#2F5DA8"
+  },
+  {
+    "code": "MK",
+    "name_ko": "북마케도니아",
+    "name_en": "North Macedonia",
+    "region": "Southern Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇲🇰",
+    "accent_color": "#C8384A"
+  },
+  {
+    "code": "ME",
+    "name_ko": "몬테네그로",
+    "name_en": "Montenegro",
+    "region": "Southern Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇲🇪",
+    "accent_color": "#B8862B"
+  },
+  {
+    "code": "MD",
+    "name_ko": "몰도바",
+    "name_en": "Moldova",
+    "region": "Eastern Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇲🇩",
+    "accent_color": "#2F4F90"
+  },
+  {
+    "code": "BY",
+    "name_ko": "벨라루스",
+    "name_en": "Belarus",
+    "region": "Eastern Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇧🇾",
+    "accent_color": "#B03A3A"
+  },
+  {
+    "code": "LU",
+    "name_ko": "룩셈부르크",
+    "name_en": "Luxembourg",
+    "region": "Western Europe",
+    "continent_group": "europe",
+    "flag_emoji": "🇱🇺",
+    "accent_color": "#3A8FD5"
+  },
+  {
+    "code": "KW",
+    "name_ko": "쿠웨이트",
+    "name_en": "Kuwait",
+    "region": "Middle East",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇰🇼",
+    "accent_color": "#2E7D45"
+  },
+  {
+    "code": "QA",
+    "name_ko": "카타르",
+    "name_en": "Qatar",
+    "region": "Middle East",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇶🇦",
+    "accent_color": "#7A2338"
+  },
+  {
+    "code": "BH",
+    "name_ko": "바레인",
+    "name_en": "Bahrain",
+    "region": "Middle East",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇧🇭",
+    "accent_color": "#C8384A"
+  },
+  {
+    "code": "BJ",
+    "name_ko": "베냉",
+    "name_en": "Benin",
+    "region": "West Africa",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇧🇯",
+    "accent_color": "#3E7D45"
+  },
+  {
+    "code": "ZM",
+    "name_ko": "잠비아",
+    "name_en": "Zambia",
+    "region": "Southern Africa",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇿🇲",
+    "accent_color": "#2E7D45"
+  },
+  {
+    "code": "MW",
+    "name_ko": "말라위",
+    "name_en": "Malawi",
+    "region": "Southern Africa",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇲🇼",
+    "accent_color": "#B03A3A"
+  },
+  {
+    "code": "MU",
+    "name_ko": "모리셔스",
+    "name_en": "Mauritius",
+    "region": "East Africa",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇲🇺",
+    "accent_color": "#C8384A"
+  },
+  {
+    "code": "CV",
+    "name_ko": "카보베르데",
+    "name_en": "Cape Verde",
+    "region": "West Africa",
+    "continent_group": "mena_africa",
+    "flag_emoji": "🇨🇻",
+    "accent_color": "#2F4F90"
+  },
+  {
+    "code": "BZ",
+    "name_ko": "벨리즈",
+    "name_en": "Belize",
+    "region": "Central America",
+    "continent_group": "americas",
+    "flag_emoji": "🇧🇿",
+    "accent_color": "#2F4F90"
+  },
+  {
+    "code": "GY",
+    "name_ko": "가이아나",
+    "name_en": "Guyana",
+    "region": "South America",
+    "continent_group": "americas",
+    "flag_emoji": "🇬🇾",
+    "accent_color": "#2E7D45"
+  },
+  {
+    "code": "SR",
+    "name_ko": "수리남",
+    "name_en": "Suriname",
+    "region": "South America",
+    "continent_group": "americas",
+    "flag_emoji": "🇸🇷",
+    "accent_color": "#3E7D45"
+  },
+  {
+    "code": "BB",
+    "name_ko": "바베이도스",
+    "name_en": "Barbados",
+    "region": "Caribbean",
+    "continent_group": "americas",
+    "flag_emoji": "🇧🇧",
+    "accent_color": "#2F5DA8"
   }
 ];

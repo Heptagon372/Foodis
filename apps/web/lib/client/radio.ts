@@ -9,6 +9,7 @@ import { exploredCountries, getState, record } from "./passport";
 import { beforeSpeak, stopSpeaking } from "./voice";
 import { questEvent } from "./quest";
 import { track } from "./track";
+import { noteFeature } from "./taste";
 
 export type RadioState = {
   status: "idle" | "loading" | "playing" | "paused" | "ended" | "error";
@@ -203,6 +204,7 @@ function advance(ep: number, seg: number) {
 // ── 화면에서 부르는 동작
 
 export async function startRadio(opts: { channel: string; start?: string }) {
+  noteFeature("radio"); // 취향 엔진: 기능 사용
   const my = ++gen;
   stopSpeaking();
   audio?.pause();

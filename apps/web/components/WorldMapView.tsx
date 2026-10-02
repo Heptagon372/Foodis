@@ -1,6 +1,6 @@
 "use client";
 // S7 세계 음식 지도 (F-EXP-05): 나라를 탭하면 아래 카드 → 국가 페이지·푸디. 경로는 서버가 계산해 넘기고(lib/map/world.ts) 여기서는 색칠·탭·확대만.
-// 색: 탐험한 나라 = 국가 Accent, 지도에 있지만 아직 = 연민트, 130개국 밖 = 회색(탭 불가)
+// 색: 탐험한 나라 = 국가 Accent, 지도에 있지만 아직 = 연민트, 150개국 밖 = 회색(탭 불가)
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Country } from "@/lib/content/types";
@@ -10,6 +10,7 @@ import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Wordmark } from "./bits";
 import { MicIcon } from "./VoiceButton";
+import { noteFeature, signal } from "@/lib/client/taste";
 
 const CHIPS: [string, string][] = [
   ["all", "전체"],
@@ -61,7 +62,10 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
     if (selected) card.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selected]);
 
-  const pick = (code: string) => setSelected((cur) => (cur === code ? null : code));
+  const pick = (code: string) => {
+    if (selected !== code) (signal("country", null, { cc: code, src: "map" }), noteFeature("map"));
+    setSelected((cur) => (cur === code ? null : code));
+  };
   const onKey = (code: string) => (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -111,7 +115,7 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
 
       <figure className="overflow-hidden rounded-3xl border border-line bg-surface" style={{ aspectRatio: map.aspect }}>
         <svg ref={svg} viewBox={map.views.all.join(" ")} className="block size-full touch-manipulation" role="group" aria-label="세계 지도 — 나라를 눌러 보세요">
-          {/* 130개국 밖: 배경으로 한 덩어리 (탭 불가) */}
+          {/* 150개국 밖: 배경으로 한 덩어리 (탭 불가) */}
           <path d={map.others} fill="var(--color-line)" stroke="var(--color-surface)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" pointerEvents="none" aria-hidden />
           {map.shapes.map((s) => {
             const c = byCode.get(s.code);

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from html import escape
 
 from common import ALLERGENS, DIET_KEYS, DIET_LEVELS, DRAFT, RAW, SEED, TASTE_TAGS, WIKI_LANGS, Http, read_csv, read_json, require_env, write_json
 
@@ -63,7 +64,8 @@ SYSTEM = """너는 세계 음식 문화 데이터베이스의 편집자다. 사�
 
 
 def build_evidence(t: dict, wd: dict, wp: dict, mdb: dict, hs: dict) -> str:
-    parts = [f"<target name_ko='{t['name_ko']}' name_en='{t['name_en']}' country='{t['country_code']}' origin_note='{t['origin_note']}'/>"]
+    q = lambda v: escape(str(v), quote=True)  # noqa: E731 — "Ploughman's lunch" 처럼 작은따옴표가 든 이름이 속성을 깨지 않게
+    parts = [f"<target name_ko='{q(t['name_ko'])}' name_en='{q(t['name_en'])}' country='{t['country_code']}' origin_note='{q(t['origin_note'])}'/>"]
     if wd:
         parts.append(f"<wikidata qid='{wd.get('qid')}'>origin={wd.get('origin_codes')} materials={wd.get('materials')} instance_of={wd.get('instance_of')}</wikidata>")
     for lang in WIKI_LANGS:

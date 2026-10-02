@@ -33,7 +33,10 @@ export function openaiSTT(): STTProvider {
   return {
     transcribe: (audio, { lang, keywords }) =>
       wrap(async () => {
-        const file = await toFile(audio, "speech.webm", { type: audio.type || "audio/webm" });
+        // API 는 파일 확장자로 형식을 본다: Safari 녹음(mp4)·측정 스크립트(mp3)도 webm 으로 이름 붙이면 거절될 수 있다
+        const type = audio.type || "audio/webm";
+        const ext = type.includes("mpeg") || type.includes("mp3") ? "mp3" : type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : type.includes("wav") ? "wav" : "webm";
+        const file = await toFile(audio, `speech.${ext}`, { type });
         const res = await client().audio.transcriptions.create({
           model: env.sttModel,
           file,

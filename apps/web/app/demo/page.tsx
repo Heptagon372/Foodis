@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useFoodi } from "@/components/FoodiSheet";
 import { Wordmark } from "@/components/bits";
+import { VoiceBench } from "@/components/VoiceBench";
 import { audioCount, cachedPageCount, isDemoMode, loadPack, precachePages, savePack, setDemoMode, warmAudio } from "@/lib/client/demo";
 import { update, useHydrated } from "@/lib/client/passport";
 import { canRecord, canWebSpeech } from "@/lib/client/voice";
@@ -165,6 +166,8 @@ function Demo() {
           {!pack && <p className="text-sm text-muted">데모 팩을 만들면 여기에 10문항이 나와요.</p>}
         </ol>
       </section>
+
+      <VoiceBench />
 
       <section className="flex flex-wrap gap-2 pb-4 text-sm">
         <Link href="/intro" className="rounded-full border border-line px-3 py-1.5">인트로 다시 보기</Link>

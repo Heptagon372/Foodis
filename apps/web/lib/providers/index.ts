@@ -3,7 +3,7 @@
 export { enabledProviders, getLLM, llmFor, llmModels, llmProviderReady, llmReady, llmStatus, tierModels } from "./registry/llm";
 export { embedConfigError, embedKeyName, embedModel, embedReady, embedStatus, getEmbedder } from "./registry/embed";
 export { getSTT, sttStatus } from "./registry/stt";
-export { getTTSChain, ttsStatus } from "./registry/tts";
+export { defaultChain, ttsAttempts, ttsReady, ttsStatus } from "./registry/tts";
 export type { ProviderStatus } from "./registry/lazy";
 
 export * from "./types";

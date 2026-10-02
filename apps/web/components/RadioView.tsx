@@ -4,6 +4,9 @@ import Link from "next/link";
 import { RELATION_LABEL } from "@/lib/content/types";
 import { closeRadio, playEpisode, skip, startRadio, toggle, useRadio } from "@/lib/client/radio";
 import { sentences, type Episode } from "@/lib/radio/script";
+import { useVoicePrefs } from "@/lib/client/voice-prefs";
+import { useVoices } from "@/lib/client/voices";
+import { findVoice, hostForSegment, isVoiceId } from "@/lib/voice/catalog";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner, Wordmark } from "./bits";
 
@@ -153,13 +156,37 @@ function NowPlaying() {
           ⏭
         </button>
       </div>
-      <div className="flex justify-center gap-4 text-caption text-muted">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-caption text-muted">
         <Link href={`/food/${e.food.slug}`} className="underline-offset-4 hover:underline">
           {e.food.name_ko} 자세히 보기
         </Link>
-        {r.engine === "browser" && <span>· 브라우저 음성으로 재생 중</span>}
+        {r.engine === "browser" ? <span>· 브라우저 음성으로 재생 중</span> : <Hosts kind={seg?.kind ?? "summary"} />}
       </div>
     </section>
+  );
+}
+
+/** 2인 진행자 이름 (design/11 문서 §4). 지금 말하는 쪽을 조금 진하게 */
+function Hosts({ kind }: { kind: string }) {
+  const picked = useVoicePrefs((p) => p.radioHosts);
+  const voices = useVoices();
+  // 고른 진행자라도 서버에 그 키가 없으면 서버가 자동 진행자로 바꿔 부른다 → 이름도 같이 맞춘다
+  const ready = (id: string) => !voices || voices.voices.some((v) => v.id === id && v.ready);
+  const names = [0, 1].map((i) => {
+    const id = picked?.[i];
+    return findVoice(isVoiceId(id) && ready(id) ? id : voices?.auto.radio?.[i])?.label_ko;
+  });
+  if (!names?.[0] || !names[1]) return null;
+  const now = hostForSegment(kind) === "host-a" ? 0 : 1;
+  return (
+    <span aria-label={`진행: ${names[0]}, ${names[1]}`}>
+      🎙 진행 {names.map((n, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          <span className={i === now ? "font-semibold text-charcoal/70" : ""}>{n}</span>
+        </span>
+      ))}
+    </span>
   );
 }
 

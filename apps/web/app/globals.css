@@ -83,6 +83,7 @@
   --animate-spin-slow: spin 2.4s linear infinite;
   --animate-rise: rise 200ms ease-out both;
   --animate-sheet: sheet-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-panel: panel-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @keyframes pulse-ring {
     0% { box-shadow: 0 0 0 0 var(--pulse-lime); }
@@ -96,6 +97,10 @@
   @keyframes rise {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }
+  }
+  @keyframes panel-in {
+    from { transform: translateX(calc(100% + 1rem)); }
+    to { transform: none; }
   }
   @keyframes sheet-up {
     from { transform: translateY(100%); }
@@ -231,18 +236,20 @@ body {
   animation-duration: 360ms;
 }
 
-/* 가로 스냅 스크롤 (카드 행) — 스크롤바 숨김.
+/* 가로 스냅 스크롤 (카드 행) — 스크롤바 숨김. components 레이어라 lg:grid 같은 유틸리티로 데스크톱에서 격자로 바꿀 수 있다.
    행은 늘 '-mx-5 px-5'(화면 여백까지 펼침)로 쓴다 → 스냅 기준도 같은 여백만큼 안쪽으로 둬야 첫 카드가 화면 끝에 붙지 않는다 */
-.snap-row {
-  display: flex;
-  gap: 0.75rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: 1.25rem;
-  scrollbar-width: none;
+@layer components {
+  .snap-row {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1.25rem;
+    scrollbar-width: none;
+  }
+  .snap-row::-webkit-scrollbar { display: none; }
+  .snap-row > * { scroll-snap-align: start; flex: none; }
 }
-.snap-row::-webkit-scrollbar { display: none; }
-.snap-row > * { scroll-snap-align: start; flex: none; }
 
 /* My Table 접시 '내려놓기' (260ms) — 살짝 위·크게에서 식탁으로 */
 @keyframes plate-set {

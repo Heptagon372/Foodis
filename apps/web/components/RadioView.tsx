@@ -10,7 +10,8 @@ import { useVoicePrefs } from "@/lib/client/voice-prefs";
 import { useVoices } from "@/lib/client/voices";
 import { findVoice, hostForSegment, isVoiceId } from "@/lib/voice/catalog";
 import { ImageCredit } from "./ImageCredit";
-import { PreviewBanner, Wordmark } from "./bits";
+import { PreviewBanner } from "./bits";
+import { TopBar } from "./TopBar";
 import { Icon, type IconName } from "./icons";
 import { btn, Eyebrow, IconTile } from "./ui";
 
@@ -23,14 +24,8 @@ export function RadioView({ channels, preview, startFood }: Props) {
   const activeChannel = r.channel?.split(":")[0];
 
   return (
-    <main className="space-y-7 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between">
-        <Wordmark />
-        <span className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink">
-          <Icon name="headphones" className="size-[18px] text-leaf" />
-          Radio
-        </span>
-      </header>
+    <main className="space-y-7 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:mx-auto lg:max-w-3xl lg:pt-8">
+      <TopBar />
       {preview && <PreviewBanner />}
 
       <section className="space-y-1.5">

@@ -11,7 +11,8 @@ import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner } from "./bits";
 import { Icon } from "./icons";
 import { useRadioMiniVisible } from "./RadioMini";
-import { BackLink, Eyebrow, IconButton, ProgressBar, btn, chip } from "./ui";
+import { TopBar } from "./TopBar";
+import { Eyebrow, IconButton, ProgressBar, btn, chip } from "./ui";
 import { MicIcon } from "./VoiceButton";
 import { noteFeature, signal } from "@/lib/client/taste";
 
@@ -96,14 +97,8 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
   const selShape = selected ? map.shapes.find((s) => s.code === selected) : undefined;
 
   return (
-    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between gap-3">
-        <BackLink href="/" label="홈" />
-        <Link href="/passport" className="glass inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-caption font-semibold text-ink transition active:scale-95">
-          <Icon name="passport" className="size-[18px] text-leaf" />
-          Passport
-        </Link>
-      </header>
+    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
+      <TopBar />
       {preview && <PreviewBanner />}
 
       <div className="space-y-3">

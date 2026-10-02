@@ -9,7 +9,8 @@ import type { FilterKey, NearbyResponse } from "@/lib/places/types";
 import type { PlacesSetup } from "@/lib/places/server";
 import { useFoodi } from "../FoodiSheet";
 import { Icon } from "../icons";
-import { BackLink, btn, chip, IconTile, SegTabs } from "../ui";
+import { TopBar } from "../TopBar";
+import { btn, chip, IconTile, SegTabs } from "../ui";
 import { PlaceCard } from "./PlaceCard";
 import { TasteMap } from "./TasteMap";
 
@@ -107,9 +108,9 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const fromLabel = loc.kind === "gps" ? null : (data?.center.label ?? loc.label);
 
   return (
-    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:mx-auto lg:max-w-4xl lg:pt-8">
       <header className="space-y-3">
-        <BackLink href={`/food/${food.slug}`} label={`${food.flag} ${food.name_ko}`} />
+        <TopBar back={{ href: `/food/${food.slug}`, label: `${food.flag} ${food.name_ko}` }} />
         <div className="space-y-1.5">
           <h1 className="flex items-center gap-2.5 text-h2 font-bold text-ink">
             <IconTile icon="pin" size="sm" />

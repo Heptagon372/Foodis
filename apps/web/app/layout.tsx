@@ -6,6 +6,7 @@ import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
 import { QuestToast } from "@/components/QuestToast";
 import { RadioMini } from "@/components/RadioMini";
+import { SideNav } from "@/components/SideNav";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
 import { Tracker } from "@/components/Tracker";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <RadioMini />
           <QuestToast />
           <TabBar />
+          <SideNav />
         </FoodiProvider>
       </body>
     </html>

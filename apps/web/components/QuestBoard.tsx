@@ -1,5 +1,5 @@
 "use client";
-// Food Quest (기능 #9): Passport 의 주간 퀘스트 보드 + 배지 선반, 홈의 한 줄 카드
+// Food Quest (기능 #9): /quests 의 주간 퀘스트 보드 + 배지 선반, 홈·Passport 의 한 줄 카드
 import Link from "next/link";
 import { useQuest } from "@/lib/client/quest";
 import type { BadgeProgress, QuestProgress } from "@/lib/quest/quests";
@@ -12,26 +12,28 @@ const date = (ts: number) => day.format(ts);
 export function QuestBoard() {
   const q = useQuest();
   return (
-    // 홈 카드의 /passport#quest 가 하이드레이션 전에도 닿도록 id 는 항상 그린다
-    <div id="quest" className="scroll-mt-14 space-y-5">
+    // 데스크톱은 퀘스트 | 배지 두 칸
+    <div id="quest" className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
       {!q.ready ? (
         <div className="h-56 rounded-3xl bg-sunken/70" aria-hidden />
       ) : (
         <>
-          <ul className="space-y-2.5">
-            {q.quests.map((x) => (
-              <QuestRow key={x.id} q={x} />
-            ))}
-          </ul>
-          <p className="text-caption text-muted">
-            매주 월요일(한국 시간)에 새 퀘스트가 열려요. 3개를 모두 끝내면 연속 기록이 이어져요
-            {q.streak > 0 && (
-              <b className="font-semibold text-leaf">
-                {" · "}
-                <Icon name="flame" className="-mt-0.5 inline size-4" /> {q.streak}주 연속
-              </b>
-            )}
-          </p>
+          <div className="space-y-3">
+            <ul className="space-y-2.5">
+              {q.quests.map((x) => (
+                <QuestRow key={x.id} q={x} />
+              ))}
+            </ul>
+            <p className="text-caption text-muted">
+              매주 월요일(한국 시간)에 새 퀘스트가 열려요. 3개를 모두 끝내면 연속 기록이 이어져요
+              {q.streak > 0 && (
+                <b className="font-semibold text-leaf">
+                  {" · "}
+                  <Icon name="flame" className="-mt-0.5 inline size-4" /> {q.streak}주 연속
+                </b>
+              )}
+            </p>
+          </div>
           <BadgeShelf badges={q.badges} />
         </>
       )}
@@ -97,7 +99,7 @@ export function QuestHomeCard() {
   if (!q.ready || !q.quests.length) return null;
   const next = q.quests.find((x) => !x.done);
   return (
-    <Link href="/passport#quest" className="glass flex min-h-16 items-center gap-3 rounded-3xl py-3 pl-3 pr-2 text-sm transition active:scale-[0.98]">
+    <Link href="/quests" className="glass flex min-h-16 items-center gap-3 rounded-3xl py-3 pl-3 pr-2 text-sm transition active:scale-[0.98]">
       <IconTile icon="quest" />
       <span className="min-w-0 flex-1">
         <b className="block font-semibold text-ink">

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ExploreHub } from "@/components/ExploreHub";
+import { IconTile } from "@/components/ui";
 import { getContent } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +15,11 @@ export default async function IngredientPage({ params }: { params: Promise<{ slu
   const { ingredient, foods } = data;
   const countries = new Set(foods.map((f) => f.country_code)).size;
   return (
+    // 재료는 나라 색이 없어 연두(lime 토큰 값)를 옅게 깐다 — accentBg 가 알파를 덧붙이므로 hex 로 넘긴다
     <ExploreHub
       back={{ href: "/", label: "홈" }}
-      accent="#7FD1AE"
-      icon="🥄"
+      accent="#C8F06A"
+      icon={<IconTile icon="utensils" size="lg" />}
       eyebrow={`재료${ingredient.category ? ` · ${CATEGORY[ingredient.category] ?? ingredient.category}` : ""}`}
       title={ingredient.name_ko}
       subtitle={`${countries}개 나라 · ${foods.length}가지 음식에 들어가요`}

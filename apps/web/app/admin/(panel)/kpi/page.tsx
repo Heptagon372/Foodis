@@ -1,6 +1,8 @@
 // 베타 KPI (07 문서 §1): North Star · Hops · 음성 사용률 · 추천 수락률 · 음성 지연 p95 · D7.
 // 익명 events(0004) 를 읽어 lib/admin/kpi.ts 로 계산한다. 발표 슬라이드 1장 근거 — 측정 방법은 docs/design/07_KPI_측정_v1.md
 import Link from "next/link";
+import { Icon } from "@/components/icons";
+import { chip } from "@/components/ui";
 import { requirePage } from "@/lib/admin/auth";
 import { computeKpis, KPI_TARGETS, startOfDay } from "@/lib/admin/kpi";
 import { loadEvents } from "@/lib/admin/kpi-data";
@@ -15,6 +17,8 @@ const DOC_URL = "https://github.com/Heptagon372/Foodis/blob/main/docs/design/07_
 const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 const sec = (ms: number | null) => (ms == null ? "—" : `${(ms / 1000).toFixed(1)}초`);
 const fix = (v: number | null, d = 1) => (v == null ? "—" : v.toFixed(d));
+const WARN = "flex items-start gap-2 rounded-2xl bg-diet-warn/15 px-4 py-3 text-sm text-diet-warn-ink";
+const CARD = "card space-y-2 rounded-3xl p-5";
 
 export default async function KpiPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   await requirePage("reviewer");
@@ -27,8 +31,11 @@ export default async function KpiPage({ searchParams }: { searchParams: Promise<
   const [loaded, status] = await Promise.all([loadEvents(from == null ? null : new Date(from), new Date(to)), dataStatus()]);
   if (loaded.error)
     return (
-      <div className="space-y-2 rounded-2xl border border-diet-no/30 bg-surface p-5">
-        <p className="font-semibold text-diet-no">이벤트를 읽을 수 없어요</p>
+      <div className="space-y-2 rounded-3xl border border-diet-no/30 bg-surface p-5">
+        <p className="flex items-center gap-2 font-semibold text-diet-no">
+          <Icon name="warn" />
+          이벤트를 읽을 수 없어요
+        </p>
         <p className="text-sm">{loaded.error.code === "PGRST205" ? "events 테이블이 없어요. Supabase SQL Editor 에서 supabase/migrations/0004_events.sql 을 실행하세요." : loaded.error.message}</p>
       </div>
     );
@@ -38,7 +45,7 @@ export default async function KpiPage({ searchParams }: { searchParams: Promise<
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(RANGES) as Range[]).map((r) => (
-          <Link key={r} href={`/admin/kpi?range=${r}`} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${range === r ? "bg-green-800 text-ivory" : "bg-surface"}`}>
+          <Link key={r} href={`/admin/kpi?range=${r}`} aria-current={range === r ? "page" : undefined} className={chip(range === r)}>
             {RANGES[r]}
           </Link>
         ))}
@@ -48,11 +55,21 @@ export default async function KpiPage({ searchParams }: { searchParams: Promise<
       </div>
 
       {!status.live && (
-        <p className="rounded-xl bg-diet-warn/15 px-4 py-3 text-sm text-[#7a5a10]">
-          앱이 <b>미리보기 샘플</b>로 돌고 있어요 — 이 동안 /api/events 는 이벤트를 받기만 하고 저장하지 않아요 ({status.reason}).
+        <p className={WARN}>
+          <Icon name="warn" className="mt-px size-[18px] shrink-0" />
+          <span>
+            앱이 <b>미리보기 샘플</b>로 돌고 있어요 — 이 동안 /api/events 는 이벤트를 받기만 하고 저장하지 않아요 ({status.reason}).
+          </span>
         </p>
       )}
-      {loaded.truncated && <p className="rounded-xl bg-diet-warn/15 px-4 py-3 text-sm text-[#7a5a10]">이벤트 {loaded.total.toLocaleString("ko-KR")}건 중 앞쪽 {k.events.toLocaleString("ko-KR")}건만 계산했어요. 기간을 줄여 보세요.</p>}
+      {loaded.truncated && (
+        <p className={WARN}>
+          <Icon name="warn" className="mt-px size-[18px] shrink-0" />
+          <span>
+            이벤트 {loaded.total.toLocaleString("ko-KR")}건 중 앞쪽 {k.events.toLocaleString("ko-KR")}건만 계산했어요. 기간을 줄여 보세요.
+          </span>
+        </p>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <KpiCard
@@ -117,13 +134,13 @@ export default async function KpiPage({ searchParams }: { searchParams: Promise<
           small={k.latency.firstAudioN < 20}
           lowerIsBetter
         />
-        <div className="space-y-2 rounded-2xl bg-surface p-4 shadow-sm">
+        <div className={CARD}>
           <p className="text-caption text-muted">사실 오류율 · 평가 셋 기준</p>
-          <p className="font-display text-2xl font-semibold text-muted">평가 셋에서 측정</p>
-          <p className="text-caption">목표 식이 0% · 기타 3% 이하</p>
+          <p className="text-h2 font-bold text-muted">평가 셋에서 측정</p>
+          <p className="text-caption text-ink-soft">목표 식이 0% · 기타 3% 이하</p>
           <p className="text-caption text-muted">
-            사용자 이벤트가 아니라 고정 질문 셋(lib/foodi/eval)으로 잰다 — <code className="rounded bg-line/60 px-1">pnpm eval:live</code>. 실제 답의 검증 실패는{" "}
-            <Link href="/admin/logs?failed=1" className="underline">
+            사용자 이벤트가 아니라 고정 질문 셋(lib/foodi/eval)으로 잰다 — <code className="rounded bg-sunken px-1 text-ink-soft">pnpm eval:live</code>. 실제 답의 검증 실패는{" "}
+            <Link href="/admin/logs?failed=1" className="text-leaf underline">
               AI 로그
             </Link>
             에서.
@@ -172,16 +189,31 @@ function KpiCard(p: {
   lowerIsBetter?: boolean;
 }) {
   const pill =
-    p.met == null ? null : p.met ? <span className="rounded-full bg-mint-100 px-2 py-0.5 text-caption font-semibold text-green-800">달성</span> : <span className="rounded-full bg-diet-no/10 px-2 py-0.5 text-caption font-semibold text-diet-no">미달</span>;
+    p.met == null ? null : p.met ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-lime-soft px-2.5 py-0.5 text-caption font-semibold text-leaf">
+        <Icon name="check" className="size-3.5" />
+        달성
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 rounded-full bg-diet-no/10 px-2.5 py-0.5 text-caption font-semibold text-diet-no">
+        <Icon name="close" className="size-3.5" />
+        미달
+      </span>
+    );
   return (
-    <div className="space-y-2 rounded-2xl bg-surface p-4 shadow-sm">
+    <div className={CARD}>
       <p className="text-caption text-muted">{p.label}</p>
-      <div className="flex flex-wrap items-baseline gap-2">
-        <p className="font-display text-2xl font-semibold">{p.value}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-h1 font-bold tabular-nums text-ink">{p.value}</p>
         {pill}
-        {p.small && <span className="rounded-full bg-line/60 px-2 py-0.5 text-caption text-charcoal/70">표본 적음</span>}
+        {p.small && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-2.5 py-0.5 text-caption text-ink-soft">
+            <Icon name="info" className="size-3.5" />
+            표본 적음
+          </span>
+        )}
       </div>
-      <p className="text-caption">{p.target}</p>
+      <p className="text-caption text-ink-soft">{p.target}</p>
       {p.daily && <Bars values={p.daily} days={p.days} target={p.targetLine} max={p.max} fmt={p.fmt} lowerIsBetter={p.lowerIsBetter} />}
       <p className="text-caption text-muted">{p.note}</p>
     </div>
@@ -206,20 +238,20 @@ function Bars({ values, days, target, max, fmt = String, lowerIsBetter }: { valu
             {v == null ? (
               <rect x={i * (W + GAP)} y={H - 1} width={W} height={1.5} className="fill-line" />
             ) : (
-              <rect x={i * (W + GAP)} y={y(v)} width={W} height={Math.max(H - y(v), 1.5)} rx={1.5} className={target == null || good ? "fill-mint-500" : "fill-diet-warn"} />
+              <rect x={i * (W + GAP)} y={y(v)} width={W} height={Math.max(H - y(v), 1.5)} rx={1.5} className={target == null || good ? "fill-brand" : "fill-diet-warn"} />
             )}
           </g>
         );
       })}
-      {target != null && <line x1={0} x2={width} y1={y(target)} y2={y(target)} strokeDasharray="3 3" strokeWidth={1} vectorEffect="non-scaling-stroke" className="stroke-green-800/60" />}
+      {target != null && <line x1={0} x2={width} y1={y(target)} y2={y(target)} strokeDasharray="3 3" strokeWidth={1} vectorEffect="non-scaling-stroke" className="stroke-ink/50" />}
     </svg>
   );
 }
 
 function Method() {
   return (
-    <section className="space-y-2 rounded-2xl border border-line p-4 text-caption text-charcoal/80">
-      <h2 className="text-sm font-semibold text-charcoal">측정 방법</h2>
+    <section className="space-y-2 rounded-3xl border border-line p-5 text-caption text-ink-soft">
+      <h2 className="text-title font-bold text-ink">측정 방법</h2>
       <ul className="list-disc space-y-1 pl-5">
         <li>
           <b>사용자</b> = 브라우저마다 만든 익명 id(계정과 무관). <b>세션</b> = 30분 무활동이면 새로. Do Not Track·GPC·데모 모드 브라우저는 보내지 않아요.
@@ -245,7 +277,7 @@ function Method() {
       </ul>
       <p>
         이벤트 목록·필드·보관 기간(90일):{" "}
-        <a href={DOC_URL} target="_blank" rel="noreferrer" className="underline">
+        <a href={DOC_URL} target="_blank" rel="noreferrer" className="text-leaf underline">
           docs/design/07_KPI_측정_v1.md
         </a>
       </p>

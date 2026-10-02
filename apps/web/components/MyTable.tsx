@@ -1,6 +1,7 @@
 "use client";
 // S8 My Table (F-REC-04, 07 문서 "탐험한 음식이 가상 식탁 일러스트에 쌓이는 화면").
 // 위에서 내려다본 원목 식탁 + 리넨 러너 위에 접시를 한상차림처럼 엇갈려 놓는다. 배치는 lib/table/my-table.ts (테스트로 겹침 검사).
+// 식탁 일러스트는 콘텐츠라 고유 색을 쓰고, 둘레(머리·범례·버튼·카드)는 v2 토큰만 — 다크에서는 식탁만 살짝 어둡게.
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Country } from "@/lib/content/types";
@@ -11,13 +12,19 @@ import { CONTINENT_COLOR, CONTINENT_LABEL, setTable, tableLayout, toTableCountry
 import { useFoodi } from "./FoodiSheet";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner } from "./bits";
-import { MicIcon } from "./VoiceButton";
+import { Icon, type IconName } from "./icons";
+import { BackLink, Eyebrow, IconButton, btn } from "./ui";
 
-const BADGE: Partial<Record<PassportStatus, string>> = { liked: "❤️", tried: "📕", saved: "🔖" };
+// 접시 위 상태 표시 (흰 원 + 라인 아이콘). 탐험은 모든 접시의 기본 상태라 표시하지 않는다
+const MARK: Partial<Record<PassportStatus, { icon: IconName; tone: string }>> = {
+  liked: { icon: "heart", tone: "text-brand" },
+  tried: { icon: "stamp", tone: "text-brand" },
+  saved: { icon: "bookmark", tone: "text-ink" },
+};
 const STATUS_TEXT: Record<PassportStatus, string> = { explored: "탐험", tried: "먹어봤어요", liked: "좋아요", saved: "저장" };
-const STATUS_LABEL = (s: PassportStatus) => (BADGE[s] ? `${BADGE[s]} ${STATUS_TEXT[s]}` : STATUS_TEXT[s]);
+const STATUS_ICON: Record<PassportStatus, IconName> = { explored: "compass", tried: "stamp", liked: "heart", saved: "bookmark" };
 
-// 식탁 재질: 이미지 없이 그라데이션으로 (원목 결 + 리넨 짜임)
+// 식탁 재질: 이미지 없이 그라데이션으로 (원목 결 + 리넨 짜임) — 일러스트 고유 색
 const WOOD: CSSProperties = {
   backgroundColor: "#b17847",
   backgroundImage: [
@@ -25,13 +32,17 @@ const WOOD: CSSProperties = {
     "repeating-linear-gradient(90deg, rgb(255 240 220 / 0.06) 0 2px, transparent 2px 29px)",
     "linear-gradient(90deg, #a8703f, #ba804b 28%, #ad7442 52%, #c08851 78%, #a56d3d)",
   ].join(","),
-  boxShadow: "0 22px 40px -24px rgb(70 40 15 / 0.7)",
+  boxShadow: "0 22px 40px -24px rgb(40 60 30 / 0.55)",
 };
 const LINEN: CSSProperties = {
-  backgroundColor: "#efe6d2",
+  backgroundColor: "#f1ecdd",
   backgroundImage: "repeating-linear-gradient(0deg, rgb(120 95 60 / 0.06) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgb(120 95 60 / 0.05) 0 1px, transparent 1px 4px)",
 };
-const EDGE: CSSProperties = { boxShadow: "inset 0 0 0 5px rgb(80 45 20 / 0.28), inset 0 12px 30px -12px rgb(40 20 5 / 0.4)" };
+const EDGE: CSSProperties = { boxShadow: "inset 0 0 0 5px rgb(80 45 20 / 0.26), inset 0 12px 30px -12px rgb(40 20 5 / 0.38)" };
+// 흰 자기 접시 (옅은 초록 기운) — 일러스트 고유 색이라 테마와 무관
+const PLATE: CSSProperties = { background: "radial-gradient(circle at 34% 28%, #fff 0%, #f3f6ef 62%, #dce3d6 100%)", boxShadow: "0 4px 9px -3px rgb(40 35 15 / 0.5), inset 0 -1px 2px rgb(80 100 70 / 0.2)" };
+// 다크 테마: 일러스트(원목·접시)가 어두운 화면에서 튀지 않게 살짝 낮춘다
+const DIM = "dark:brightness-[0.84] dark:saturate-[0.92]";
 
 // 화면 식탁 좌표계: 100 × 130 (세로로 긴 식탁), 가장자리 6 은 비워 둔다 → 접시는 88 × 118 안에
 const TW = 100;
@@ -64,52 +75,68 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
 
   return (
     <main className="space-y-6 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between">
-        <Link href="/passport" className="rounded-full border border-line bg-surface px-3 py-1.5 text-sm">
-          ← Passport
-        </Link>
-        <span className="text-sm font-semibold text-green-800">🍽️ My Table</span>
+      <header className="flex items-center justify-between gap-3">
+        <BackLink href="/passport" label="Passport" />
+        <span className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink">
+          <Icon name="table" className="size-[18px] text-leaf" />
+          My Table
+        </span>
       </header>
       {preview && <PreviewBanner />}
 
-      <div className="space-y-1.5">
-        <p className="text-caption font-semibold uppercase tracking-wide text-muted">My Table</p>
+      <div className="space-y-2">
+        <Eyebrow>My Table</Eyebrow>
         {/* 하이드레이션 전에는 저장된 기록을 모른다 → 빈 식탁 문구가 깜빡이지 않게 중립 문구 */}
-        <h1 className="font-display text-h1 font-semibold text-balance">
-          {!hydrated ? "식탁을 차리는 중…" : empty ? "아직 빈 식탁이에요" : `${nCountries}개국 · ${total}개 음식이 차려졌어요`}
+        <h1 className="text-h1 font-bold text-balance text-ink">
+          {!hydrated ? "식탁을 차리는 중…" : empty ? "아직 빈 식탁이에요" : (
+            <>
+              <span className="text-leaf">{nCountries}개국 · {total}개</span> 음식이 차려졌어요
+            </>
+          )}
         </h1>
-        <p className="text-sm text-charcoal/70">{empty ? "푸디에게 물어보면 첫 접시가 놓여요." : "처음 탐험한 음식부터 차례로 놓였어요. 접시를 눌러 보세요."}</p>
+        <p className="text-sm text-ink-soft">{empty ? "푸디에게 물어보면 첫 접시가 놓여요." : "처음 탐험한 음식부터 차례로 놓였어요. 접시를 눌러 보세요."}</p>
       </div>
 
       <TableTop plates={hydrated ? plates : []} ghosts={empty} selId={selId} onSelect={(id) => setSelId((s) => (s === id ? null : id))} />
 
       {empty && (
-        <button type="button" onClick={() => open({ listen: true })} className="flex w-full items-center justify-center gap-2 rounded-full bg-mint-500 py-4 font-semibold text-green-800 transition active:scale-[0.98]">
-          <MicIcon className="size-5" /> 푸디에게 첫 음식 추천받기
+        <button type="button" onClick={() => open({ listen: true })} className={`${btn("lime", "md")} w-full`}>
+          <Icon name="mic" className="size-5" /> 푸디에게 첫 음식 추천받기
         </button>
       )}
 
       {cur ? (
         <PlateCard key={cur.id} p={cur} onClose={() => setSelId(null)} />
       ) : (
-        hydrated && total > 0 && <p className="text-center text-caption text-muted">접시를 누르면 어떤 음식인지 볼 수 있어요</p>
+        hydrated &&
+        total > 0 && (
+          <p className="flex items-center justify-center gap-1.5 text-center text-caption text-muted">
+            <Icon name="info" className="size-4 shrink-0" />
+            접시를 누르면 어떤 음식인지 볼 수 있어요
+          </p>
+        )
       )}
 
       {legend.length > 0 && (
-        <section className="space-y-2.5 rounded-3xl bg-surface p-4 shadow-sm">
-          <h2 className="text-[15px] font-semibold tracking-tight text-charcoal/90">오늘의 한 상</h2>
+        <section className="card space-y-3 rounded-3xl p-5">
+          <h2 className="text-title font-bold text-ink">오늘의 한 상</h2>
           <div className="flex flex-wrap gap-2">
             {legend.map((c) => (
-              <span key={c.key} className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm">
+              <span key={c.key} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-sunken/60 px-3 text-sm text-ink-soft">
                 <span className="size-2.5 rounded-full" style={{ backgroundColor: CONTINENT_COLOR[c.key] }} aria-hidden />
                 {CONTINENT_LABEL[c.key]}
-                <b className="tabular-nums text-green-800">{c.n}</b>
+                <b className="tabular-nums text-leaf">{c.n}</b>
               </span>
             ))}
           </div>
           {counts.length > 0 && (
-            <p className="text-sm text-charcoal/80">
-              {counts.map((c) => `${STATUS_LABEL(c.s)} ${c.n}`).join(" · ")}
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-soft">
+              {counts.map((c) => (
+                <span key={c.s} className="inline-flex items-center gap-1">
+                  <Icon name={STATUS_ICON[c.s]} className="size-4 text-leaf" />
+                  {STATUS_TEXT[c.s]} <b className="tabular-nums text-ink">{c.n}</b>
+                </span>
+              ))}
             </p>
           )}
           <p className="text-caption text-muted">
@@ -135,16 +162,16 @@ function TableTop({ plates, ghosts, selId, onSelect }: { plates: TablePlate[]; g
   // 최근 5개 접시만 차례로 내려놓는다 (나머지는 함께) — 전체가 0.5초 안에 끝나게
   const delay = (i: number) => Math.max(0, i - (plates.length - 5)) * 40;
   return (
-    <div className="relative aspect-[100/130] w-full overflow-hidden rounded-[2rem]" style={WOOD} role="group" aria-label={ghosts ? "빈 식탁" : `식탁 위 음식 ${plates.length}개`}>
+    <div className={`relative aspect-[100/130] w-full overflow-hidden rounded-[28px] ${DIM}`} style={WOOD} role="group" aria-label={ghosts ? "빈 식탁" : `식탁 위 음식 ${plates.length}개`}>
       <span aria-hidden className="absolute inset-y-0 left-1/2 w-[34%] -translate-x-1/2" style={LINEN}>
-        <span className="absolute inset-y-0 inset-x-[5%] border-x-2 border-dashed border-[#d6c6a6]" />
+        <span className="absolute inset-y-0 inset-x-[5%] border-x-2 border-dashed border-[#d8cdb0]" />
       </span>
-      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[2rem]" style={EDGE} />
+      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[28px]" style={EDGE} />
       {ghosts
-        ? pos.map((_, i) => <span key={i} aria-hidden className="absolute aspect-square rounded-full border-2 border-dashed border-ivory/70 bg-ivory/10" style={box(i)} />)
+        ? pos.map((_, i) => <span key={i} aria-hidden className="absolute aspect-square rounded-full border-2 border-dashed border-white/70 bg-white/10" style={box(i)} />)
         : plates.map((p, i) => {
             const on = p.id === selId;
-            const badges = p.statuses.filter((s) => BADGE[s]);
+            const badges = p.statuses.filter((s) => MARK[s]);
             return (
               <button
                 key={p.id}
@@ -152,7 +179,7 @@ function TableTop({ plates, ghosts, selId, onSelect }: { plates: TablePlate[]; g
                 onClick={() => onSelect(p.id)}
                 aria-pressed={on}
                 aria-label={[p.name, p.country, ...badges.map((s) => STATUS_TEXT[s])].filter(Boolean).join(" · ")}
-                className={`@container plate-set absolute aspect-square rounded-full transition-[scale] active:scale-95 ${on ? "z-10 ring-[3px] ring-mint-500 ring-offset-2 ring-offset-[#b17847]" : ""}`}
+                className={`@container plate-set absolute aspect-square rounded-full transition-[scale] active:scale-95 ${on ? "z-10 ring-[3px] ring-lime ring-offset-2 ring-offset-[#b17847]" : ""}`}
                 style={{ ...box(i), animationDelay: `${delay(i)}ms` }}
               >
                 <PlateFace p={p} />
@@ -163,30 +190,37 @@ function TableTop({ plates, ghosts, selId, onSelect }: { plates: TablePlate[]; g
   );
 }
 
-/** 접시 한 장: 흰 테두리 · 대륙 색 띠 · 안쪽(사진 또는 국가색 + 음식 모양) · 국기 · 상태 배지. 크기는 부모(@container) 기준 */
+/** 접시 한 장: 흰 테두리 · 대륙 색 띠 · 안쪽(사진 또는 국가색 + 흰 음식 모양) · 국기 · 상태 표시. 크기는 부모(@container) 기준 */
 function PlateFace({ p, photo = true, badges = true }: { p: TablePlate; photo?: boolean; badges?: boolean }) {
   const band = p.continent ? CONTINENT_COLOR[p.continent] : undefined;
   const img = photo ? p.image : null;
-  const marks = badges ? p.statuses.filter((s) => BADGE[s]) : [];
+  const marks = badges ? p.statuses.filter((s) => MARK[s]) : [];
   return (
     <>
-      <span aria-hidden className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle at 34% 28%, #fff 0%, #f6f1e7 62%, #e2d9c8 100%)", boxShadow: "0 4px 9px -3px rgb(60 35 15 / 0.55), inset 0 -1px 2px rgb(120 90 50 / 0.2)" }} />
+      <span aria-hidden className="absolute inset-0 rounded-full" style={PLATE} />
       {band && <span aria-hidden className="absolute inset-[8%] rounded-full" style={{ boxShadow: `inset 0 0 0 max(1.5px, 2.5cqw) ${band}` }} />}
       <span
         aria-hidden
-        className="absolute inset-[15%] grid place-items-center overflow-hidden rounded-full shadow-[inset_0_2px_6px_rgb(0_0_0/0.22)]"
+        className="absolute inset-[15%] grid place-items-center overflow-hidden rounded-full shadow-[inset_0_2px_6px_rgb(11_26_16/0.22)]"
         style={img ? { backgroundImage: `url(${img})`, backgroundSize: "cover", backgroundPosition: "center", backgroundColor: `${p.accent}55` } : { background: `radial-gradient(circle at 38% 32%, ${p.accent}99, ${p.accent} 78%)` }}
       >
-        {!img && <span className="text-[32cqw] leading-none drop-shadow-sm">{p.glyph}</span>}
+        {/* 사진이 없으면 음식 모양 라인 아이콘 (밝은 국가색에서도 보이게 옅은 그늘) */}
+        {!img && <Icon name={p.icon} strokeWidth={2} className="size-[44cqw] text-white drop-shadow-[0_1px_1.5px_rgb(11_26_16/0.45)]" />}
       </span>
-      <span aria-hidden className="absolute -bottom-[3%] -left-[3%] text-[max(12px,26cqw)] leading-none drop-shadow">
-        {p.flag}
-      </span>
+      {p.flag ? (
+        <span aria-hidden className="absolute -bottom-[3%] -left-[3%] text-[max(12px,26cqw)] leading-none drop-shadow">
+          {p.flag}
+        </span>
+      ) : (
+        <span aria-hidden className="absolute -bottom-[3%] -left-[3%] grid size-[max(16px,26cqw)] place-items-center rounded-full bg-surface text-muted shadow-sm">
+          <Icon name="pin" className="size-[62%]" />
+        </span>
+      )}
       {marks.length > 0 && (
         <span aria-hidden className="absolute -right-[5%] -top-[5%] flex">
           {marks.map((s) => (
-            <span key={s} className="grid size-[max(16px,26cqw)] place-items-center rounded-full bg-surface text-[max(9px,15cqw)] leading-none shadow-sm">
-              {BADGE[s]}
+            <span key={s} className={`grid size-[max(16px,26cqw)] place-items-center rounded-full bg-surface shadow-sm ${MARK[s]!.tone}`}>
+              <Icon name={MARK[s]!.icon} strokeWidth={2.25} className="size-[62%]" />
             </span>
           ))}
         </span>
@@ -197,32 +231,32 @@ function PlateFace({ p, photo = true, badges = true }: { p: TablePlate; photo?: 
 
 function PlateCard({ p, onClose }: { p: TablePlate; onClose: () => void }) {
   return (
-    <div className="animate-rise space-y-2 rounded-3xl bg-surface p-3 shadow-[0_1px_0_#0000000a,0_12px_28px_-16px_#00000055]">
+    <div className="card animate-rise space-y-3 rounded-3xl p-4">
       <div className="flex items-center gap-3">
-        <span className="@container relative aspect-square w-16 shrink-0">
+        <span className={`@container relative aspect-square w-16 shrink-0 ${DIM}`}>
           <PlateFace p={p} badges={false} />
         </span>
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate font-semibold">{p.name}</p>
-          <p className="text-caption text-muted">
-            <span aria-hidden>{p.flag}</span> {p.country || "나라 정보 없음"}
+          <p className="truncate text-title font-bold text-ink">{p.name}</p>
+          <p className="flex items-center gap-1 text-caption text-ink-soft">
+            {p.flag ? <span aria-hidden>{p.flag}</span> : <Icon name="pin" className="size-3.5 text-muted" />} {p.country || "나라 정보 없음"}
           </p>
           <p className="flex flex-wrap gap-1">
             {p.statuses.map((s) => (
-              <span key={s} className="rounded-full bg-mint-100 px-2 py-0.5 text-[11px] font-medium text-green-800">
-                {STATUS_LABEL(s)}
+              <span key={s} className="inline-flex items-center gap-1 rounded-full bg-lime-soft px-2 py-0.5 text-[11px] font-semibold text-leaf">
+                <Icon name={STATUS_ICON[s]} className="size-3" strokeWidth={2} />
+                {STATUS_TEXT[s]}
               </span>
             ))}
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="닫기" className="self-start rounded-full px-2 py-1 text-muted hover:bg-line/60">
-          ✕
-        </button>
+        <IconButton icon="close" label="닫기" onClick={onClose} variant="ghost" className="-mr-1 -mt-1 self-start" />
       </div>
       <div className="flex items-center justify-between gap-2">
-        <ImageCredit credit={p.image ? p.credit : null} className="bg-charcoal/60" />
-        <Link href={`/food/${p.slug}`} className="ml-auto whitespace-nowrap rounded-full bg-green-800 px-3.5 py-2 text-sm font-semibold text-ivory transition active:scale-95">
-          음식 이야기 보기 →
+        <ImageCredit credit={p.image ? p.credit : null} />
+        <Link href={`/food/${p.slug}`} className={`${btn("primary", "sm")} ml-auto whitespace-nowrap`}>
+          음식 이야기 보기
+          <Icon name="next" className="-mr-1 size-4" />
         </Link>
       </div>
     </div>
@@ -255,19 +289,25 @@ function TableCardButton({ plates, countries, foods }: { plates: TablePlate[]; c
 
   return (
     <div className="space-y-3">
-      <button type="button" onClick={make} disabled={busy} className="w-full rounded-2xl border border-line bg-surface py-3 font-semibold text-green-800 transition active:scale-[0.98] disabled:opacity-50">
-        {busy ? "식탁 그리는 중…" : img ? "이미지 다시 만들기" : "🖼 식탁 이미지로 저장"}
+      <button type="button" onClick={make} disabled={busy} className={`${btn("outline", "md")} w-full`}>
+        <Icon name={img && !busy ? "replay" : "image"} className={`size-5 text-leaf ${busy ? "animate-pulse" : ""}`} />
+        {busy ? "식탁 그리는 중…" : img ? "이미지 다시 만들기" : "식탁 이미지로 저장"}
       </button>
       {img && (
-        <div className="animate-rise space-y-2">
+        <div className="animate-rise space-y-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 blob 이미지 */}
-          <img src={img.url} alt={`나의 식탁 — ${countries}개국 ${foods}개 음식`} className="w-full rounded-2xl shadow-lg" />
-          <button type="button" onClick={share} className="w-full rounded-2xl bg-mint-500 py-3 font-semibold text-green-800">
+          <img src={img.url} alt={`나의 식탁 — ${countries}개국 ${foods}개 음식`} className="w-full rounded-3xl border border-line shadow-lift" />
+          <button type="button" onClick={share} className={`${btn("primary", "md")} w-full`}>
+            <Icon name="share" className="size-5" />
             공유하기 · 저장
           </button>
         </div>
       )}
-      {msg && <p className="text-center text-caption text-muted">{msg}</p>}
+      {msg && (
+        <p role="status" className="text-center text-caption text-muted">
+          {msg}
+        </p>
+      )}
     </div>
   );
 }
@@ -280,8 +320,8 @@ export function MyTablePreview({ countries }: { countries: Country[] }) {
   const total = plates.length + hidden;
   const shown = plates.slice(-6);
   return (
-    <Link href="/passport/table" className="block overflow-hidden rounded-3xl bg-surface shadow-sm transition active:scale-[0.99]">
-      <div className="relative flex h-24 items-center justify-center gap-[3%] px-4" style={WOOD}>
+    <Link href="/passport/table" className="card block overflow-hidden rounded-3xl transition active:scale-[0.99]">
+      <div className={`relative flex h-24 items-center justify-center gap-[3%] px-4 ${DIM}`} style={WOOD}>
         <span aria-hidden className="absolute inset-x-0 top-1/2 h-[52%] -translate-y-1/2" style={LINEN} />
         <span aria-hidden className="pointer-events-none absolute inset-0" style={EDGE} />
         {shown.length
@@ -290,11 +330,23 @@ export function MyTablePreview({ countries }: { countries: Country[] }) {
                 <PlateFace p={p} photo={false} badges={false} />
               </span>
             ))
-          : [0, 1, 2].map((i) => <span key={i} aria-hidden className="relative aspect-square w-[13%] max-w-14 rounded-full border-2 border-dashed border-ivory/70" />)}
+          : [0, 1, 2].map((i) => <span key={i} aria-hidden className="relative aspect-square w-[13%] max-w-14 rounded-full border-2 border-dashed border-white/70 bg-white/10" />)}
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <p className="text-sm text-charcoal/80">{total ? <><b className="text-green-800">{total}개 음식</b>이 식탁에 올라 있어요</> : "첫 접시를 기다리는 식탁이에요"}</p>
-        <span className="shrink-0 text-sm font-semibold text-green-800">식탁 보기 →</span>
+      <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-3">
+        <p className="flex items-center gap-2 text-sm text-ink-soft">
+          <Icon name="table" className="size-[18px] shrink-0 text-leaf" />
+          {total ? (
+            <span>
+              <b className="text-ink">{total}개 음식</b>이 식탁에 올라 있어요
+            </span>
+          ) : (
+            "첫 접시를 기다리는 식탁이에요"
+          )}
+        </p>
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-leaf">
+          식탁 보기
+          <Icon name="next" className="size-4" />
+        </span>
       </div>
     </Link>
   );

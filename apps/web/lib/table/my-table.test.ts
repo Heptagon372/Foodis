@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PassportEntry } from "@/lib/client/passport";
-import { DEFAULT_ACCENT, MAX_PLATES, foodGlyph, setTable, tableLayout } from "./my-table";
+import { DEFAULT_ACCENT, MAX_PLATES, foodIcon, setTable, tableLayout } from "./my-table";
 
 // 화면 식탁(88×118)과 이미지 저장 식탁(848×772) 비율 + 극단 비율
 const TABLES: [number, number][] = [
@@ -61,14 +61,14 @@ describe("setTable", () => {
     const { plates, hidden } = setTable({ b: entry({ at: 5, slug: "mandu", name_ko: "만두", tags: ["dumpling"] }), old: entry({ at: 2 }) }, foods, countries);
     expect(hidden).toBe(0);
     expect(plates.map((p) => p.name)).toEqual(["김치", "만두"]);
-    expect(plates[0]).toMatchObject({ id: "old", image: "https://x/kimchi.jpg", accent: "#C8102E", continent: "asia", glyph: "🫙" });
+    expect(plates[0]).toMatchObject({ id: "old", image: "https://x/kimchi.jpg", accent: "#C8102E", continent: "asia", icon: "jar" });
     // 조회표에 없는 음식도 국기 + 국가색으로
-    expect(plates[1]).toMatchObject({ image: null, accent: "#C8102E", country: "대한민국", glyph: "🥟" });
+    expect(plates[1]).toMatchObject({ image: null, accent: "#C8102E", country: "대한민국", icon: "chef" });
   });
 
   it("나라도 모르면 기본 색 · 넘치면 최근 것만", () => {
     const { plates } = setTable({ z: entry({ cc: "ZZ", flag: "", slug: "zz" }) }, [], []);
-    expect(plates[0]).toMatchObject({ accent: DEFAULT_ACCENT, continent: null, flag: "🏳️" });
+    expect(plates[0]).toMatchObject({ accent: DEFAULT_ACCENT, continent: null, flag: "" });
     const many = Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`f${i}`, entry({ at: i, slug: `s${i}` })]));
     const r = setTable(many, [], countries);
     expect(r.hidden).toBe(5);
@@ -77,7 +77,7 @@ describe("setTable", () => {
   });
 
   it("음식 모양: 앞선 태그 우선 · 없으면 접시", () => {
-    expect(foodGlyph(["spicy", "soupy", "noodle"])).toBe("🍜");
-    expect(foodGlyph(["spicy"])).toBe("🍽️");
+    expect(foodIcon(["spicy", "dumpling", "noodle"])).toBe("soup");
+    expect(foodIcon(["spicy"])).toBe("utensils");
   });
 });

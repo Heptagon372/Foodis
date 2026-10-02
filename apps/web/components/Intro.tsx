@@ -2,6 +2,7 @@
 // S0 인트로 (05 문서 §2): 국기들이 바람에 흔들리며 들어와 → "FOOD" 글자 위 점들로 수렴 → 워드마크로 녹아듦 → 태그라인 + CTA.
 // 총 3.2초, 건너뛰기 가능. 목표 좌표는 캔버스에 워드마크를 그려 채워진 픽셀에서 샘플링한다.
 import { useEffect, useRef, useState } from "react";
+import { btn } from "./ui";
 
 const FLAGS = ["🇰🇷", "🇯🇵", "🇨🇳", "🇹🇭", "🇻🇳", "🇮🇳", "🇳🇵", "🇺🇿", "🇹🇷", "🇱🇧", "🇮🇷", "🇪🇬", "🇲🇦", "🇪🇹", "🇿🇦", "🇮🇹", "🇫🇷", "🇪🇸", "🇬🇷", "🇦🇹", "🇵🇱", "🇬🇪", "🇲🇽", "🇺🇸", "🇵🇪", "🇧🇷", "🇦🇷", "🇧🇴"];
 const T = { gather: 1200, converge: 2200, reveal: 2800, end: 3200 };
@@ -96,11 +97,20 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
   }, [short]);
 
   return (
-    <div ref={stage} className={`fixed inset-0 z-[60] overflow-hidden bg-ivory transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}>
+    <div
+      ref={stage}
+      className={`fixed inset-0 z-[60] overflow-hidden bg-canvas transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
+      // 바탕 안개 — 토큰(--mist-*)이라 다크에서는 밤의 숲 안개가 된다
+      style={{ backgroundImage: "radial-gradient(90% 55% at 85% 0%, var(--mist-lime), transparent 65%), radial-gradient(80% 50% at 0% 100%, var(--mist-leaf), transparent 62%)" }}
+    >
       {!short && (
-      <button type="button" onClick={onDone} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 rounded-full px-3 py-1.5 text-sm text-muted hover:bg-line/60">
-        건너뛰기
-      </button>
+        <button
+          type="button"
+          onClick={onDone}
+          className="glass absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 inline-flex h-10 items-center rounded-full px-4 text-sm font-medium text-ink-soft transition active:scale-95"
+        >
+          건너뛰기
+        </button>
       )}
       {FLAGS.map((f, i) => (
         <span key={f} ref={(el) => void (flagEls.current[i] = el)} className="absolute left-0 top-0 text-3xl opacity-0 will-change-transform" aria-hidden>
@@ -108,8 +118,9 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
         </span>
       ))}
       <div className="absolute inset-x-0 top-[42%] -translate-y-1/2 text-center">
+        {/* 캔버스 샘플링과 같은 Fraunces 로 그려야 국기가 앉은 자리와 글자가 겹친다 */}
         <p
-          className="font-display font-bold tracking-tight text-green-800 transition-opacity duration-500"
+          className="font-serif font-bold tracking-tight text-ink transition-opacity duration-500"
           style={{ fontSize: "min(24vw, 102px)", lineHeight: 1, opacity: phase === "flags" ? 0 : 1 }}
           aria-label="FOOD"
         >
@@ -117,8 +128,11 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
         </p>
       </div>
       <div hidden={short} className={`absolute inset-x-0 top-[58%] space-y-8 px-8 text-center transition-all duration-300 ${phase === "cta" ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
-        <p className="font-display text-xl italic text-charcoal/80">Different Cultures, One Table.</p>
-        <button type="button" onClick={onDone} className="w-full max-w-xs rounded-full bg-green-800 px-6 py-4 text-[17px] font-semibold text-ivory shadow-lg transition active:scale-[0.98]">
+        {/* 세리프 이탤릭은 영문 한 단어 강조에만 (디자인 v2 글꼴 원칙) */}
+        <p className="text-xl font-medium tracking-tight text-ink-soft">
+          Different Cultures, One <span className="font-serif font-semibold italic text-leaf">Table.</span>
+        </p>
+        <button type="button" onClick={onDone} className={`${btn("primary", "lg")} w-full max-w-xs`}>
           세계 음식 탐험하기
         </button>
       </div>

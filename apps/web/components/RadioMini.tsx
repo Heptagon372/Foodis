@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { closeRadio, toggle, useRadio } from "@/lib/client/radio";
 import { sentences } from "@/lib/radio/script";
+import { Icon } from "./icons";
+import { IconButton } from "./ui";
 
 const HIDDEN = ["/radio", "/admin", "/login", "/onboarding", "/intro"];
 
@@ -18,28 +20,37 @@ export function RadioMini() {
   const visible = useRadioMiniVisible();
   if (!visible) return null;
   const e = r.episodes[r.ep];
-  const line = r.status === "ended" ? "오늘 라디오는 여기까지예요" : (sentences(e.segments[r.seg]?.text ?? "")[r.sent] ?? "");
+  const ended = r.status === "ended";
+  const line = ended ? "오늘 라디오는 여기까지예요" : (sentences(e.segments[r.seg]?.text ?? "")[r.sent] ?? "");
   const playing = r.status === "playing";
   return (
-    <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md px-3">
-      <div className="flex animate-rise items-center gap-3 rounded-2xl bg-green-800 p-2 pr-3 text-ivory shadow-[0_12px_30px_-12px_#00000080]">
+    // 떠 있는 탭 바(68px + 아래 max(12px, 안전 영역)) 위. 가운데 푸디 구슬이 바 위로 ~18px 솟아 있어 그만큼 더 띄운다
+    <div className="fixed inset-x-0 bottom-[calc(92px+max(0.75rem,env(safe-area-inset-bottom)))] z-40 mx-auto max-w-md px-3">
+      <div className="forest-panel flex animate-rise items-center gap-2 rounded-[22px] p-2 shadow-lift">
         <Link href="/radio" className="flex min-w-0 flex-1 items-center gap-3" aria-label={`라디오 열기 — ${e.food.name_ko}`}>
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl text-2xl" style={{ background: e.food.accent }} aria-hidden>
+          <span className="grid size-11 shrink-0 place-items-center rounded-[14px] border border-white/15 text-2xl" style={{ background: `${e.food.accent}66` }} aria-hidden>
             {e.food.flag}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold">
-              🎧 {e.food.name_ko} <span className="font-normal text-ivory/60">· {r.ep + 1}/{r.episodes.length}</span>
+            <span className="flex items-center gap-1.5 text-sm font-semibold">
+              <Icon name="headphones" className="size-4 shrink-0 text-lime" />
+              <span className="truncate">{e.food.name_ko}</span>
+              <span className="shrink-0 font-normal text-white/60 tabular-nums">
+                {r.ep + 1}/{r.episodes.length}
+              </span>
             </span>
-            <span className="block truncate text-caption text-ivory/70">{line}</span>
+            <span className="block truncate text-caption text-white/75">{line}</span>
           </span>
         </Link>
-        <button type="button" onClick={toggle} className="grid size-10 shrink-0 place-items-center rounded-full bg-mint-500 text-lg text-green-800" aria-label={playing ? "일시정지" : "재생"}>
-          {playing ? "⏸" : r.status === "ended" ? "↻" : "▶"}
+        <button
+          type="button"
+          onClick={toggle}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-lime text-on-lime shadow-glow transition active:scale-95"
+          aria-label={playing ? "일시정지" : ended ? "처음부터 다시" : "재생"}
+        >
+          <Icon name={playing ? "pause" : ended ? "replay" : "play"} className={`size-5 ${playing || ended ? "" : "translate-x-px fill-current"}`} />
         </button>
-        <button type="button" onClick={closeRadio} className="grid size-8 shrink-0 place-items-center rounded-full text-ivory/60 hover:text-ivory" aria-label="라디오 끄기">
-          ✕
-        </button>
+        <IconButton icon="close" label="라디오 끄기" onClick={closeRadio} variant="on-dark" />
       </div>
     </div>
   );

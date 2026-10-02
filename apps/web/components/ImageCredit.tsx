@@ -5,7 +5,7 @@ export function ImageCredit({ credit, className = "", link = true }: { credit: s
   if (!credit) return null;
   const [artist, license, page] = credit.split(" / ").map((s) => s?.trim());
   const text = `사진 ${artist || "작자 미상"}${license ? ` · ${license}` : ""}`;
-  const cls = `max-w-[70%] truncate rounded-full bg-charcoal/45 px-2 py-0.5 text-[11px] text-white backdrop-blur ${className}`;
+  const cls = `max-w-[62%] truncate rounded-full bg-shade/50 px-2 py-1 text-[11px] leading-4 text-white backdrop-blur ${className}`;
   return link && page?.startsWith("http") ? (
     <a href={page} target="_blank" rel="noreferrer" className={cls} title={credit} onClick={(e) => e.stopPropagation()}>
       {text}

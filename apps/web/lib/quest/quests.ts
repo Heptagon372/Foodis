@@ -1,6 +1,7 @@
 // Food Quest (기능 #9 · 리텐션) — 주간 퀘스트 3개 + 영구 배지. 순수 함수만 둔다(저장·화면은 lib/client/quest.ts).
 // 진행도는 게스트 Passport(entries 의 첫 기록 시각 at)와 작은 카운터(라디오·음성 질문·먹어봤어요)로 계산한다.
 // 주 경계는 Asia/Seoul 월요일 0시 — 한국은 서머타임이 없어 +9시간 고정으로 충분하다.
+import type { IconName } from "@/components/icons";
 import type { PassportEntry } from "@/lib/client/passport";
 import { CONTINENT_KEYS, CONTINENT_OF, COUNTRY_TOTAL } from "./continents";
 
@@ -60,7 +61,8 @@ const firstInWeek = (c: Ctx, keyOf: (e: QuestEntry) => string | undefined) => [.
 
 export type QuestTemplate = {
   id: string;
-  emoji: string;
+  /** 라인 아이콘 이름 (화면에서 <Icon name>) — 색 있는 이모지는 쓰지 않는다 */
+  icon: IconName;
   title: string;
   /** 완료하면 받는 스탬프 (보드의 보상 칩) */
   reward: string;
@@ -75,9 +77,9 @@ export type QuestTemplate = {
 export const QUESTS: QuestTemplate[] = [
   {
     id: "new_countries",
-    emoji: "🧭",
+    icon: "compass",
     title: "이번 주 새로운 나라 3곳 탐험",
-    reward: "🧭 나침반 스탬프",
+    reward: "나침반 스탬프",
     target: 3,
     progress: (c) => firstInWeek(c, (e) => e.cc),
     feasible: (before) => COUNTRY_TOTAL - new Set(before.map((e) => e.cc)).size >= 3,
@@ -85,20 +87,20 @@ export const QUESTS: QuestTemplate[] = [
   },
   {
     id: "new_continent",
-    emoji: "🌐",
+    icon: "globe",
     title: "아직 0인 대륙 하나 열기",
-    reward: "🌐 지구본 스탬프",
+    reward: "지구본 스탬프",
     target: 1,
     progress: (c) => firstInWeek(c, (e) => CONTINENT_OF[e.cc]),
     feasible: (before) => new Set(before.map((e) => CONTINENT_OF[e.cc]).filter(Boolean)).size < CONTINENT_KEYS.length,
     next: () => "아직 안 가 본 대륙 열기",
   },
-  { id: "fermented", emoji: "🫙", title: "발효 음식 2가지 탐험", reward: "🫙 항아리 스탬프", target: 2, progress: tagged("fermented"), next: (n) => `발효 음식 ${n}개 더` },
-  { id: "soupy", emoji: "🍲", title: "국물 요리 2가지 탐험", reward: "🍲 냄비 스탬프", target: 2, progress: tagged("soupy"), next: (n) => `국물 요리 ${n}개 더` },
-  { id: "foods", emoji: "🍽", title: "이번 주 음식 5가지 탐험", reward: "🍽 접시 스탬프", target: 5, progress: (c) => inWeek(c).length, next: (n) => `음식 ${n}개 더 탐험` },
-  { id: "tried", emoji: "📕", title: "먹어봤어요 1개 기록", reward: "📕 도장 스탬프", target: 1, progress: (c) => c.counts.tried ?? 0, next: (n) => `먹어봤어요 ${n}개 더` },
-  { id: "radio", emoji: "🎧", title: "라디오로 이야기 1편 듣기", reward: "🎧 헤드폰 스탬프", target: 1, progress: (c) => c.counts.radio ?? 0, next: (n) => `라디오 이야기 ${n}편 더` },
-  { id: "voice_ask", emoji: "🎙", title: "푸디에게 음성으로 3번 묻기", reward: "🎙 마이크 스탬프", target: 3, progress: (c) => c.counts.voice_ask ?? 0, next: (n) => `음성으로 ${n}번 더 묻기` },
+  { id: "fermented", icon: "jar", title: "발효 음식 2가지 탐험", reward: "항아리 스탬프", target: 2, progress: tagged("fermented"), next: (n) => `발효 음식 ${n}개 더` },
+  { id: "soupy", icon: "soup", title: "국물 요리 2가지 탐험", reward: "냄비 스탬프", target: 2, progress: tagged("soupy"), next: (n) => `국물 요리 ${n}개 더` },
+  { id: "foods", icon: "utensils", title: "이번 주 음식 5가지 탐험", reward: "접시 스탬프", target: 5, progress: (c) => inWeek(c).length, next: (n) => `음식 ${n}개 더 탐험` },
+  { id: "tried", icon: "stamp", title: "먹어봤어요 1개 기록", reward: "도장 스탬프", target: 1, progress: (c) => c.counts.tried ?? 0, next: (n) => `먹어봤어요 ${n}개 더` },
+  { id: "radio", icon: "headphones", title: "라디오로 이야기 1편 듣기", reward: "헤드폰 스탬프", target: 1, progress: (c) => c.counts.radio ?? 0, next: (n) => `라디오 이야기 ${n}편 더` },
+  { id: "voice_ask", icon: "mic", title: "푸디에게 음성으로 3번 묻기", reward: "마이크 스탬프", target: 3, progress: (c) => c.counts.voice_ask ?? 0, next: (n) => `음성으로 ${n}번 더 묻기` },
 ];
 
 // 같은 주엔 모두 같은 순서 — FNV-1a 해시 → mulberry32
@@ -124,7 +126,7 @@ export function pickWeekly(weekKey: string, before: QuestEntry[], n = 3): QuestT
   return order.filter((q) => q.feasible?.(before) ?? true).slice(0, n);
 }
 
-export type QuestProgress = { id: string; emoji: string; title: string; reward: string; target: number; value: number; done: boolean; doneAt: number | null; next: string };
+export type QuestProgress = { id: string; icon: IconName; title: string; reward: string; target: number; value: number; done: boolean; doneAt: number | null; next: string };
 
 export function weeklyBoard(entries: QuestEntry[], data: QuestData, now: number) {
   const week = kstWeek(now);
@@ -137,7 +139,7 @@ export function weeklyBoard(entries: QuestEntry[], data: QuestData, now: number)
   ).map((q) => {
     const doneAt = done[q.id] ?? null;
     const value = doneAt != null ? q.target : Math.min(q.target, q.progress(ctx));
-    return { id: q.id, emoji: q.emoji, title: q.title, reward: q.reward, target: q.target, value, done: value >= q.target, doneAt, next: q.next(q.target - value) };
+    return { id: q.id, icon: q.icon, title: q.title, reward: q.reward, target: q.target, value, done: value >= q.target, doneAt, next: q.next(q.target - value) };
   });
   return { week, quests, doneCount: quests.filter((q) => q.done).length };
 }
@@ -157,41 +159,41 @@ export function streak(cleared: string[], now: number): number {
 
 // ── 배지 (영구)
 type BadgeCtx = { entries: QuestEntry[]; streak: number };
-export type BadgeRule = { id: string; emoji: string; name: string; hint: string; target: number; value: (c: BadgeCtx) => number };
+export type BadgeRule = { id: string; icon: IconName; name: string; hint: string; target: number; value: (c: BadgeCtx) => number };
 
 const countries = (c: BadgeCtx) => new Set(c.entries.map((e) => e.cc)).size;
 
 export const BADGES: BadgeRule[] = [
-  { id: "first", emoji: "🎒", name: "첫 탐험", hint: "음식 하나를 탐험하면 열려요", target: 1, value: (c) => c.entries.length },
-  { id: "countries_5", emoji: "🗺", name: "5개국", hint: "5개국을 탐험하면 열려요", target: 5, value: countries },
-  { id: "countries_10", emoji: "✈️", name: "10개국", hint: "10개국을 탐험하면 열려요", target: 10, value: countries },
-  { id: "countries_25", emoji: "🌏", name: "25개국", hint: "25개국을 탐험하면 열려요", target: 25, value: countries },
-  { id: "continents", emoji: "🌐", name: "다섯 대륙", hint: "다섯 대륙에 모두 발자국을 남기면 열려요", target: CONTINENT_KEYS.length, value: (c) => new Set(c.entries.map((e) => CONTINENT_OF[e.cc]).filter(Boolean)).size },
+  { id: "first", icon: "backpack", name: "첫 탐험", hint: "음식 하나를 탐험하면 열려요", target: 1, value: (c) => c.entries.length },
+  { id: "countries_5", icon: "map", name: "5개국", hint: "5개국을 탐험하면 열려요", target: 5, value: countries },
+  { id: "countries_10", icon: "plane", name: "10개국", hint: "10개국을 탐험하면 열려요", target: 10, value: countries },
+  { id: "countries_25", icon: "earth", name: "25개국", hint: "25개국을 탐험하면 열려요", target: 25, value: countries },
+  { id: "continents", icon: "globe", name: "다섯 대륙", hint: "다섯 대륙에 모두 발자국을 남기면 열려요", target: CONTINENT_KEYS.length, value: (c) => new Set(c.entries.map((e) => CONTINENT_OF[e.cc]).filter(Boolean)).size },
   {
     id: "dumpling_road",
-    emoji: "🥟",
+    icon: "chef",
     name: "만두 로드",
     hint: "만두 계열 음식 3가지를 '먹어봤어요'로 기록하면 열려요",
     target: 3,
     value: (c) => c.entries.filter((e) => e.tags.includes("dumpling") && e.statuses.includes("tried")).length,
   },
-  { id: "fermented", emoji: "🫙", name: "발효 탐험가", hint: "발효 음식 3가지를 탐험하면 열려요", target: 3, value: (c) => c.entries.filter((e) => e.tags.includes("fermented")).length },
-  { id: "streak_2", emoji: "🔥", name: "2주 연속", hint: "주간 퀘스트를 2주 연속 모두 끝내면 열려요", target: 2, value: (c) => c.streak },
-  { id: "streak_4", emoji: "🏆", name: "4주 연속", hint: "주간 퀘스트를 4주 연속 모두 끝내면 열려요", target: 4, value: (c) => c.streak },
+  { id: "fermented", icon: "jar", name: "발효 탐험가", hint: "발효 음식 3가지를 탐험하면 열려요", target: 3, value: (c) => c.entries.filter((e) => e.tags.includes("fermented")).length },
+  { id: "streak_2", icon: "flame", name: "2주 연속", hint: "주간 퀘스트를 2주 연속 모두 끝내면 열려요", target: 2, value: (c) => c.streak },
+  { id: "streak_4", icon: "trophy", name: "4주 연속", hint: "주간 퀘스트를 4주 연속 모두 끝내면 열려요", target: 4, value: (c) => c.streak },
 ];
 
-export type BadgeProgress = { id: string; emoji: string; name: string; hint: string; target: number; value: number; earnedAt: number | null };
+export type BadgeProgress = { id: string; icon: IconName; name: string; hint: string; target: number; value: number; earnedAt: number | null };
 
 export function badgeShelf(entries: QuestEntry[], data: QuestData, now: number): BadgeProgress[] {
   const ctx = { entries, streak: streak(data.cleared, now) };
   return BADGES.map((b) => {
     const earnedAt = data.badges[b.id] ?? null;
-    return { id: b.id, emoji: b.emoji, name: b.name, hint: b.hint, target: b.target, value: earnedAt != null ? b.target : Math.min(b.target, b.value(ctx)), earnedAt };
+    return { id: b.id, icon: b.icon, name: b.name, hint: b.hint, target: b.target, value: earnedAt != null ? b.target : Math.min(b.target, b.value(ctx)), earnedAt };
   });
 }
 
 // ── 상태 전이 (저장소가 부른다)
-export type Celebration = { kind: "quest" | "badge"; emoji: string; title: string };
+export type Celebration = { kind: "quest" | "badge"; icon: IconName; title: string };
 
 /** 주가 바뀌었으면 이번 주 카운터·완료를 비운다 */
 function roll(data: QuestData, week: string): QuestData {
@@ -212,7 +214,7 @@ export function settle(data: QuestData, entries: QuestEntry[], now: number): { d
   const newly = board.quests.filter((q) => q.done && !(q.id in d.done));
   if (newly.length) {
     d = { ...d, done: { ...d.done, ...Object.fromEntries(newly.map((q) => [q.id, now])) } };
-    for (const q of newly) fresh.push({ kind: "quest", emoji: q.emoji, title: q.title });
+    for (const q of newly) fresh.push({ kind: "quest", icon: q.icon, title: q.title });
   }
   if (board.quests.length && board.quests.every((q) => q.done) && !d.cleared.includes(board.week.key)) {
     d = { ...d, cleared: [...d.cleared, board.week.key].slice(-12) };
@@ -222,7 +224,7 @@ export function settle(data: QuestData, entries: QuestEntry[], now: number): { d
   const earned = BADGES.filter((b) => !(b.id in d.badges) && b.value(ctx) >= b.target);
   if (earned.length) {
     d = { ...d, badges: { ...d.badges, ...Object.fromEntries(earned.map((b) => [b.id, now])) } };
-    for (const b of earned) fresh.push({ kind: "badge", emoji: b.emoji, title: b.name });
+    for (const b of earned) fresh.push({ kind: "badge", icon: b.icon, title: b.name });
   }
   return { data: d, fresh };
 }

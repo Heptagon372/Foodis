@@ -6,8 +6,8 @@ import { useRadioMiniVisible } from "./RadioMini";
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const path = usePathname();
-  // 미니 플레이어가 떠 있으면 마지막 내용이 가려지지 않게 아래 여백을 더 준다
+  // 떠 있는 탭 바(68px + 아래 12px/안전 영역, 가운데 구슬이 18px 솟음) · 미니 플레이어(탭 바 위 92px 부터 약 62px)가 마지막 내용을 가리지 않게 아래 여백
   const mini = useRadioMiniVisible();
-  if (path.startsWith("/admin")) return <div className="min-h-dvh bg-ivory">{children}</div>;
-  return <div className={`mx-auto min-h-dvh max-w-md ${mini ? "pb-52" : "pb-28"}`}>{children}</div>;
+  if (path.startsWith("/admin")) return <div className="min-h-dvh bg-canvas">{children}</div>;
+  return <div className={`mx-auto min-h-dvh max-w-md ${mini ? "pb-56" : "pb-32"}`}>{children}</div>;
 }

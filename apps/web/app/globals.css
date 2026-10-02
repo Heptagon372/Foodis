@@ -258,6 +258,41 @@ body {
 }
 .plate-set { animation: plate-set 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
+/* 세계 지도 3D (회색 점토 지도) — 윗면은 흰 회색, 옆면은 진한 회색, 바다는 회색 바닥 + 그림자.
+   --u 는 '화면 1px 이 SVG 좌표로 몇인지' (WorldMapView 가 확대할 때마다 갱신) → 두께·솟음 높이가 확대와 상관없이 화면에서 같게 */
+:root {
+  --map-sea: #d5d7d9;
+  --map-sea-deep: #bfc2c5;
+  --map-top: #fafafa;
+  --map-edge: #c6c9cd;
+  --map-side: #b3b7bb;
+  --map-side-deep: #979ba0;
+  --map-off: #e4e6e8;
+  --map-shadow: rgb(0 0 0 / 0.24);
+  --map-done: color-mix(in oklab, var(--color-brand) 38%, var(--map-top));
+}
+:root[data-theme="dark"] {
+  --map-sea: #2b2e32;
+  --map-sea-deep: #1b1d20;
+  --map-top: #6b7077;
+  --map-edge: #50545a;
+  --map-side: #3c3f44;
+  --map-side-deep: #2a2c30;
+  --map-off: #4b4f55;
+  --map-shadow: rgb(0 0 0 / 0.5);
+  --map-done: color-mix(in oklab, var(--color-brand) 60%, var(--map-top));
+}
+.wm-sea { background: radial-gradient(120% 90% at 50% 35%, var(--map-sea) 0%, var(--map-sea-deep) 100%); }
+.wm-svg { --u: 1.5; }
+.wm-svg[data-drag] { cursor: grabbing; }
+/* 끄는 동안은 흐림 그림자를 빼서 프레임마다 다시 흐리지 않게 */
+.wm-svg[data-drag] .wm-shadow { display: none; }
+/* 고른 나라가 바닥(두께 아래)에서 제자리로 솟는다 — to 는 각 층의 원래 transform */
+@keyframes wm-rise {
+  from { transform: translateY(calc(var(--u) * 6px)); }
+}
+.wm-rise { animation: wm-rise 340ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }

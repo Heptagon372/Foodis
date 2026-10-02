@@ -51,3 +51,17 @@ describe("세계 지도 (F-EXP-05)", () => {
     }
   });
 });
+
+describe("나라 패널 국가 정보", () => {
+  it("150개국 모두 수도·언어·식문화 소개가 있다", async () => {
+    const { COUNTRY_INFO } = await import("./country-info");
+    for (const c of PREVIEW_COUNTRIES) {
+      const i = COUNTRY_INFO[c.code];
+      expect(i?.capital && i.lang && i.about, c.code).toBeTruthy();
+    }
+  });
+
+  it("확대 경계(box)가 모든 나라에 넓이 있게 잡힌다", () => {
+    for (const s of buildWorldMap().shapes) expect(s.box[2] > 0 && s.box[3] > 0, s.code).toBe(true);
+  });
+});

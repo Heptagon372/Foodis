@@ -124,6 +124,8 @@ export function stopSpeaking() {
  * 서버 TTS 를 먼저 시도하고, 실패하면 브라우저 음성으로. onEnd 는 어느 경로든 한 번 호출된다 (stopSpeaking 으로 멈춘 경우 제외).
  * 서버 음성은 받는 대로 재생하고(stream-audio.ts), 돌아오는 시점 = 첫 소리가 난 때 → 호출 측이 first_audio_ms 로 잰다.
  */
+const FIRST_AUDIO_TIMEOUT_MS = 8_000;
+
 export async function speak(text: string, onEnd: () => void, prefetched?: Blob | null): Promise<"cached" | "server" | "browser" | "none"> {
   stopSpeaking();
   beforeSpeak.forEach((f) => f());
@@ -131,6 +133,15 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
   const audio = new Audio();
   let release = () => {};
   let started = false;
+  // 첫 소리까지 8초 제한 (라디오와 같은 기준): 스트림이 안 열리는 브라우저(일부 iOS)에서 무한 대기 대신 브라우저 음성으로
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      pending?.abort();
+      reject(new Error("first_audio_timeout"));
+    }, FIRST_AUDIO_TIMEOUT_MS);
+  });
+  deadline.catch(() => {}); // 경주에 쓰이지 않은 채 끝나도 처리되지 않은 거부로 남지 않게
   try {
     let first: Promise<unknown> = Promise.resolve();
     if (prefetched) {
@@ -140,13 +151,14 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
       release = () => URL.revokeObjectURL(url);
     } else {
       const ctrl = (pending = new AbortController());
-      const res = await fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal: ctrl.signal });
+      const res = await Promise.race([fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal: ctrl.signal }), deadline]);
       if (!res.ok) throw new Error(String(res.status));
-      const att = await attachResponse(res, audio);
+      const att = await Promise.race([attachResponse(res, audio), deadline]);
       release = att.release;
       first = att.firstAudio;
     }
     if (my !== seq) {
+      clearTimeout(timer);
       release();
       return "none";
     }
@@ -165,10 +177,12 @@ export async function speak(text: string, onEnd: () => void, prefetched?: Blob |
     audio.onended = finish;
     // 첫 소리 전 오류는 아래 catch 가 브라우저 음성으로 받는다 — 여기서도 onEnd 하면 두 번 불린다
     audio.onerror = () => started && finish();
-    await Promise.all([audio.play(), first]);
+    await Promise.race([Promise.all([audio.play(), first]), deadline]);
+    clearTimeout(timer);
     started = true;
     return prefetched ? "cached" : "server";
   } catch {
+    clearTimeout(timer);
     audio.onended = audio.onerror = null;
     audio.pause();
     release();

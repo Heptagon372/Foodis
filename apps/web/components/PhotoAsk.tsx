@@ -4,6 +4,7 @@
 // 사진은 이 기기 메모리(썸네일)에만 있고, 서버는 인식 후 버린다.
 import Link from "next/link";
 import { useRef } from "react";
+import { getAiPrefs } from "@/lib/client/ai-prefs";
 import type { Confidence, VisionResponse } from "@/lib/foodi/vision";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
@@ -48,7 +49,7 @@ async function recognize(dataUrl: string): Promise<VisionResponse> {
   const res = await fetch("/api/foodi/vision", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ media_type: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1) }),
+    body: JSON.stringify({ media_type: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1), model: getAiPrefs().model ?? undefined }),
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error?.code === "vision_unavailable" ? UNAVAILABLE : (data?.error?.message ?? "사진을 잠깐 못 봤어요. 다시 찍어 주세요."));

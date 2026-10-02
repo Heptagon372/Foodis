@@ -34,7 +34,9 @@ export async function POST(req: Request) {
   if (!day.ok) return jsonError(429, "rate_limited", "오늘 사진 인식은 여기까지예요. 글이나 음성으로 물어봐 주세요.", { "Retry-After": String(day.retryAfterSec) });
 
   try {
-    return NextResponse.json(await recognizeFood(await getOrchestratorDeps(), img.image));
+    // model: '푸디의 두뇌' 선택 (선택 사항). 서버가 목록·키·예산으로 다시 검증한다
+    const model = (raw as { model?: unknown }).model;
+    return NextResponse.json(await recognizeFood(await getOrchestratorDeps(), img.image, typeof model === "string" ? model.slice(0, 64) : undefined));
   } catch (e) {
     if (e instanceof VisionBudgetError) return jsonError(503, "vision_budget", "오늘 사진 인식 사용량이 다 찼어요. 글이나 음성으로 물어봐 주세요.");
     // 키가 없는 미리보기 모드: deps 의 offlineLLM 이 'preview' ProviderError 를 던진다

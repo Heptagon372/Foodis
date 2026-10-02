@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
 import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
+import { getAiPrefs } from "@/lib/client/ai-prefs";
 import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { pauseRadio } from "@/lib/client/radio";
@@ -73,7 +74,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         const res = await fetch("/api/foodi/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text, input_mode: mode, context_food_id: contextFoodId, seen_food_ids: seen.current.slice(-30), guest: guestProfile(s) }),
+          body: JSON.stringify({ text, input_mode: mode, context_food_id: contextFoodId, seen_food_ids: seen.current.slice(-30), guest: guestProfile(s), model: getAiPrefs().model ?? undefined }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error?.message ?? "푸디가 잠시 쉬고 있어요.");
@@ -340,6 +341,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
               ))}
             </p>
           )}
+          {t.res.model_used && <p className="text-caption text-muted">🧠 {t.res.model_used.label}{t.res.model_used.downgraded ? " · 오늘은 사용량이 많아 기본 AI 가 답했어요" : ""}</p>}
         </>
       )}
     </div>

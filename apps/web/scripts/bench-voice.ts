@@ -81,6 +81,7 @@ async function main() {
   const has = {
     openai: Boolean(process.env.OPENAI_API_KEY),
     google: Boolean(process.env.GOOGLE_TTS_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS),
+    gemini: Boolean(process.env.GEMINI_API_KEY),
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
     supabase: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
   };
@@ -93,6 +94,7 @@ async function main() {
       ...(await import("@/lib/providers/openai")),
       ...(await import("@/lib/content")),
       ...(await import("@/lib/foodi/deps")),
+      ...(await import("@/lib/providers/registry/llm")),
       ...(await import("@/lib/foodi/orchestrator")),
       ...(await import("@/lib/foodi/eval/cases")),
       ...(await import("@/lib/preview/foods")),
@@ -103,7 +105,9 @@ async function main() {
       console.error('lib/* 가 "server-only" 를 import 합니다. `tsx --conditions=react-server scripts/bench-voice.ts` 로 실행하세요 (pnpm bench:voice).');
     throw e;
   }
-  const { env, isLive, googleTTS, openaiTTS, openaiSTT, getOrchestratorDeps, ask, EVAL_CASES, PREVIEW_FOODS, previewId, previewRepo } = lib;
+  const { env, isLive, googleTTS, openaiTTS, openaiSTT, getOrchestratorDeps, ask, EVAL_CASES, PREVIEW_FOODS, previewId, previewRepo, llmReady, llmModels } = lib;
+  const { order: llmOrder, models: llmTier } = llmModels();
+  const llmLabel = llmOrder.map((p) => `${p} ${llmTier[p]?.fast} / ${llmTier[p]?.smart}`).join(" → ");
   mkdirSync(OUT_DIR, { recursive: true });
   const log = (s: string) => console.log(`  ${s}`);
   console.log(`\n음성 지연 측정 — 키: ${Object.entries(has).map(([k, v]) => `${k} ${v ? "있음" : "없음"}`).join(" · ")}\n`);
@@ -270,8 +274,8 @@ async function main() {
       log(`/ask ${c.id} 실패: ${redact((e as Error).message)}`);
     }
   }
-  const usingLLM = has.anthropic;
-  const pathLabel = `${usingLLM ? `LLM (${env.llmModelFast} 의도 + ${env.llmModelSmart} 답변)` : "템플릿 — LLM 키 없음"} · ${dbLive ? "실제 DB" : "미리보기 데이터"}`;
+  const usingLLM = llmReady();
+  const pathLabel = `${usingLLM ? `LLM (${llmLabel} — 의도 / 답변)` : "템플릿 — LLM 키 없음"} · ${dbLive ? "실제 DB" : "미리보기 데이터"}`;
   log(`/ask: ${askLat.size}/10 (${pathLabel})`);
 
   // ── 6. 표 만들기
@@ -352,7 +356,7 @@ async function main() {
   for (const c of candidates.filter((x) => !measured.includes(x))) e2eRows.push([`${c.label} (${c.voice})`, sttLabel, "—", "—", "—", "—", c.skip ?? "측정 없음"]);
   const e2eTable = markdownTable(["조합", "STT", "첫 음성 p50 (받는 대로 재생 — 현재 앱)", "p95", "첫 음성 p50 (다 받은 뒤 재생 — 이전 방식)", "p95", `목표 p95 ≤ ${FIRST_AUDIO_TARGET_MS / 1000}초 (현재 앱)`], e2eRows);
 
-  const keysLine = Object.entries({ OPENAI_API_KEY: has.openai, "GOOGLE_TTS_CREDENTIALS_JSON·GOOGLE_APPLICATION_CREDENTIALS": has.google, ANTHROPIC_API_KEY: has.anthropic, "Supabase 서비스 키": has.supabase })
+  const keysLine = Object.entries({ OPENAI_API_KEY: has.openai, "GOOGLE_TTS_CREDENTIALS_JSON·GOOGLE_APPLICATION_CREDENTIALS": has.google, GEMINI_API_KEY: has.gemini, ANTHROPIC_API_KEY: has.anthropic, "Supabase 서비스 키": has.supabase })
     .map(([k, v]) => `${k} ${v ? "있음" : "없음"}`)
     .join(" · ");
 
@@ -362,7 +366,7 @@ async function main() {
     `- 명령: \`pnpm --filter web bench:voice${LIVE_DB ? " -- --live-db" : ""}\` (apps/web/scripts/bench-voice.ts)`,
     `- 기기: ${os.type()} ${os.release()} · ${os.cpus()[0]?.model.trim() ?? "CPU ?"} · Node ${process.version}`,
     `- 키: ${keysLine}`,
-    `- 설정: TTS_PROVIDER=${env.ttsProvider} · GOOGLE_TTS_VOICE=${env.googleTtsVoice} · OPENAI_TTS_VOICE=${env.openaiTtsVoice} · STT_MODEL=${env.sttModel} · LLM ${env.llmModelFast} / ${env.llmModelSmart} (effort ${env.llmSmartEffort})`,
+    `- 설정: TTS_PROVIDER=${env.ttsProvider} · GOOGLE_TTS_VOICE=${env.googleTtsVoice} · OPENAI_TTS_VOICE=${env.openaiTtsVoice} · STT_MODEL=${env.sttModel} · LLM ${llmLabel} (Gemini thinking ${env.llmGeminiSmartThinking} · GPT effort ${env.llmOpenaiSmartEffort})`,
     "- 표본: 후보마다 워밍업 1회 뒤 데모 문장 10개를 1회씩, 순서대로. 10개 표본의 p95 는 사실상 최대값에 가깝다.",
     "",
     "### TTS 후보 비교 (데모 답변 10문장)",

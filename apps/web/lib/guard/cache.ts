@@ -10,8 +10,9 @@ export function normalizeQuestion(text: string): string {
     .toLowerCase();
 }
 
-/** 캐시 키 = 정규화 텍스트 + 식이 조건 + 탐험 국가 수 구간 (11 문서 §5). 개인 식별 정보는 넣지 않는다. */
-export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: string): string {
+/** 캐시 키 = 정규화 텍스트 + 식이 조건 + 탐험 국가 수 구간 (11 문서 §5). 개인 식별 정보는 넣지 않는다.
+ *  modelId: 사용자가 고른 '푸디의 두뇌' — 다른 모델의 답이 섞이지 않게. 자동(기본 체인)이면 비워서 예전 키 그대로 */
+export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: string, modelId?: string | null): string {
   const diet = Object.entries(ctx.diet)
     .filter(([, v]) => v)
     .map(([k]) => k)
@@ -25,6 +26,6 @@ export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: s
     .slice(0, 3)
     .map(([t]) => t)
     .join(",");
-  const raw = [normalizeQuestion(text), diet, ctx.allergens.slice().sort().join(","), bucket, dna, contextFoodId ?? ""].join("|");
+  const raw = [normalizeQuestion(text), diet, ctx.allergens.slice().sort().join(","), bucket, dna, contextFoodId ?? "", ...(modelId ? [`model=${modelId}`] : [])].join("|");
   return "answer:" + createHash("sha256").update(raw).digest("hex");
 }

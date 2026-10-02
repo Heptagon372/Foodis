@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { dataStatus } from "@/lib/content";
 import { supabasePublic } from "@/lib/db/supabase-server";
 import { env } from "@/lib/env";
-import { embedStatus, llmStatus, sttStatus, ttsStatus } from "@/lib/providers";
+import { embedStatus, llmModels, llmStatus, sttStatus, ttsStatus } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export async function GET() {
   }
   const ok = db.ok && anyReady(providers.llm) && anyReady(providers.embed);
   return NextResponse.json(
-    { ok, keys, providers, db, content: await dataStatus().catch(() => ({ live: false, reason: "확인 실패" })), models: { fast: env.llmModelFast, smart: env.llmModelSmart }, demoMode: env.demoMode },
+    { ok, keys, providers, db, content: await dataStatus().catch(() => ({ live: false, reason: "확인 실패" })), models: llmModels(), demoMode: env.demoMode },
     { status: ok ? 200 : 503 },
   );
 }

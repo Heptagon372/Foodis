@@ -1,6 +1,6 @@
 // 할루시네이션 테스트 셋 실행기.
 //   pnpm test          → 오프라인(LLM 없음): 규칙 + DB 템플릿 경로. liveOnly 항목은 건너뛴다. 회귀 테스트로 항상 돈다
-//   pnpm --filter web eval:live → 실제 Claude 로 같은 30문항 (apps/web/.env.local 의 ANTHROPIC_API_KEY, 1회 약 $0.3). P3 완료 기준 "30문항 통과"
+//   pnpm --filter web eval:live → 실제 LLM(registry 기본 체인: Gemini → GPT)으로 같은 30문항 (apps/web/.env.local 의 GEMINI_API_KEY · OPENAI_API_KEY, 1회 약 $0.05). P3 완료 기준 "30문항 통과"
 // 데이터는 미리보기 샘플(lib/preview). 결과는 lib/foodi/eval/.last-<mode>.json 에 남는다.
 import { writeFileSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
@@ -18,12 +18,15 @@ const MODE = LIVE ? "live" : "offline";
 const offlineLLM: LLMProvider = { structured: async () => Promise.reject(new Error("offline")) };
 const offlineEmbedder: Embedder = { embed: async () => Promise.reject(new Error("offline")) };
 
+/** 앱과 같은 registry 기본 체인 (LLM_PROVIDERS 순서 중 키 있는 제공자). 특정 제공자만 재려면 LLM_PROVIDERS=openai pnpm … eval:live */
 async function liveLLM(): Promise<LLMProvider> {
   const { loadEnvConfig } = await import("@next/env");
   loadEnvConfig(process.cwd());
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error("eval:live 에는 ANTHROPIC_API_KEY 가 필요합니다 (apps/web/.env.local)");
-  const { anthropicLLM } = await import("@/lib/providers/anthropic");
-  return anthropicLLM();
+  // lib/env 는 import 시점에 환경변수를 읽는다 → .env.local 을 읽은 뒤에 불러온다
+  const { getLLM, llmModels, llmReady } = await import("@/lib/providers/registry/llm");
+  if (!llmReady()) throw new Error("eval:live 에는 LLM 키가 필요합니다 — GEMINI_API_KEY · OPENAI_API_KEY 중 하나 (apps/web/.env.local)");
+  console.log(`[eval:live] LLM ${JSON.stringify(llmModels())}`);
+  return getLLM();
 }
 
 const idOf = (slug: string) => {

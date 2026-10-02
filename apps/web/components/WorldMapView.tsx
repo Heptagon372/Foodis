@@ -74,7 +74,10 @@ export function WorldMapView({ map, countries, counts, preview }: { map: WorldMa
   }, [selected]);
 
   const pick = (code: string) => {
-    if (selected !== code) (signal("country", null, { cc: code, src: "map" }), noteFeature("map"));
+    if (selected !== code) {
+      signal("country", null, { cc: code, src: "map" });
+      noteFeature("map");
+    }
     setSelected((cur) => (cur === code ? null : code));
   };
   const onKey = (code: string) => (e: KeyboardEvent) => {

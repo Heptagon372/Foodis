@@ -21,6 +21,9 @@ export const COUNTRY_LANG: Record<string, string> = {
   RW: "rw-RW", SA: "ar-SA", SD: "ar-SD", SE: "sv-SE", SG: "en-SG", SK: "sk-SK", SN: "fr-SN", SO: "so-SO", SV: "es-SV", SY: "ar-SY",
   TH: "th-TH", TJ: "tg-TJ", TM: "tk-TM", TN: "ar-TN", TO: "to-TO", TR: "tr-TR", TT: "en-TT", TW: "zh-TW", TZ: "sw-TZ", UA: "uk-UA",
   UG: "en-UG", US: "en-US", UY: "es-UY", UZ: "uz-UZ", VE: "es-VE", VN: "vi-VN", WS: "sm-WS", YE: "ar-YE", ZA: "af-ZA", ZW: "en-ZW",
+  // 150개국 확장분 (모리셔스 → 프랑스어, 수리남 → 네덜란드어, 룩셈부르크 → 룩셈부르크어)
+  BB: "en-BB", BH: "ar-BH", BJ: "fr-BJ", BN: "ms-BN", BY: "be-BY", BZ: "en-BZ", CV: "pt-CV", GY: "en-GY", KP: "ko-KP", KW: "ar-KW",
+  LU: "lb-LU", MD: "ro-MD", ME: "sr-ME", MK: "mk-MK", MU: "fr-MU", MW: "en-MW", QA: "ar-QA", SI: "sl-SI", SR: "nl-SR", ZM: "en-ZM",
 };
 
 /** 서버가 시도할 목소리 하나. voice 는 제공자 음성 이름, lang 은 제공자에게 넘길 언어 */

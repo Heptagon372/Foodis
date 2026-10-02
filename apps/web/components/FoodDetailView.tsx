@@ -83,7 +83,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   const mains = food.ingredients.filter((i) => i.role === "main").map((i) => i.name_ko);
   const stats: Stat[] = [];
   if (food.cooking_method) stats.push({ icon: "pot", label: "조리법", value: METHOD_LABEL[food.cooking_method] ?? food.cooking_method });
-  if (food.taste_tags.length) stats.push({ icon: "flame", label: food.summary ? "맛" : "분류 (이름으로 추정)", value: food.taste_tags.map((t) => TASTE_LABEL[t] ?? t).join(" · ") });
+  if (food.taste_tags.length) stats.push({ icon: "flame", label: food.summary ? "맛" : "분류 (추정)", value: food.taste_tags.map((t) => TASTE_LABEL[t] ?? t).join(" · ") });
   if (mains.length) stats.push({ icon: "carrot", label: "주재료", value: mains.join(" · ") });
   stats.push({ icon: "pin", label: "어디서", value: `${food.country.name_ko}${food.region_in_country ? ` · ${food.region_in_country}` : ""}` });
 

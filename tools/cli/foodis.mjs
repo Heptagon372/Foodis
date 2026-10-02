@@ -137,8 +137,9 @@ const KEY_ROWS = [
   ["apps/web/.env.local", "GOOGLE_TTS_CREDENTIALS_JSON", "Google TTS"],
   ["foodis-data/.env", "SUPABASE_URL", "데이터: Supabase URL"],
   ["foodis-data/.env", "SUPABASE_SERVICE_ROLE_KEY", "데이터: Supabase 서버 키"],
-  ["foodis-data/.env", "ANTHROPIC_API_KEY", "데이터: Anthropic (s05 초안)"],
-  ["foodis-data/.env", "OPENAI_API_KEY", "데이터: OpenAI (s09 임베딩)"],
+  ["foodis-data/.env", "GEMINI_API_KEY", "데이터: Gemini (s05 기본·s09)"],
+  ["foodis-data/.env", "OPENAI_API_KEY", "데이터: OpenAI (s05·s09)"],
+  ["foodis-data/.env", "ANTHROPIC_API_KEY", "데이터: Anthropic (s05, 선택)"],
 ];
 const mask = (v) => (v ? (v.length > 10 ? `${v.slice(0, 6)}…(${v.length}자)` : "설정됨") : "");
 
@@ -494,7 +495,15 @@ async function onKey(k) {
       if (k === "0") await runForeground("가상환경 설치", IS_WIN ? "py" : "python3", ["-m", "venv", ".venv", "&&", `"${py}"`, "-m", "pip", "install", "-r", "requirements.txt"], { cwd: DATA });
       if (k === "1") await pyRun("s01 Wikidata", "s01_wikidata.py");
       if (k === "2") await pyRun("s02 위키백과", "s02_wikipedia.py");
-      if (k === "5") await pyRun("s05 AI 초안 (이어서 실행됨)", "s05_llm_draft.py");
+      if (k === "5") {
+        const ok = await pyRun("s05 AI 초안 비용 추정 (호출 안 함)", "s05_llm_draft.py", ["--dry-run"]);
+        if (ok) {
+          pauseUi();
+          const yes = (await ask("남은 초안을 실제로 만들까요? 비용이 듭니다 (y/N) ")).toLowerCase() === "y";
+          resumeUi();
+          if (yes) await pyRun("s05 AI 초안 (이어서 실행됨)", "s05_llm_draft.py", ["--yes"]);
+        }
+      }
       if (k === "6") await pyRun("s06 관계 후보", "s06_relations.py");
       if (k === "e") await pyRun("s07 검수 시트 만들기", "s07_review.py", ["export"]);
       if (k === "i") await pyRun("s07 검수 반영", "s07_review.py", ["import"]);

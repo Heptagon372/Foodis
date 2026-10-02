@@ -62,6 +62,21 @@ def parse_wiki_hint(hint: str) -> tuple[str, str]:
     return (m.group(1), m.group(2)) if m and m.group(1) in WIKI_LANGS else ("en", hint.strip())
 
 
+def _retry_delay(r: requests.Response, attempt: int) -> float:
+    """재시도 대기 시간: Retry-After 헤더 → Google API 본문의 RetryInfo.retryDelay("30s") → 지수 백오프. 최대 2분."""
+    ra = r.headers.get("Retry-After")
+    if ra and ra.isdigit():
+        return float(ra)
+    try:
+        for d in (r.json().get("error") or {}).get("details") or []:
+            rd = str(d.get("retryDelay", "")) if isinstance(d, dict) else ""
+            if rd.endswith("s"):
+                return min(float(rd[:-1]), 120.0)
+    except Exception:  # 본문이 JSON 이 아니거나 모양이 다르면 백오프로
+        pass
+    return float(2 ** attempt)
+
+
 class Http:
     """User-Agent 고정, 429/5xx 재시도(Retry-After 준수), 최소 요청 간격, 디스크 캐시."""
 
@@ -79,7 +94,7 @@ class Http:
         return self.cache_dir / f"{h}.json"  # type: ignore[operator]
 
     def request(self, method: str, url: str, *, params=None, data=None, json_body=None,
-                headers=None, cache: bool = True, retries: int = 5) -> Any:
+                headers=None, cache: bool = True, retries: int = 5, timeout: float = 60) -> Any:
         key = self._key(method, url, params, data or json_body) if (cache and self.cache_dir) else None
         if key and key.exists():
             return json.loads(key.read_text(encoding="utf-8"))
@@ -88,10 +103,9 @@ class Http:
             if wait > 0:
                 time.sleep(wait)
             self._last = time.time()
-            r = self.s.request(method, url, params=params, data=data, json=json_body, headers=headers, timeout=60)
+            r = self.s.request(method, url, params=params, data=data, json=json_body, headers=headers, timeout=timeout)
             if r.status_code == 429 or r.status_code >= 500:
-                retry_after = r.headers.get("Retry-After")
-                delay = float(retry_after) if retry_after and retry_after.isdigit() else 2 ** attempt
+                delay = _retry_delay(r, attempt)
                 print(f"  ↻ {r.status_code} {url[:60]}… {delay:.0f}s 후 재시도")
                 time.sleep(delay)
                 continue

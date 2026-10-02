@@ -23,16 +23,16 @@ REVIEW_FIELDS = ["slug", "country_code", "name_ko", "name_en", "origin_note", "d
 
 def consistency_flags(d: dict) -> list[str]:
     """재료 정보와 식이 판정의 모순을 찾는다. d 는 LLM 초안 또는 최종 데이터."""
-    ings = d.get("ingredients", [])
-    diet = d.get("diet") or d.get("diet_draft", {})
+    ings = [i for i in d.get("ingredients") or [] if isinstance(i, dict)]  # 스키마 오류 초안도 export 는 되도록
+    diet = d.get("diet") or d.get("diet_draft") or {}
     flags = []
-    animal = [i["name_en"] for i in ings if i.get("animal_origin") and i.get("role") != "optional"]
+    animal = [i.get("name_en", "?") for i in ings if i.get("animal_origin") and i.get("role") != "optional"]
     if animal and diet.get("vegan") == "yes":
         flags.append(f"vegan=yes 인데 동물성 재료({', '.join(animal)})")
-    meat = [i["name_en"] for i in ings if i.get("category") in ("meat", "poultry", "seafood") and i.get("role") != "optional"]
+    meat = [i.get("name_en", "?") for i in ings if i.get("category") in ("meat", "poultry", "seafood") and i.get("role") != "optional"]
     if meat and diet.get("vegetarian") == "yes":
         flags.append(f"vegetarian=yes 인데 육류·해산물({', '.join(meat)})")
-    pork = [i["name_en"] for i in ings if i.get("pork")]
+    pork = [i.get("name_en", "?") for i in ings if i.get("pork")]
     if pork and diet.get("halal") not in ("no", None):
         flags.append(f"돼지고기({', '.join(pork)}) 포함인데 halal≠no")
     if any(i.get("allergen") == "dairy" and i.get("role") != "optional" for i in ings) and diet.get("dairy_free") == "yes":
@@ -63,13 +63,15 @@ def export() -> None:
         v = drafts.get(t["slug"])
         if not v:
             continue
-        d = v["draft"]
-        flags = consistency_flags(d) + completeness_flags(d, wd.get(t["slug"], {}))
-        dd = d.get("diet_draft", {})
+        d = v["draft"] or {}
+        bad = [f"AI 초안 스키마 오류({v['needs_review'][0][:60]}) → s05 --needs-review --smart 로 다시 만들기"] if v.get("needs_review") else []
+        flags = bad + consistency_flags(d) + completeness_flags(d, wd.get(t["slug"], {}))
+        dd = d.get("diet_draft") or {}
+        ings = [i for i in d.get("ingredients") or [] if isinstance(i, dict)]
         rows.append({**t, "auto_flags": " / ".join(flags), "summary": d.get("summary"), "history": d.get("history"),
-                     "culture_story": d.get("culture_story"), "taste_tags": ",".join(d.get("taste_tags", [])),
-                     "ingredients_main": ", ".join(f"{i['name_ko']}({i['name_en']})" for i in d.get("ingredients", []) if i["role"] == "main"),
-                     "allergens": ",".join(d.get("allergens", [])),
+                     "culture_story": d.get("culture_story"), "taste_tags": ",".join(map(str, d.get("taste_tags") or [])),
+                     "ingredients_main": ", ".join(f"{i.get('name_ko')}({i.get('name_en')})" for i in ings if i.get("role") == "main"),
+                     "allergens": ",".join(map(str, d.get("allergens") or [])),
                      **{f"draft_{k}": dd.get(k) for k in DIET_KEYS}, "diet_reason": dd.get("reason"),
                      **{f"final_{k}": "" for k in DIET_KEYS}, "diet_note": "", "diet_sources": "", "approve": "", "reviewer": "", "review_memo": ""})
     rows.sort(key=lambda r: (r["demo_required"] != "Y", r["auto_flags"] == "", r["country_code"]))
@@ -94,9 +96,12 @@ def finalize_diet(row: dict) -> tuple[dict, list[str]]:
 def do_import() -> None:
     drafts = read_json(DRAFT / "foods_draft.json", {})
     wd, wp = read_json(RAW / "wikidata.json", {}), read_json(RAW / "wikipedia.json", {})
-    final, warns, blocked = {}, [], []
+    final, warns, blocked, broken = {}, [], [], []
     for row in read_csv(DRAFT / "review_sheet.csv"):
         if (row.get("approve") or "").strip().upper() != "Y":
+            continue
+        if drafts[row["slug"]].get("needs_review"):  # 구조가 깨진 초안은 승인해도 적재하지 않는다 → s05 로 다시 만든 뒤 export 부터
+            broken.append(f"{row['slug']}: AI 초안 스키마 오류 — s05 --needs-review 로 다시 만든 뒤 export 부터 다시")
             continue
         d = dict(drafts[row["slug"]]["draft"])
         for f in ("summary", "history", "culture_story"):  # 검수자가 시트에서 고친 문장을 반영
@@ -127,6 +132,8 @@ def do_import() -> None:
         print("  ⚠", w)
     for b in blocked:
         print("  ⛔ 차단(모순):", b)
+    for b in broken:
+        print("  ⛔ 차단(초안 오류):", b)
 
 
 if __name__ == "__main__":

@@ -36,7 +36,8 @@ export function trackingAllowed(): boolean {
   return true;
 }
 
-function anonId(): string {
+/** 브라우저 무작위 id (계정과 무관) — 커뮤니티 미리보기 모드의 게스트 글쓴이 표시에도 쓴다 */
+export function anonId(): string {
   try {
     let id = localStorage.getItem(ANON_KEY);
     if (!id) localStorage.setItem(ANON_KEY, (id = newId()));

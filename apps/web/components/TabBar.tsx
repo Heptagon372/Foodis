@@ -1,5 +1,5 @@
 "use client";
-// 모바일 하단 탭: 홈 · 지도 · (푸디) · 라디오 · Passport — 떠 있는 유리 바. 데스크톱(lg)에서는 사이드바(SideNav)가 대신한다.
+// 모바일 하단 탭: 홈 · 지도 · (푸디) · 커뮤니티 · Passport — 떠 있는 유리 바. 라디오는 홈 배너·미니 플레이어·사이드바에서. 데스크톱(lg)에서는 사이드바(SideNav)가 대신한다.
 // 메뉴 표는 nav.ts 하나 → 사이드바와 같은 카테고리. 푸디는 화면 이동이 아니라 시트를 연다 → 어디서든 대화로 돌아온다.
 // 높이: 바 68px + 아래 여백 12px(또는 안전 영역) → 위에 얹는 미니 플레이어는 bottom 6rem 부터
 import Link from "next/link";
@@ -13,7 +13,7 @@ import { activeHref, isBareRoute, NAV_GROUPS, type NavItem } from "./nav";
 const pick = (href: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === href)!;
 // 내 기록(My Table·퀘스트)은 Passport 탭이 켜진다
 const LEFT: NavItem[] = [pick("/"), pick("/map")];
-const RIGHT: NavItem[] = [pick("/radio"), { ...pick("/passport"), also: ["/passport", "/quests"] }];
+const RIGHT: NavItem[] = [pick("/community"), { ...pick("/passport"), also: ["/passport", "/quests"] }];
 
 export function TabBar() {
   const path = usePathname();

@@ -3,6 +3,8 @@
 // 모바일 = 위에 묶음 칩(바로 가기) + 세로 카드 / 데스크톱 = 왼쪽 묶음 목록(고정) + 오른쪽 카드
 import { useRouter } from "next/navigation";
 import { useAccount } from "@/lib/client/account";
+import { clearInterest, useTopInterests } from "@/lib/client/community";
+import { CATEGORY } from "@/lib/community/categories";
 import { update, useLocal } from "@/lib/client/passport";
 import { setTheme } from "@/lib/client/theme";
 import { ALLERGENS, DIET_KEYS } from "@/lib/foodi/schema";
@@ -110,7 +112,25 @@ function DisplaySettings() {
           </button>
         </div>
       </SettingCard>
+      <CommunityInterest />
     </div>
+  );
+}
+
+/** 커뮤니티 AI 맞춤 피드가 쓰는 관심 기록 (이 기기에만 저장) — 보고 지울 수 있게 */
+function CommunityInterest() {
+  const top = useTopInterests(5);
+  return (
+    <SettingCard icon="users" title="커뮤니티 맞춤 기록" desc="자주 본 모임을 이 기기에만 기억해 AI 맞춤 피드 순서에 써요. 서버에는 개인별로 남기지 않아요.">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-ink-soft">{top.length ? top.map(([k]) => CATEGORY[k].label).join(" · ") : "아직 기록이 없어요"}</span>
+        {top.length > 0 && (
+          <button type="button" onClick={clearInterest} className={btn("outline", "sm")}>
+            기록 지우기
+          </button>
+        )}
+      </div>
+    </SettingCard>
   );
 }
 

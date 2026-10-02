@@ -11,8 +11,9 @@ import { Icon } from "../icons";
 import { btn } from "../ui";
 import { RateForm, ReportPlaceForm } from "./PlaceForms";
 
-type KakaoReview = { username: string; rating: number; date: string; text: string };
-type KakaoReviews = { rating: number | null; reviewCount: number; reviews: KakaoReview[] };
+type ReviewItem = { username: string; rating: number; date: string; text: string };
+type KakaoReviews = { rating: number | null; reviewCount: number; reviews: ReviewItem[] };
+type NaverReviews = { naverId: string | null; rating: number | null; reviewCount: number; reviews: ReviewItem[]; placeUrl: string | null };
 
 function useKakaoReviews(placeId: string) {
   const [data, setData] = useState<KakaoReviews | null>(null);
@@ -27,14 +28,30 @@ function useKakaoReviews(placeId: string) {
   return data;
 }
 
+function useNaverReviews(placeId: string, name: string, address: string | null) {
+  const [data, setData] = useState<NaverReviews | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const qs = new URLSearchParams({ name, ...(address ? { address } : {}) });
+    fetch(`/api/places/${placeId}/naver-reviews?${qs}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setData(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [placeId, name, address]);
+  return data;
+}
+
 export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void }) {
   const x = p.place;
-  const [open, setOpen] = useState<null | "rate" | "report" | "reviews">(null);
+  const [open, setOpen] = useState<null | "rate" | "report" | "kakao-reviews" | "naver-reviews">(null);
   const kakao = useKakaoReviews(x.id);
+  const naver = useNaverReviews(x.id, x.name, x.road_address ?? x.address);
   const cat = x.category?.split(">").pop()?.trim();
   const g = x.rating.google;
   const a = x.rating.app;
   const k = kakao;
+  const n = naver;
   const fr = franchiseLabel(x.franchise);
   const verifiedOffers = x.offers.filter((o) => o.verified);
   const pendingKinds = [...new Set(x.offers.filter((o) => !o.verified).map((o) => o.kind))];
@@ -73,22 +90,28 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
         {k?.rating != null && (
           <span className="inline-flex items-center gap-1">
             <Icon name="star" className="size-4 text-amber-400" fill="currentColor" />
-            <span className="font-semibold tabular-nums">{k.rating.toFixed(1)}</span> <span className="text-caption text-muted">카카오 리뷰 {k.reviewCount.toLocaleString("ko-KR")}개</span>
+            <span className="font-semibold tabular-nums">{k.rating.toFixed(1)}</span> <span className="text-caption text-muted">카카오 {k.reviewCount.toLocaleString("ko-KR")}개</span>
+          </span>
+        )}
+        {n?.rating != null && (
+          <span className="inline-flex items-center gap-1">
+            <Icon name="star" className="size-4 text-green-500" fill="currentColor" />
+            <span className="font-semibold tabular-nums">{n.rating.toFixed(1)}</span> <span className="text-caption text-muted">네이버 {n.reviewCount.toLocaleString("ko-KR")}개</span>
           </span>
         )}
         {g && (
           <span className="inline-flex items-center gap-1">
             <Icon name="star" className="size-4 text-diet-warn" fill="currentColor" />
-            <span className="font-semibold tabular-nums">{g.rating.toFixed(1)}</span> <span className="text-caption text-muted">Google 리뷰 {g.count.toLocaleString("ko-KR")}개</span>
+            <span className="font-semibold tabular-nums">{g.rating.toFixed(1)}</span> <span className="text-caption text-muted">Google {g.count.toLocaleString("ko-KR")}개</span>
           </span>
         )}
         {a && (
           <span className="inline-flex items-center gap-1">
             <Icon name="star" className="size-4 text-leaf" fill="currentColor" />
-            <span className="font-semibold tabular-nums">{a.avg.toFixed(1)}</span> <span className="text-caption text-muted">푸디 이용자 {a.count}명</span>
+            <span className="font-semibold tabular-nums">{a.avg.toFixed(1)}</span> <span className="text-caption text-muted">푸디 {a.count}명</span>
           </span>
         )}
-        {!g && !a && !k?.rating && <span className="text-caption text-muted">{k === null ? "카카오 리뷰 불러오는 중…" : "평점 정보가 아직 없어요"}</span>}
+        {!g && !a && !k?.rating && !n?.rating && <span className="text-caption text-muted">{k === null && n === null ? "리뷰 불러오는 중…" : "평점 정보가 아직 없어요"}</span>}
         {(g || a) && x.fewRatings && <span className="text-caption text-diet-warn-ink">평가가 아직 적어요</span>}
       </div>
 
@@ -138,10 +161,22 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
             길찾기
           </a>
         )}
+        {n?.placeUrl && (
+          <a href={n.placeUrl} target="_blank" rel="noreferrer" className={link}>
+            <Icon name="external" className="size-4 text-green-500" />
+            네이버에서 보기
+          </a>
+        )}
         {k && k.reviews.length > 0 && (
-          <button type="button" aria-expanded={open === "reviews"} onClick={() => setOpen(open === "reviews" ? null : "reviews")} className={link}>
-            <Icon name="message" className="size-4 text-leaf" />
-            카카오 리뷰 보기
+          <button type="button" aria-expanded={open === "kakao-reviews"} onClick={() => setOpen(open === "kakao-reviews" ? null : "kakao-reviews")} className={link}>
+            <Icon name="message" className="size-4 text-amber-400" />
+            카카오 리뷰
+          </button>
+        )}
+        {n && n.reviews.length > 0 && (
+          <button type="button" aria-expanded={open === "naver-reviews"} onClick={() => setOpen(open === "naver-reviews" ? null : "naver-reviews")} className={link}>
+            <Icon name="message" className="size-4 text-green-500" />
+            네이버 리뷰
           </button>
         )}
         <button type="button" aria-expanded={open === "rate"} onClick={() => setOpen(open === "rate" ? null : "rate")} className={link}>
@@ -157,32 +192,41 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
         <div className="rounded-2xl bg-sunken p-3.5" onClick={(e) => e.stopPropagation()}>
           {open === "rate" && <RateForm target={{ id: x.id, name: x.name, example: p.example }} foodSlug={p.foodSlug} onDone={() => undefined} />}
           {open === "report" && <ReportPlaceForm target={{ id: x.id, name: x.name, example: p.example }} onDone={() => undefined} />}
-          {open === "reviews" && k && (
-            <div className="space-y-3">
-              <h4 className="font-bold text-ink">카카오맵 리뷰</h4>
-              {k.reviews.map((r, i) => (
-                <div key={i} className="space-y-1 border-t border-line pt-2 first:border-0 first:pt-0">
-                  <div className="flex items-center gap-2 text-caption">
-                    <span className="inline-flex items-center gap-0.5">
-                      <Icon name="star" className="size-3.5 text-amber-400" fill="currentColor" />
-                      <span className="font-semibold tabular-nums">{r.rating}</span>
-                    </span>
-                    <span className="text-muted">{r.username}</span>
-                    {r.date && <span className="text-muted">{r.date}</span>}
-                  </div>
-                  {r.text && <p className="text-sm text-ink-soft">{r.text}</p>}
-                </div>
-              ))}
-              {x.place_url && (
-                <a href={x.place_url} target="_blank" rel="noreferrer" className="block text-center text-caption font-medium text-leaf hover:underline">
-                  카카오맵에서 리뷰 더 보기 →
-                </a>
-              )}
-            </div>
+          {open === "kakao-reviews" && k && (
+            <ReviewList title="카카오맵 리뷰" reviews={k.reviews} starColor="text-amber-400" moreUrl={x.place_url} moreLabel="카카오맵에서 더 보기" />
+          )}
+          {open === "naver-reviews" && n && (
+            <ReviewList title="네이버 리뷰" reviews={n.reviews} starColor="text-green-500" moreUrl={n.placeUrl} moreLabel="네이버에서 더 보기" />
           )}
         </div>
       )}
     </article>
+  );
+}
+
+function ReviewList({ title, reviews, starColor, moreUrl, moreLabel }: { title: string; reviews: ReviewItem[]; starColor: string; moreUrl: string | null; moreLabel: string }) {
+  return (
+    <div className="space-y-3">
+      <h4 className="font-bold text-ink">{title}</h4>
+      {reviews.map((r, i) => (
+        <div key={i} className="space-y-1 border-t border-line pt-2 first:border-0 first:pt-0">
+          <div className="flex items-center gap-2 text-caption">
+            <span className="inline-flex items-center gap-0.5">
+              <Icon name="star" className={`size-3.5 ${starColor}`} fill="currentColor" />
+              <span className="font-semibold tabular-nums">{r.rating}</span>
+            </span>
+            <span className="text-muted">{r.username}</span>
+            {r.date && <span className="text-muted">{r.date}</span>}
+          </div>
+          {r.text && <p className="text-sm text-ink-soft">{r.text}</p>}
+        </div>
+      ))}
+      {moreUrl && (
+        <a href={moreUrl} target="_blank" rel="noreferrer" className="block text-center text-caption font-medium text-leaf hover:underline">
+          {moreLabel} →
+        </a>
+      )}
+    </div>
   );
 }
 

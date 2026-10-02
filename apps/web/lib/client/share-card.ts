@@ -13,7 +13,7 @@ const W = 1080;
 const H = 1350;
 const C = { green: "#1F5F46", greenDark: "#164634", mint: "#7FD1AE", ivory: "#FBF8F1", soft: "#CFE6DB" };
 
-function family(varName: string, fallback: string) {
+export function family(varName: string, fallback: string) {
   const v = typeof document !== "undefined" ? getComputedStyle(document.documentElement).getPropertyValue(varName).trim() : "";
   return v || fallback;
 }
@@ -118,7 +118,7 @@ export async function drawShareCard(d: ShareCardData): Promise<Blob> {
   return new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error("이미지를 만들지 못했어요"))), "image/png"));
 }
 
-function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   g.beginPath();
   g.moveTo(x + r, y);
   g.arcTo(x + w, y, x + w, y + h, r);
@@ -128,13 +128,14 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.closePath();
 }
 
-/** 휴대폰: 공유 시트(파일 공유 지원 시) · 그 외: 내려받기 */
-export async function shareOrDownload(blob: Blob, countries: number): Promise<"shared" | "downloaded"> {
-  const file = new File([blob], `foodis-passport-${countries}.png`, { type: "image/png" });
+/** 휴대폰: 공유 시트(파일 공유 지원 시) · 그 외: 내려받기. meta 없으면 Passport 카드 (My Table 이 파일명·문구만 바꿔 쓴다) */
+export async function shareOrDownload(blob: Blob, countries: number, meta?: { name: string; title: string; text: string }): Promise<"shared" | "downloaded"> {
+  const m = meta ?? { name: `foodis-passport-${countries}.png`, title: "나의 Food Passport", text: `${countries}개국 음식을 탐험했어요 — FOODIS` };
+  const file = new File([blob], m.name, { type: "image/png" });
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
   if (nav.canShare?.({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title: "나의 Food Passport", text: `${countries}개국 음식을 탐험했어요 — FOODIS` });
+      await nav.share({ files: [file], title: m.title, text: m.text });
       return "shared";
     } catch {
       /* 사용자가 취소하면 아래로 → 내려받기 */

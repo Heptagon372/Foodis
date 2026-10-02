@@ -75,6 +75,13 @@ body {
 .snap-row::-webkit-scrollbar { display: none; }
 .snap-row > * { scroll-snap-align: start; flex: none; }
 
+/* My Table 접시 '내려놓기' (260ms) — 살짝 위·크게에서 식탁으로 */
+@keyframes plate-set {
+  from { opacity: 0; transform: translateY(-14%) scale(1.12); }
+  to { opacity: 1; transform: none; }
+}
+.plate-set { animation: plate-set 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }

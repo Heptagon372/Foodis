@@ -8,6 +8,7 @@ import { ALLERGEN_LABEL, DIET_LABEL } from "./DietBadge";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section, Wordmark } from "./bits";
 import { ShareCardButton } from "./ShareCardButton";
+import { MyTablePreview } from "./MyTable";
 import { AccountCard, AccountNudge } from "./AccountCard";
 import { useAccount } from "@/lib/client/account";
 
@@ -58,6 +59,10 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
         </div>
         <ShareCardButton explored={explored} countries={countries} foodCount={entries.length} dna={dna} />
       </section>
+
+      <Section title="My Table">
+        <MyTablePreview countries={countries} />
+      </Section>
       <AccountNudge foods={entries.length} />
 
       <Section title="국기 그리드" more={<span className="text-caption text-muted">{explored.length}/{countries.length}개국</span>}>

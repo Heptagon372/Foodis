@@ -1,11 +1,13 @@
 "use client";
 // Food Culture Radio 재생기 (F-VOI-05). 화면을 옮겨 다녀도 계속 재생되도록 모듈 단위 상태 + 미니 플레이어.
-// 음성: 세그먼트마다 /api/foodi/tts (다음 세그먼트는 미리 받아 둠) → 실패하면 이후 브라우저 음성(문장 단위).
+// 음성: 세그먼트마다 /api/foodi/tts — 미리 받지 않은 구간은 받는 대로 재생(stream-audio.ts), 다음 세그먼트는 blob 으로 미리 받아 둠
+//       → 실패하면 이후 브라우저 음성(문장 단위).
 // 자막: 서버 음성은 재생 위치를 글자 수 비율로 문장에 대응, 브라우저 음성은 문장 단위라 정확하다.
 import { useSyncExternalStore } from "react";
 import type { Episode } from "@/lib/radio/script";
 import { sentences } from "@/lib/radio/script";
 import { exploredCountries, getState, record } from "./passport";
+import { attachResponse, canStreamAudio, type AttachedAudio } from "./stream-audio";
 import { beforeSpeak, stopSpeaking } from "./voice";
 import { questEvent } from "./quest";
 import { track } from "./track";
@@ -41,6 +43,7 @@ export const radioState = () => st;
 let audio: HTMLAudioElement | null = null;
 let gen = 0; // 이전 재생의 늦게 도착한 콜백 무시용
 const blobs = new Map<string, Promise<string | null>>();
+const CHARS_PER_SEC = 7; // 한국어 TTS 말 속도 어림 (공백·문장부호 포함). 크게 잡으면 자막이 앞서 가므로 보수적으로
 
 function silentWav(): string {
   const n = 800;
@@ -82,7 +85,9 @@ function unlock() {
 }
 
 const key = (ep: number, seg: number) => `${st.channel}:${st.episodes[ep]?.food.slug}:${seg}`;
+const ttsInit = (text: string, signal: AbortSignal): RequestInit => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal });
 
+/** 미리 받기(다음 구간)·다시 듣기용: blob 을 다 받아 둔다 — 재생 중에 받으니 첫 소리 지연과 무관 */
 function fetchSeg(ep: number, seg: number): Promise<string | null> {
   const k = key(ep, seg);
   const text = st.episodes[ep]?.segments[seg]?.text;
@@ -91,12 +96,55 @@ function fetchSeg(ep: number, seg: number): Promise<string | null> {
     blobs.set(
       k,
       // 8초 안에 음성이 안 오면 브라우저 음성으로 — 라디오가 멈춰 있는 것처럼 보이지 않게
-      fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(8000) })
+      fetch("/api/foodi/tts", ttsInit(text, AbortSignal.timeout(8000)))
         .then(async (r) => (r.ok ? URL.createObjectURL(await r.blob()) : null))
         .catch(() => null),
     );
   }
   return blobs.get(k)!;
+}
+
+let live: AttachedAudio | null = null; // 지금 <audio> 에 붙어 받는 중인 스트림 (자막 길이 추정용)
+let cacheEpoch = 0; // releaseAudio 마다 증가 — 늦게 다 받은 스트림이 비운 캐시에 다시 들어가지 않게
+
+/**
+ * 미리 받아 두지 않은 구간(첫 구간·넘기기 직후): 받는 대로 재생해 첫 소리를 당긴다.
+ * 8초 제한은 '첫 소리까지'만 — 긴 구간을 받는 도중에 잘라 버리지 않게.
+ */
+async function streamSeg(my: number, ep: number, seg: number): Promise<"playing" | "paused" | "failed"> {
+  const text = st.episodes[ep]?.segments[seg]?.text;
+  const el = audio;
+  if (!text || !el) return "failed";
+  const k = key(ep, seg);
+  const epoch = cacheEpoch;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let att: AttachedAudio | null = null;
+  try {
+    const res = await fetch("/api/foodi/tts", ttsInit(text, ctrl.signal));
+    if (my !== gen) return (ctrl.abort(), "failed");
+    if (!res.ok) return "failed";
+    att = await attachResponse(res, el);
+    live = att;
+    // 다 받으면 캐시에 — 같은 구간을 다시 들을 때(이전 에피소드·자동 재생 거부 뒤 ▶)는 받지 않고 바로
+    void att.done.then((b) => b && epoch === cacheEpoch && !blobs.has(k) && blobs.set(k, Promise.resolve(URL.createObjectURL(b))));
+    bindAudio(my, ep, seg);
+    await Promise.all([el.play(), att.firstAudio]);
+    // 다음 구간은 첫 소리가 난 뒤에 미리 받는다 — 같이 받으면 지금 구간의 첫 조각과 대역폭을 다툰다
+    const n = nextPos(ep, seg);
+    if (n && my === gen) void fetchSeg(...n);
+    return "playing";
+  } catch (e) {
+    if (my !== gen) return "failed";
+    if ((e as Error)?.name === "NotAllowedError") return "paused"; // 자동 재생 차단 — ▶ 를 다시 누르면 이어진다
+    // 받은 조각이 늦게라도 재생되지 않게 (브라우저 음성과 겹침 방지)
+    el.pause();
+    att?.release();
+    if (live === att) live = null;
+    return "failed";
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function nextPos(ep: number, seg: number): [number, number] | null {
@@ -135,9 +183,14 @@ function bindAudio(my: number, ep: number, seg: number) {
   if (!audio) return;
   const lines = sentences(st.episodes[ep].segments[seg].text);
   const total = lines.reduce((a, l) => a + l.length, 0) || 1;
+  const stream = live;
+  // 받는 중인 스트림의 duration 은 '지금까지 받은 길이'라 자막이 앞서 나간다 → 다 받기 전엔 글자 수로 어림한 길이를 하한으로
+  const duration = (el: HTMLAudioElement) => (stream && stream === live && !stream.complete ? Math.max(el.duration || 0, total / CHARS_PER_SEC) : el.duration);
   audio.ontimeupdate = () => {
-    if (my !== gen || !audio?.duration) return;
-    const at = (audio.currentTime / audio.duration) * total;
+    if (my !== gen || !audio) return;
+    const d = duration(audio);
+    if (!d || !Number.isFinite(d)) return;
+    const at = (audio.currentTime / d) * total;
     let acc = 0;
     const i = lines.findIndex((l) => (acc += l.length) > at);
     if (i >= 0 && i !== st.sent) set({ sent: i });
@@ -155,11 +208,21 @@ async function playAt(ep: number, seg: number, fromSentence = 0) {
   const lines = sentences(st.episodes[ep].segments[seg].text);
 
   if (st.engine === "server") {
+    // 미리 받아 둔(또는 이미 들은) 구간이 아니면 받는 대로 재생 — 첫 소리까지의 시간이 KPI (08 문서 §6)
+    if (audio && !blobs.has(key(ep, seg)) && canStreamAudio()) {
+      const r = await streamSeg(my, ep, seg);
+      if (my !== gen) return;
+      if (r === "playing") return;
+      if (r === "paused") return set({ status: "paused" });
+      set({ engine: "browser" }); // 서버 음성이 없으면 이번 세션은 브라우저 음성으로
+      return speakFrom(my, ep, seg, lines, fromSentence);
+    }
     const url = await fetchSeg(ep, seg);
     if (my !== gen) return;
     if (url && audio) {
       const n = nextPos(ep, seg);
       if (n) void fetchSeg(...n); // 다음 구간 미리 받기
+      live = null;
       audio.src = url;
       bindAudio(my, ep, seg);
       try {
@@ -265,6 +328,9 @@ export function playEpisode(ep: number) {
 function releaseAudio() {
   for (const p of blobs.values()) void p.then((u) => u && URL.revokeObjectURL(u));
   blobs.clear();
+  cacheEpoch++;
+  live?.release();
+  live = null;
 }
 
 export function closeRadio() {

@@ -1,6 +1,6 @@
 import OpenAI, { toFile } from "openai";
 import { env } from "@/lib/env";
-import { ProviderError, type Embedder, type STTProvider, type TTSProvider } from "./types";
+import { ProviderError, type Embedder, type STTProvider, type TTSProvider, type Usage } from "./types";
 
 let shared: OpenAI | undefined;
 const client = () => (shared ??= new OpenAI({ timeout: 8_000, maxRetries: 1 }));
@@ -52,22 +52,35 @@ export function openaiSTT(): STTProvider {
 
 // TTS 후보 B: gpt-4o-mini-tts. 말투 지시로 "호기심 많은 여행 친구" 페르소나 연출 (09 문서 §5.4)
 export function openaiTTS(): TTSProvider {
+  // 헤더가 오면 곧바로 Response 를 준다 — 본문(MP3)은 합성되는 대로 이어서 들어온다
+  const open = (text: string, voice?: string) =>
+    wrap(async () => {
+      const res = await client().audio.speech.create({
+        model: "gpt-4o-mini-tts",
+        voice: voice ?? env.openaiTtsVoice,
+        input: text,
+        instructions: "밝고 호기심 많은 여행 친구처럼, 또박또박 자연스러운 한국어로 말한다.",
+        response_format: "mp3",
+      });
+      if (!res.body) throw new ProviderError("openai", "TTS 응답 본문 없음", true);
+      return res;
+    });
+  const usage = (text: string): Usage => {
+    const seconds = text.length / 15; // 한국어 약 15자/초
+    return { provider: "openai", operation: "tts", units: text.length, unitType: "chars", costUsd: (seconds / 60) * 0.015 };
+  };
   return {
-    synthesize: (text, opts) =>
-      wrap(async () => {
-        const res = await client().audio.speech.create({
-          model: "gpt-4o-mini-tts",
-          voice: opts?.voice ?? env.openaiTtsVoice,
-          input: text,
-          instructions: "밝고 호기심 많은 여행 친구처럼, 또박또박 자연스러운 한국어로 말한다.",
-          response_format: "mp3",
-        });
-        if (!res.body) throw new ProviderError("openai", "TTS 응답 본문 없음", true);
-        const seconds = text.length / 15; // 한국어 약 15자/초
-        return {
-          audio: res.body as ReadableStream<Uint8Array>,
-          usage: { provider: "openai", operation: "tts", units: text.length, unitType: "chars", costUsd: (seconds / 60) * 0.015 },
-        };
-      }),
+    async synthesize(text, opts) {
+      const res = await open(text, opts?.voice);
+      // 끝까지 받아 둔다: 본문이 중간에 끊기면 여기서 throw → 다음 제공자로 (응답을 내보낸 뒤엔 되돌릴 수 없다)
+      const bytes = await res.arrayBuffer().catch((e: Error) => {
+        throw new ProviderError("openai", `TTS 본문 수신 실패: ${e.message}`, true);
+      });
+      return { audio: new Blob([bytes]).stream(), usage: usage(text) };
+    },
+    async stream(text, opts) {
+      const res = await open(text, opts?.voice);
+      return { stream: res.body as ReadableStream<Uint8Array>, contentType: "audio/mpeg", usage: usage(text) };
+    },
   };
 }

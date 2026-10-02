@@ -66,10 +66,13 @@ async function readAll(stream: ReadableStream<Uint8Array>, t0: number) {
   return { bytes, ttfb, total: now() - t0 };
 }
 
-/** 합성 1회: 첫 바이트(스트리밍 재생이면 이때 소리가 난다) · 전체 수신(현재 클라이언트는 다 받은 뒤 재생) */
+/**
+ * 합성 1회: 첫 바이트(앱은 받는 대로 재생 → 이때 소리가 난다) · 전체 수신(다 받은 뒤 재생하던 이전 방식·미리 받은 라디오 구간).
+ * /api/foodi/tts 와 같은 경로: 흘려보낼 수 있는 제공자(OpenAI)는 stream, 아니면(Google) synthesize — 그래서 Google 은 첫 바이트 ≈ 전체.
+ */
 async function synth(tts: TTSProvider, text: string, voice: string) {
   const t0 = now();
-  const { audio } = await tts.synthesize(text, { voice });
+  const audio = tts.stream ? (await tts.stream(text, { voice })).stream : (await tts.synthesize(text, { voice })).audio;
   return readAll(audio, t0);
 }
 
@@ -343,11 +346,11 @@ async function main() {
       stream.push(stt + a + t.ttfb);
       full.push(stt + a + t.total);
     });
-    return [`${c.label} (${c.voice})`, sttLabel, fmtMs(S(stream).p50), fmtMs(S(stream).p95), fmtMs(S(full).p50), fmtMs(S(full).p95), verdict(S(full).p95)];
+    return [`${c.label} (${c.voice})`, sttLabel, fmtMs(S(stream).p50), fmtMs(S(stream).p95), fmtMs(S(full).p50), fmtMs(S(full).p95), verdict(S(stream).p95)];
   });
   e2eRows.push(["브라우저 speechSynthesis (서버 TTS 없음)", "제외 (Web Speech 가정)", `${fmtMs(askS.p50)} + 음성 시작`, `${fmtMs(askS.p95)} + 음성 시작`, "—", "—", "기기에서 측정 (/demo)"]);
   for (const c of candidates.filter((x) => !measured.includes(x))) e2eRows.push([`${c.label} (${c.voice})`, sttLabel, "—", "—", "—", "—", c.skip ?? "측정 없음"]);
-  const e2eTable = markdownTable(["조합", "STT", "첫 음성 p50 (스트리밍 재생 시)", "p95", "첫 음성 p50 (현재: 다 받은 뒤 재생)", "p95", `목표 p95 ≤ ${FIRST_AUDIO_TARGET_MS / 1000}초 (현재 방식)`], e2eRows);
+  const e2eTable = markdownTable(["조합", "STT", "첫 음성 p50 (받는 대로 재생 — 현재 앱)", "p95", "첫 음성 p50 (다 받은 뒤 재생 — 이전 방식)", "p95", `목표 p95 ≤ ${FIRST_AUDIO_TARGET_MS / 1000}초 (현재 앱)`], e2eRows);
 
   const keysLine = Object.entries({ OPENAI_API_KEY: has.openai, "GOOGLE_TTS_CREDENTIALS_JSON·GOOGLE_APPLICATION_CREDENTIALS": has.google, ANTHROPIC_API_KEY: has.anthropic, "Supabase 서비스 키": has.supabase })
     .map(([k, v]) => `${k} ${v ? "있음" : "없음"}`)
@@ -366,7 +369,7 @@ async function main() {
     "",
     ttsTable,
     "",
-    "- 첫 바이트 = 합성 요청 → 오디오 첫 조각 도착. Google `synthesizeSpeech` 는 한 번에 돌려줘서 첫 바이트 ≈ 전체 합성이다 (스트리밍은 `streamingSynthesize` 별도 API).",
+    "- 첫 바이트 = 합성 요청 → 오디오 첫 조각 도착 (/api/foodi/tts 와 같은 경로: OpenAI 는 `stream()`, Google 은 `synthesize()`). Google `synthesizeSpeech` 는 한 번에 돌려줘서 첫 바이트 ≈ 전체 합성이다 (`streamingSynthesize` 를 안 쓰는 이유는 §6).",
     "- 비용은 목록가 기준(무료 구간 제외). OpenAI 는 재생 길이 × 분당 단가 추정. 가격 상수는 스크립트 상단 — 2026-10 확인 필요.",
     "",
     "<details><summary>문장별 상세 · 청취용 파일 (apps/web/bench-out/)</summary>",
@@ -391,7 +394,7 @@ async function main() {
     e2eTable,
     "",
     "- 같은 번호끼리 STT(질문) + /ask + TTS 를 더한 서버 측 합. 기기↔서버 왕복·오디오 디코딩·브라우저 재생 시작은 빠져 있다 → `/demo` 의 \"지연 측정\" 패널로 발표 기기에서 따로 잰다.",
-    "- \"현재 방식\" = lib/client/voice.ts `speak()` 가 MP3 를 끝까지 받은 뒤 재생. \"스트리밍 재생 시\" = 첫 조각부터 재생하도록 바꿨을 때의 기대값.",
+    "- \"받는 대로 재생\" = 현재 앱 (lib/client/stream-audio.ts — `speak()`·라디오가 MediaSource 에 첫 조각부터 붙여 재생, 서버 첫 바이트 기준). \"다 받은 뒤 재생\" = 이전 방식 · MediaSource 미지원 브라우저 · 미리 받은 라디오 구간.",
   ].join("\n");
 
   console.log(`\n${block}\n`);

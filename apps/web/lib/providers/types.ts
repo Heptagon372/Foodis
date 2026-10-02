@@ -8,6 +8,8 @@ export type Usage = {
   units: number;
   unitType: "tokens" | "seconds" | "chars" | "calls";
   costUsd: number;
+  /** 실제로 답한 모델 id (LLM). fallback 으로 다른 제공자가 답했을 때도 정확히 보이게 — 응답의 model_used */
+  model?: string;
 };
 
 export type ModelTier = "fast" | "smart";
@@ -25,13 +27,15 @@ export interface LLMProvider {
     model: ModelTier;
     maxTokens: number;
     operation: string;
-    /** 있으면 user 텍스트 앞에 이미지 블록을 붙인다 (Vision). 비전 모델은 LLM_MODEL_VISION, 없으면 tier 모델 */
+    /** 있으면 user 텍스트 앞에 이미지 블록을 붙인다 (Vision). 비전 모델은 제공자별 LLM_*_VISION, 없으면 tier 모델 */
     image?: ImageInput;
   }): Promise<{ data: z.infer<S>; usage: Usage }>;
 }
 
 export interface Embedder {
-  embed(texts: string[]): Promise<{ vectors: number[][]; usage: Usage }>;
+  /** kind: 검색 질의(query, 기본) / 음식 문서(document), titles: 문서 제목(음식 이름, texts 와 같은 순서).
+   *  Gemini 임베딩은 둘을 다른 접두어로 만든다 — OpenAI 는 무시 */
+  embed(texts: string[], opts?: { kind?: "query" | "document"; titles?: string[] }): Promise<{ vectors: number[][]; usage: Usage }>;
 }
 
 /** 서버 STT 언어 힌트: ko = 한국어(사투리 포함) · auto = 언어 자동 감지(외국어) — 10 문서 */

@@ -8,19 +8,32 @@ export const env = {
   supabaseAnonKey: str("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   supabaseServiceKey: str("SUPABASE_SERVICE_ROLE_KEY"),
 
-  // ── LLM (lib/providers/registry/llm.ts)
-  llmProvider: str("LLM_PROVIDER", "anthropic") as "anthropic",
-  // 09 문서 선정: 의도 분류 = Haiku 4.5, 답변 = Sonnet 5
-  llmModelFast: str("LLM_MODEL_FAST", "claude-haiku-4-5")!,
-  llmModelSmart: str("LLM_MODEL_SMART", "claude-sonnet-5")!,
-  // 사진 인식(F-VIS-01) 모델. 비우면 LLM_MODEL_FAST 를 쓴다 — 후보 목록에서 고르기만 하므로 작은 모델로 충분
-  llmModelVision: str("LLM_MODEL_VISION"),
-  // 음성 지연 예산(답변 1.5초) 때문에 smart 모델은 낮은 effort 로 시작. Haiku 4.5 는 effort 미지원이라 smart 에만 적용
-  llmSmartEffort: str("LLM_SMART_EFFORT", "low") as "low" | "medium" | "high",
+  // ── LLM (lib/providers/registry/llm.ts · docs/design/09_AI_제공자_구성_v2.md)
+  // 시도 순서. 키 없는 제공자는 건너뛰고, 장애(429·5xx·시간 초과·키 오류)면 다음 제공자로. anthropic 은 넣을 때만 쓴다
+  llmProviders: (str("LLM_PROVIDERS", "gemini,openai")!).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
+  // Gemini: 의도 분류·답변 모두 3.5 Flash-Lite ($0.30/$2.50). 음성 지연 예산(답변 1.5초) 때문에 thinking 은 minimal
+  llmGeminiFast: str("LLM_GEMINI_FAST", "gemini-3.5-flash-lite")!,
+  llmGeminiSmart: str("LLM_GEMINI_SMART", "gemini-3.5-flash-lite")!,
+  llmGeminiVision: str("LLM_GEMINI_VISION"), // 비우면 fast 모델
+  llmGeminiFastThinking: str("LLM_GEMINI_FAST_THINKING", "minimal") as "minimal" | "low" | "medium" | "high",
+  llmGeminiSmartThinking: str("LLM_GEMINI_SMART_THINKING", "minimal") as "minimal" | "low" | "medium" | "high",
+  // OpenAI: GPT-6 Luna ($0.10/$0.50). reasoning 은 none — 생각 토큰만큼 첫 음성이 늦어진다
+  llmOpenaiFast: str("LLM_OPENAI_FAST", "gpt-6-luna")!,
+  llmOpenaiSmart: str("LLM_OPENAI_SMART", "gpt-6-luna")!,
+  llmOpenaiVision: str("LLM_OPENAI_VISION"),
+  llmOpenaiFastEffort: str("LLM_OPENAI_FAST_EFFORT", "none") as "none" | "minimal" | "low" | "medium" | "high",
+  llmOpenaiSmartEffort: str("LLM_OPENAI_SMART_EFFORT", "none") as "none" | "minimal" | "low" | "medium" | "high",
+  // Anthropic (선택): 예전 이름 LLM_MODEL_FAST · LLM_MODEL_SMART · LLM_MODEL_VISION · LLM_SMART_EFFORT 도 그대로 읽는다
+  llmAnthropicFast: (str("LLM_ANTHROPIC_FAST") ?? str("LLM_MODEL_FAST", "claude-haiku-4-5"))!,
+  llmAnthropicSmart: (str("LLM_ANTHROPIC_SMART") ?? str("LLM_MODEL_SMART", "claude-sonnet-5"))!,
+  llmAnthropicVision: str("LLM_ANTHROPIC_VISION") ?? str("LLM_MODEL_VISION"),
+  // Haiku 4.5 는 effort 미지원이라 smart 에만 적용
+  llmAnthropicSmartEffort: (str("LLM_ANTHROPIC_SMART_EFFORT") ?? str("LLM_SMART_EFFORT", "low")) as "low" | "medium" | "high",
 
-
-  // ── 임베딩 (registry/embed.ts)
-  embeddingModel: str("EMBEDDING_MODEL", "text-embedding-3-small")!,
+  // ── 임베딩 (registry/embed.ts) — 제공자를 바꾸면 임베딩 전체를 다시 만들어야 한다 (질의·문서 벡터가 같은 모델이어야 비교 가능)
+  // 데이터 파이프라인(s09)도 같은 EMBED_PROVIDER · EMBEDDING_MODEL 을 읽는다. 모델 기본값은 제공자에 따라: openai → text-embedding-3-small, gemini → gemini-embedding-2
+  embedProvider: str("EMBED_PROVIDER", "openai") as "openai" | "gemini",
+  embeddingModel: str("EMBEDDING_MODEL", str("EMBED_PROVIDER") === "gemini" ? "gemini-embedding-2" : "text-embedding-3-small")!,
 
   // ── STT (registry/stt.ts)
   sttModel: str("STT_MODEL", "gpt-transcribe")!,

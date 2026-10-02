@@ -58,6 +58,8 @@
 
 ### 5.1 LLM
 
+> **2026-10-02 갱신:** 기본 LLM 을 Gemini 3.5 Flash-Lite → GPT-6 Luna (장애 대체) 로 바꾸고 Anthropic 은 선택으로 돌렸다. 아래 표는 초기 선정 기록이다 — 현재 모델·가격·비용 추정은 [`docs/design/09_AI_제공자_구성_v2.md`](../design/09_AI_제공자_구성_v2.md).
+
 | 모델 | 가격 (1M 토큰, 입력/출력) | FOODIS 역할 |
 |---|---|---|
 | **Claude Haiku 4.5** | $1 / $5 | 의도 분류·슬롯 추출 (짧고 빠름) |
@@ -116,13 +118,16 @@
 | STT fallback | 질의의 20%만, 5초 | ≈ $0.0001 |
 | **합계** |  | **약 $0.012 (약 16원)** |
 
+> 2026-10-02: 의도·답변 LLM 을 Gemini 3.5 Flash-Lite 로 바꾼 뒤 두 줄 합계는 약 $0.0093 → **약 $0.0016**. 새 추정은 [`docs/design/09_AI_제공자_구성_v2.md`](../design/09_AI_제공자_구성_v2.md) §4.
+
 - 베타 테스트 30명 × 50질의 = 1,500질의 → **약 18달러**. 데모 질문 10개는 응답 캐시로 반복 비용 0.
 - 데이터 구축(s05 초안 180건): 약 4~5달러. 임베딩: 1센트 미만.
 - **API 예산 상한**을 서버에 설정해 하루 한도를 넘으면 캐시·템플릿 응답으로 전환한다 (11 문서).
 
 ## 8. 키 발급 체크리스트
 
-- [ ] Anthropic Console — API 키, 월 사용 한도 설정
+- [ ] Google AI Studio — `GEMINI_API_KEY` (1순위 LLM, 2026-10 추가), 결제·한도 설정
+- [ ] Anthropic Console — API 키, 월 사용 한도 설정 (선택 — 2026-10 부터 기본 LLM 아님)
 - [ ] OpenAI Platform — API 키 (임베딩·STT·TTS 후보), 사용 한도 설정
 - [ ] Google Cloud — Text-to-Speech API 활성화 (TTS 비교용)
 - [ ] Supabase — 프로젝트 생성, `0001_init.sql` 실행, service_role 키 보관

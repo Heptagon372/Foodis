@@ -132,8 +132,9 @@ const KEY_ROWS = [
   ["apps/web/.env.local", "NEXT_PUBLIC_SUPABASE_URL", "Supabase URL"],
   ["apps/web/.env.local", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "Supabase 공개 키"],
   ["apps/web/.env.local", "SUPABASE_SERVICE_ROLE_KEY", "Supabase 서버 키"],
-  ["apps/web/.env.local", "ANTHROPIC_API_KEY", "Anthropic (푸디 답변)"],
-  ["apps/web/.env.local", "OPENAI_API_KEY", "OpenAI (임베딩·STT)"],
+  ["apps/web/.env.local", "GEMINI_API_KEY", "Gemini (푸디 답변 1순위)"],
+  ["apps/web/.env.local", "OPENAI_API_KEY", "OpenAI (답변 2순위·임베딩·STT)"],
+  ["apps/web/.env.local", "ANTHROPIC_API_KEY", "Anthropic (선택)"],
   ["apps/web/.env.local", "GOOGLE_TTS_CREDENTIALS_JSON", "Google TTS"],
   ["foodis-data/.env", "SUPABASE_URL", "데이터: Supabase URL"],
   ["foodis-data/.env", "SUPABASE_SERVICE_ROLE_KEY", "데이터: Supabase 서버 키"],
@@ -276,7 +277,10 @@ function serverLines() {
     const mark = (b, label) => (b ? C.ok(`✓ ${label}`) : C.muted(`✕ ${label}`));
     lines.push(`  데이터  ${h.content?.live ? C.ok("실제 DB") : C.warn("미리보기 샘플")} ${C.muted(`· ${h.content?.reason ?? ""}`)}`);
     lines.push(`  DB      ${h.db?.ok ? C.ok(`연결됨 · 국가 ${h.db.countries}개`) : C.bad(h.db?.error || "연결 안 됨")}`);
-    lines.push(`  키      ${mark(k.supabase, "Supabase")}  ${mark(k.anthropic, "Anthropic")}  ${mark(k.openai, "OpenAI")}  ${mark(k.google_tts, "Google TTS")}`);
+    // 영역별 준비된 제공자 (/api/health providers — 키 값은 없다)
+    const ready = (area) => (h.providers?.[area] ?? []).filter((p) => p.ready).map((p) => p.id);
+    const llm = ready("llm");
+    lines.push(`  키      ${mark(k.supabase, "Supabase")}  ${mark(llm.length, `LLM ${llm.join("→") || ""}`.trim())}  ${mark(ready("embed").length, "임베딩")}  ${mark(ready("tts").length, "TTS")}`);
   } else if (S.phase === "ready") lines.push(`  ${C.muted(S.healthErr ? `상태 확인 실패: ${S.healthErr}` : "상태 확인 중…")}`);
   return lines;
 }

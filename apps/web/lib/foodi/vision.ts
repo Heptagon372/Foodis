@@ -2,11 +2,12 @@
 // 원칙은 대화와 같다: DB가 사실, AI는 고르기만. 이유 문구 외의 사실(이름·요약·식이 배지)은 전부 DB 값으로 채운다.
 // 사진은 이 요청 안에서만 쓰고 어디에도 저장·기록하지 않는다.
 import { z } from "zod";
+import { allowedModel, modelUsed } from "@/lib/ai/models";
 import type { ImageInput, ImageMediaType } from "@/lib/providers/types";
 import { josa } from "./generate";
-import { toCard, type OrchestratorDeps } from "./orchestrator";
+import { chooseLLM, toCard, type OrchestratorDeps } from "./orchestrator";
 import type { CountryRow, FoodName } from "./repo";
-import type { FoodCard } from "./schema";
+import type { FoodCard, ModelUsed } from "./schema";
 
 // ── 입력 검증 ───────────────────────────────────────────────
 export const VISION_MAX_BYTES = 1.5 * 1024 * 1024;
@@ -118,7 +119,7 @@ export function pickCandidates(out: VisionOutput, list: VisionCandidate[]): Visi
 
 // ── 파이프라인 ──────────────────────────────────────────────
 export type VisionCard = FoodCard & { confidence: Confidence };
-export type VisionResponse = { is_food: boolean; speech: string; cards: VisionCard[]; follow_ups: string[] };
+export type VisionResponse = { is_food: boolean; speech: string; cards: VisionCard[]; follow_ups: string[]; model_used?: ModelUsed };
 
 /** 일일 예산 초과: 사진 인식은 템플릿 대체가 없어 라우트가 503 으로 안내한다 */
 export class VisionBudgetError extends Error {}
@@ -126,7 +127,8 @@ export class VisionBudgetError extends Error {}
 export const NO_MATCH = "제 지도에 있는 음식 중에는 닮은 게 없어요.";
 const NO_MATCH_FOLLOW = ["오늘의 음식 추천", "음식 문화 이야기 들려줘"];
 
-export async function recognizeFood(deps: Pick<OrchestratorDeps, "llm" | "repo" | "dailyBudgetUsd">, image: ImageInput): Promise<VisionResponse> {
+/** model: '푸디의 두뇌' 사용자 선택 — 대화와 같은 규칙(목록·키 검증, premium 은 예산 80% 넘으면 기본)으로 사진도 그 모델이 본다 */
+export async function recognizeFood(deps: Pick<OrchestratorDeps, "llm" | "repo" | "dailyBudgetUsd" | "models">, image: ImageInput, model?: string): Promise<VisionResponse> {
   const { repo } = deps;
   const [spent, names, countries] = await Promise.all([repo.usageTodayUsd().catch(() => 0), repo.allFoodNames(), repo.countries()]);
   if (spent >= deps.dailyBudgetUsd) throw new VisionBudgetError("daily budget exceeded");
@@ -134,7 +136,8 @@ export async function recognizeFood(deps: Pick<OrchestratorDeps, "llm" | "repo" 
   const list = candidateList(names, countries);
   if (!list.length) return { is_food: true, speech: NO_MATCH, cards: [], follow_ups: NO_MATCH_FOLLOW };
 
-  const { data, usage } = await deps.llm.structured({
+  const { llm, downgraded } = chooseLLM(deps, deps.models ? allowedModel(model, deps.models.ready) : null, spent);
+  const { data, usage } = await llm.structured({
     system: visionSystem(list),
     user: "이 사진 속 음식과 닮은 음식을 <foods> 목록에서 골라 주세요.",
     schema: VisionOutput,
@@ -153,7 +156,8 @@ export async function recognizeFood(deps: Pick<OrchestratorDeps, "llm" | "repo" 
     const f = rows.get(p.food_id);
     return f ? [{ ...toCard(f, `사진과 닮은 이유: ${p.reason}`), confidence: p.confidence }] : [];
   });
-  return { is_food: data.is_food, ...visionSpeech(cards, data.is_food), cards };
+  const used = modelUsed(usage, downgraded);
+  return { is_food: data.is_food, ...visionSpeech(cards, data.is_food), cards, ...(used ? { model_used: used } : {}) };
 }
 
 function visionSpeech(cards: VisionCard[], isFood: boolean): Pick<VisionResponse, "speech" | "follow_ups"> {

@@ -1,5 +1,6 @@
 // Foodi 파이프라인: cache → intent·슬롯 ∥ 임베딩 → retrieve → generate → validate → 기록 (11 문서 §4, 04 문서 RAG ①~⑧).
 // 어느 외부 서비스가 죽어도 카드가 있는 답은 나간다.
+import { allowedModel, applyBudget, modelUsed, type LLMProviderId, type ModelInfo } from "@/lib/ai/models";
 import type { Embedder, LLMProvider, Usage } from "@/lib/providers/types";
 import { answerCacheKey } from "@/lib/guard/cache";
 import { DIET_LABEL, generate, josa, templateAnswer, type GenContext } from "./generate";
@@ -15,7 +16,22 @@ export type OrchestratorDeps = {
   repo: FoodisRepo;
   dailyBudgetUsd: number;
   now?: () => number;
+  /** '푸디의 두뇌' 사용자 선택을 받을 때만 (deps.ts). 없으면 요청의 model 은 무시하고 llm 만 쓴다 */
+  models?: ModelRouter;
 };
+
+export type ModelRouter = {
+  /** 제공자가 켜져 있고(LLM_PROVIDERS) 키가 있나 */
+  ready(provider: LLMProviderId): boolean;
+  /** 고른 모델의 제공자를 앞세운 LLM — 실패하면 나머지 제공자로 (registry/llm.ts llmFor) */
+  llmFor(model: ModelInfo): LLMProvider;
+};
+
+/** 요청의 model → 이번 요청에 쓸 LLM. 목록 밖·키 없음 → 기본, premium 은 오늘 사용액이 예산의 80% 를 넘으면 기본으로 */
+export function chooseLLM(deps: Pick<OrchestratorDeps, "llm" | "models" | "dailyBudgetUsd">, requested: ModelInfo | null, spentUsd: number) {
+  const choice = applyBudget(requested, spentUsd, deps.dailyBudgetUsd);
+  return { llm: choice.model && deps.models ? deps.models.llmFor(choice.model) : deps.llm, downgraded: choice.downgraded };
+}
 
 const CACHE_TTL_HOURS = 24;
 
@@ -39,7 +55,9 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
 
   // 캐시는 대화 첫 질문만 (데모 질문 10개가 여기 해당). "다른 거 추천" 같은 이어지는 질문은 매번 새로
   const cacheable = req.seen_food_ids.length === 0;
-  const cacheKey = answerCacheKey(req.text, ctx, req.context_food_id);
+  // 사용자가 고른 모델은 목록·키 검증만 먼저 (캐시 키에 들어간다). premium 강등은 사용액을 본 뒤에
+  const requested = deps.models ? allowedModel(req.model, deps.models.ready) : null;
+  const cacheKey = answerCacheKey(req.text, ctx, req.context_food_id, requested?.id);
   const cached = cacheable ? await repo.cacheGet<AskResponse>(cacheKey).catch(() => null) : null;
   if (cached) {
     if (userId) await repo.markExplored(userId, cached.cards.map((c) => c.food_id)).catch(() => {});
@@ -47,15 +65,14 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   }
 
   // 예산 초과 → 캐시·템플릿 모드: LLM·임베딩 호출 없이 규칙 + 키워드 검색만 (11 문서 §6)
-  const [overBudget, countries, foodNames] = await Promise.all([
-    repo.usageTodayUsd().then((u) => u >= deps.dailyBudgetUsd, () => false),
-    repo.countries(),
-    repo.allFoodNames(),
-  ]);
+  const [spentUsd, countries, foodNames] = await Promise.all([repo.usageTodayUsd().catch(() => 0), repo.countries(), repo.allFoodNames()]);
+  const overBudget = spentUsd >= deps.dailyBudgetUsd;
   const vocab: Vocab = { countries, foods: foodNames };
+  const { llm, downgraded } = chooseLLM(deps, requested, spentUsd);
+  let answeredBy: Usage | undefined;
 
   const [intentRes, embedding] = await Promise.all([
-    overBudget ? Promise.resolve(ruleOnly(req.text, req.context_food_id, vocab)) : classify(deps.llm, req.text, req.context_food_id, vocab),
+    overBudget ? Promise.resolve(ruleOnly(req.text, req.context_food_id, vocab)) : classify(llm, req.text, req.context_food_id, vocab),
     // 임베딩은 의도와 무관하게 병렬로 미리 계산 (비용 ≈ 0, 지연 절감)
     overBudget
       ? Promise.resolve(null)
@@ -154,10 +171,12 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
       // 후보 0건 안내는 정상 답. 예산 초과로 LLM 을 건너뛴 템플릿만 validated=false 로 남긴다
       validated = foods.length === 0 || !overBudget;
     } else {
-      const gen = await generate(deps.llm, g, foodNames);
+      const gen = await generate(llm, g, foodNames);
       usages.push(...gen.usages);
-      if (gen.out) out = gen.out;
-      else {
+      if (gen.out) {
+        out = gen.out;
+        answeredBy = gen.usages.at(-1); // 검증을 통과한 마지막 호출
+      } else {
         out = templateAnswer(g);
         validated = false;
       }
@@ -178,6 +197,7 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   });
   const sources = cards.flatMap((c) => (byId.get(c.food_id)?.sources ?? []).slice(0, 2).map((s) => ({ food_id: c.food_id, ...s })));
 
+  const used = modelUsed(answeredBy, downgraded);
   const response: AskResponse = {
     conversation_id: null,
     intent,
@@ -188,6 +208,7 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
     validated,
     ...(notInMap ? { not_in_map: notInMap } : {}),
     ...(passport ? { passport } : {}),
+    ...(used ? { model_used: used } : {}),
   };
 
   const conversationId = await repo
@@ -205,8 +226,8 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   await Promise.all([
     repo.recordUsage(usages, conversationId).catch(() => {}),
     userId && cards.length ? repo.markExplored(userId, cards.map((c) => c.food_id)).catch(() => {}) : null,
-    // 검증 통과한 '일반' 답만 캐시. 개인 기록(passport)은 캐시하지 않는다
-    cacheable && validated && intent !== "passport_status" ? repo.cacheSet(cacheKey, "answer", response, CACHE_TTL_HOURS).catch(() => {}) : null,
+    // 검증 통과한 '일반' 답만 캐시. 개인 기록(passport)·강등된 답(고른 모델의 답이 아님)은 캐시하지 않는다
+    cacheable && validated && intent !== "passport_status" && !downgraded ? repo.cacheSet(cacheKey, "answer", response, CACHE_TTL_HOURS).catch(() => {}) : null,
   ]);
 
   return { ...response, conversation_id: conversationId };

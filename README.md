@@ -11,7 +11,7 @@ Foodis/
 ├─ apps/web/               Next.js 15 앱 (PWA) — 화면 + /api/* BFF
 │  ├─ app/api/             foodi/ask · tts · stt, foods, countries, health
 │  └─ lib/
-│     ├─ providers/        외부 API 어댑터 (Anthropic · OpenAI · Google TTS) — 환경변수로 교체
+│     ├─ providers/        외부 API 어댑터 (Gemini · OpenAI · Anthropic(선택) · Google TTS) — 환경변수로 교체 (docs/design/09_AI_제공자_구성_v2.md)
 │     ├─ foodi/            Orchestrator: intent → retrieve → generate → validate
 │     ├─ guard/            응답 캐시 키 · 속도 제한
 │     └─ db/               Supabase 클라이언트 · Repo 구현

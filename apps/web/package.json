@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
     "@google-cloud/text-to-speech": "^7.1.1",
+    "@google/genai": "^2.26.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "country-flag-emoji-polyfill": "^0.1.10",

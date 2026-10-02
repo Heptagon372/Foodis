@@ -28,6 +28,8 @@ export const AskRequest = z.object({
   input_mode: z.enum(["voice", "text"]).default("voice"),
   /** 이번 대화에서 이미 카드로 보여준 음식 — "다른 거 추천"이 같은 음식을 반복하지 않게 */
   seen_food_ids: uuidList(30),
+  /** '푸디의 두뇌' 사용자 선택 (lib/ai/models 의 id). 서버가 목록·키로 다시 검증 — 모르는 값이면 무시하고 기본 체인 */
+  model: z.string().max(64).optional(),
   /** 게스트 전용: 브라우저에 저장된 프로필 (로그인 사용자는 DB 프로필을 쓰고 이 값은 무시) */
   guest: z
     .object({
@@ -95,4 +97,9 @@ export type AskResponse = {
   /** passport_status 일 때 요약 카드 (03 문서 #7) */
   passport?: PassportSummary;
   cached?: boolean;
+  /** 답을 실제로 만든 모델 (LLM 답일 때만). 템플릿·규칙 답이면 없다 */
+  model_used?: ModelUsed;
 };
+
+/** downgraded: 고른 premium 모델 대신 기본 모델이 답함 (오늘 사용액이 예산의 80% 초과) */
+export type ModelUsed = { id: string; label: string; provider: string; downgraded?: true };

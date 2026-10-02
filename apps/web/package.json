@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:types": "supabase gen types typescript --linked > lib/db/types.gen.ts",
-    "eval:live": "vitest run lib/foodi/eval --mode live"
+    "eval:live": "vitest run lib/foodi/eval --mode live",
+    "bench:voice": "tsx --conditions=react-server scripts/bench-voice.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -36,6 +37,7 @@
     "eslint-config-next": "15.5.27",
     "supabase": "^2.119.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.3"
   }

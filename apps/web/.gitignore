@@ -42,3 +42,6 @@ next-env.d.ts
 !.env.example
 lib/foodi/eval/.last-*.json
 /.next-prod/
+
+# 음성 지연 측정 청취용 오디오 (scripts/bench-voice.ts)
+/bench-out/

@@ -14,7 +14,6 @@ import {
   Bookmark,
   Cake,
   Camera,
-  Volume2,
   Carrot,
   Check,
   ChefHat,
@@ -111,7 +110,6 @@ export const ICONS = {
   "volume-on": Volume2,
   "volume-off": VolumeX,
   wave: AudioLines,
-  volume: Volume2,
   // 상태·정보
   info: Info,
   warn: TriangleAlert,

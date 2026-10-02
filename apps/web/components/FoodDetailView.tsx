@@ -109,7 +109,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
           <div className="flex items-center gap-2">
             <h1 className="text-h1 font-bold text-ink">{food.name_ko}</h1>
             <button type="button" onClick={sayLocal} className={`${btn("soft", "sm")} shrink-0`} aria-label={`${local.text} ${local.native ? "현지" : "영어"} 발음 듣기`}>
-              <Icon name="volume" className="size-4" />
+              <Icon name="volume-on" className="size-4" />
               {local.native ? "현지 발음" : "영어 발음"}
             </button>
           </div>

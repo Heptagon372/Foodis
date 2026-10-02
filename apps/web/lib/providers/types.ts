@@ -34,8 +34,21 @@ export interface Embedder {
   embed(texts: string[]): Promise<{ vectors: number[][]; usage: Usage }>;
 }
 
+/** 서버 STT 언어 힌트: ko = 한국어(사투리 포함) · auto = 언어 자동 감지(외국어) — 10 문서 */
+export type STTLang = "ko" | "auto";
+
+export type STTResult = {
+  /** 들은 그대로 (사용자에게 보여 준다) */
+  text: string;
+  /** 감지된 언어 (ISO 639-1, 예: "ko" "en"). 제공자가 모르면 비움 */
+  language?: string;
+  /** 사투리·외국어를 표준 한국어로 옮긴 문장 — 제공자가 직접 만들 수 있을 때만 (Gemini). 나머지는 normalize 단계가 채운다 */
+  standardKo?: string;
+  usage: Usage;
+};
+
 export interface STTProvider {
-  transcribe(audio: Blob, opts: { lang: "ko"; keywords?: string[] }): Promise<{ text: string; usage: Usage }>;
+  transcribe(audio: Blob, opts: { lang: STTLang; keywords?: string[]; signal?: AbortSignal }): Promise<STTResult>;
 }
 
 export type TTSStream = { stream: ReadableStream<Uint8Array>; contentType: string; usage: Usage };

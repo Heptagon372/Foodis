@@ -18,7 +18,7 @@ import { InAppNotice, MicHelp } from "./MicHelp";
 import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
-type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean; photo?: PhotoTurn };
+type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean; photo?: PhotoTurn; heard?: string };
 
 const Ctx = createContext<{ open(o?: OpenOpts): void } | null>(null);
 export const useFoodi = () => {
@@ -56,7 +56,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const ask = useCallback(
-    async (q: string, mode: "voice" | "text", contextFoodId?: string) => {
+    async (q: string, mode: "voice" | "text", contextFoodId?: string, heard?: string) => {
       const text = q.trim();
       if (!text) return;
       setHint(null);
@@ -66,7 +66,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       if (mode === "voice") questEvent("voice_ask"); // Food Quest: 음성으로 묻기
       const id = ++seq.current;
       const t0 = performance.now(); // KPI: 질의 → 응답 / (음성) 발화 확정 → 첫 음성 재생
-      setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);
+      setTurns((t) => [...t, { id, q: text, mode, contextFoodId, heard }]);
       setVoice("thinking");
       const s = getState();
       const fromServer = async (): Promise<AskResponse> => {
@@ -131,7 +131,8 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setInterim("");
       listenRef.current = listen({
         onInterim: setInterim,
-        onFinal: (t) => void ask(t, "voice", contextFoodId),
+        // 사투리·외국어면 표준어 문장으로 묻고, 들은 말은 질문 아래에 남긴다 (10 문서 §5)
+        onFinal: (t, r) => void ask(r?.standardKo ?? t, "voice", contextFoodId, r?.standardKo && r.standardKo !== t ? t : undefined),
         onError: (reason) => {
           setVoice("idle");
           setInterim("");
@@ -289,6 +290,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
       <button type="button" onClick={onEdit} className="ml-auto block max-w-[85%] text-right text-subtitle text-charcoal/70" title="탭해서 고치기">
         “{t.q}” <span className="text-caption text-muted">✎</span>
       </button>
+      {t.heard && <p className="ml-auto max-w-[85%] text-right text-caption text-muted">들은 말: {t.heard}</p>}
       {!t.res && !t.error && <p className="text-sm text-muted">푸디가 지도를 보고 있어요…</p>}
       {t.error && <p className="rounded-xl bg-surface px-3 py-2 text-sm">{t.error}</p>}
       {t.res && (

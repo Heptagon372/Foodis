@@ -24,6 +24,17 @@ export const env = {
 
   // ── STT (registry/stt.ts)
   sttModel: str("STT_MODEL", "gpt-transcribe")!,
+  // 서버 STT 체인 (10 문서 §3): 쉼표로 1순위부터. 키 없는 엔진은 건너뛰고, 실패하면 다음 엔진으로
+  sttChainKo: str("STT_KO", "elevenlabs,clova,gemini,openai")!, // 한국어(사투리 포함)
+  sttChainMulti: str("STT_MULTI", "elevenlabs,gemini,openai")!, // 언어 자동 감지(외국어)
+  sttElevenlabsKey: str("ELEVENLABS_API_KEY"),
+  sttElevenlabsModel: str("STT_ELEVENLABS_MODEL", "scribe_v2")!,
+  sttClovaSecret: str("CLOVA_SPEECH_SECRET"), // CLOVA Speech 도메인 Secret Key
+  sttClovaUrl: str("CLOVA_SPEECH_STT_URL"), // 비우면 단문 인식 기본 주소
+  sttGeminiKey: str("GEMINI_API_KEY", process.env.GOOGLE_API_KEY),
+  sttGeminiModel: str("STT_GEMINI_MODEL", "gemini-2.5-flash")!,
+  // 사투리·외국어를 표준어로 옮길 때 LLM(빠른 등급)을 부를지. false 면 들은 말 그대로 묻는다
+  sttNormalize: str("STT_NORMALIZE", "true") !== "false",
 
   // ── TTS (registry/tts.ts)
   ttsProvider: str("TTS_PROVIDER", "google") as "google" | "openai",

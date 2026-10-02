@@ -1,5 +1,6 @@
 import OpenAI, { toFile } from "openai";
 import { env } from "@/lib/env";
+import { audioExt, estimateSeconds, normLang, pickKeywords } from "./stt/common";
 import { ProviderError, type Embedder, type STTProvider, type TTSProvider, type Usage } from "./types";
 
 let shared: OpenAI | undefined;
@@ -28,24 +29,26 @@ export function openaiEmbedder(): Embedder {
   };
 }
 
-// STT fallback: GPT Transcribe + DB 음식명 키워드 힌트 ("인제라", "하차푸리" 인식 보강). 분당 $0.0045
-export function openaiSTT(): STTProvider {
+// STT: GPT Transcribe + DB 음식명 키워드 힌트 ("인제라", "하차푸리" 인식 보강). 분당 $0.0045 — 서버 STT 체인의 마지막 안전망 (10 문서)
+// gpt-transcribe 는 language 대신 languages[] 를 받고, 감지한 언어를 languages[{code}] 로 돌려준다 (둘 다 보내지 말 것 — 공식 가이드)
+export function openaiSTT(c: () => OpenAI = client, model = env.sttModel): STTProvider {
+  const modern = model === "gpt-transcribe";
   return {
-    transcribe: (audio, { lang, keywords }) =>
+    transcribe: (audio, { lang, keywords, signal }) =>
       wrap(async () => {
         // API 는 파일 확장자로 형식을 본다: Safari 녹음(mp4)·측정 스크립트(mp3)도 webm 으로 이름 붙이면 거절될 수 있다
         const type = audio.type || "audio/webm";
-        const ext = type.includes("mpeg") || type.includes("mp3") ? "mp3" : type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : type.includes("wav") ? "wav" : "webm";
-        const file = await toFile(audio, `speech.${ext}`, { type });
-        const res = await client().audio.transcriptions.create({
-          model: env.sttModel,
-          file,
-          language: lang,
-          ...(keywords?.length && env.sttModel === "gpt-transcribe" ? { keywords } : {}),
-        });
-        // 길이를 응답에서 알 수 없어 바이트로 추정 (webm/opus ≈ 4KB/초) — 비용 추적용 근사치
-        const seconds = Math.max(1, Math.round(audio.size / 4000));
-        return { text: res.text.trim(), usage: { provider: "openai", operation: "stt", units: seconds, unitType: "seconds", costUsd: (seconds / 60) * 0.0045 } };
+        const file = await toFile(audio, `speech.${audioExt(type)}`, { type });
+        const hint = lang === "ko" ? (modern ? { languages: ["ko"] } : { language: "ko" }) : {}; // auto = 자동 감지
+        const words = modern ? pickKeywords(keywords, 100) : [];
+        const res = await c().audio.transcriptions.create({ model, file, ...hint, ...(words.length ? { keywords: words } : {}) }, { signal });
+        // 길이가 응답에 오면 그걸로, 아니면 바이트로 추정 — 비용 추적용 근사치
+        const seconds = res.usage?.type === "duration" ? Math.max(1, Math.ceil(res.usage.seconds)) : estimateSeconds(audio);
+        return {
+          text: res.text.trim(),
+          language: normLang(res.languages?.[0]?.code) ?? (lang === "ko" ? "ko" : undefined),
+          usage: { provider: "openai", operation: "stt", units: seconds, unitType: "seconds", costUsd: (seconds / 60) * 0.0045 },
+        };
       }),
   };
 }

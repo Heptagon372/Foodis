@@ -13,10 +13,12 @@ export type VoicePrefs = {
   sttMode: "auto" | "server";
   /** 서버 STT 언어 힌트: ko = 한국어(사투리 포함) · auto = 언어 자동 감지 */
   sttLang: "ko" | "auto";
+  /** 서버 STT 엔진 직접 고르기 (null = 자동: 언어 힌트별 기본 체인). 고른 엔진이 실패하면 기본 체인으로 이어진다 */
+  sttEngine: string | null;
 };
 
 const KEY = "foodis:voice";
-const INITIAL: VoicePrefs = { v: 1, ttsVoice: null, radioHosts: null, sttMode: "auto", sttLang: "ko" };
+const INITIAL: VoicePrefs = { v: 1, ttsVoice: null, radioHosts: null, sttMode: "auto", sttLang: "ko", sttEngine: null };
 let state: VoicePrefs = INITIAL;
 let loaded = false;
 const listeners = new Set<() => void>();

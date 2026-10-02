@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Country } from "@/lib/content/types";
 import { drawShareCard, shareOrDownload } from "@/lib/client/share-card";
+import { track } from "@/lib/client/track";
 
 export function ShareCardButton({ explored, countries, foodCount, dna }: { explored: string[]; countries: Country[]; foodCount: number; dna: Record<string, number> }) {
   const [img, setImg] = useState<{ url: string; blob: Blob } | null>(null);
@@ -23,6 +24,7 @@ export function ShareCardButton({ explored, countries, foodCount, dna }: { explo
       });
       if (img) URL.revokeObjectURL(img.url);
       setImg({ url: URL.createObjectURL(blob), blob });
+      track("share_card", { countries: explored.length });
     } catch (e) {
       setMsg((e as Error).message);
     } finally {

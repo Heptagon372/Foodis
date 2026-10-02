@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/bits";
 import { LogoutButton } from "@/components/admin/ui";
-import { requirePage } from "@/lib/admin/auth";
+import { hasRole, requirePage } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "검수 어드민 — FOODIS" };
@@ -13,6 +13,7 @@ const NAV = [
   ["/admin/reports", "신고"],
   ["/admin/import", "가져오기"],
   ["/admin/logs", "AI 로그"],
+  ["/admin/kpi", "KPI"],
 ] as const;
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -25,7 +26,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <span className="text-sm font-semibold text-muted">검수 어드민</span>
         </div>
         <nav className="flex flex-wrap gap-1 text-sm">
-          {NAV.map(([href, label]) => (
+          {NAV.filter(([href]) => href !== "/admin/kpi" || hasRole(s, "reviewer")).map(([href, label]) => (
             <Link key={href} href={href} className="rounded-lg px-3 py-1.5 font-medium text-charcoal/80 hover:bg-mint-100 hover:text-green-800">
               {label}
             </Link>

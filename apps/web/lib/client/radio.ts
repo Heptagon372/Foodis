@@ -7,6 +7,7 @@ import type { Episode } from "@/lib/radio/script";
 import { sentences } from "@/lib/radio/script";
 import { exploredCountries, getState, record } from "./passport";
 import { beforeSpeak, stopSpeaking } from "./voice";
+import { track } from "./track";
 
 export type RadioState = {
   status: "idle" | "loading" | "playing" | "paused" | "ended" | "error";
@@ -108,6 +109,7 @@ function nextPos(ep: number, seg: number): [number, number] | null {
 function markExplored(ep: number) {
   const f = st.episodes[ep]?.food;
   if (f) record({ id: f.id, slug: f.slug, name_ko: f.name_ko, flag: f.flag, country_code: f.country_code, taste_tags: f.taste_tags }, "explored");
+  if (f) track("radio_play", { food_id: f.id }); // 새 에피소드 시작 (KPI 참고 지표)
 }
 
 function mediaSession() {

@@ -7,6 +7,7 @@ import { FoodiProvider } from "@/components/FoodiSheet";
 import { RadioMini } from "@/components/RadioMini";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
+import { Tracker } from "@/components/Tracker";
 import "./globals.css";
 
 // 워드마크·H1: Fraunces (여행·문화 톤 세리프) / 본문: Pretendard (한글), 영문 fallback Inter — 05 문서 §7
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <FlagPolyfill />
         <SWRegister />
         <AccountSync />
+        <Tracker />
         <FoodiProvider>
           <AppFrame>{children}</AppFrame>
           <RadioMini />

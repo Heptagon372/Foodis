@@ -9,6 +9,7 @@ import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
 import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { pauseRadio } from "@/lib/client/radio";
+import { track } from "@/lib/client/track";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
@@ -61,6 +62,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setInterim("");
       pauseRadio(); // 푸디가 답하는 동안 라디오는 잠시 멈춤
       const id = ++seq.current;
+      const t0 = performance.now(); // KPI: 질의 → 응답 / (음성) 발화 확정 → 첫 음성 재생
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);
       setVoice("thinking");
       const s = getState();
@@ -95,17 +97,22 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         seen.current = [...seen.current, ...r.cards.map((c) => c.food_id)];
         // 카드로 보여준 음식은 '탐험함'으로 Passport 에 기록 (F-REC-02)
         for (const c of r.cards) record({ id: c.food_id, slug: c.slug, name_ko: c.name_ko, flag: c.country.flag, country_code: c.country.code, taste_tags: [] }, "explored");
+        const latency_ms = Math.round(performance.now() - t0);
+        let first_audio_ms: number | undefined;
         if (muted) setVoice("idle");
         else {
           setVoice("speaking");
           const audio = packItem ? await cachedAudio(packItem).catch(() => null) : null;
-          await speak(r.speech, () => setVoice((v) => (v === "speaking" ? "idle" : v)), audio);
+          const how = await speak(r.speech, () => setVoice((v) => (v === "speaking" ? "idle" : v)), audio);
+          if (mode === "voice" && how !== "none") first_audio_ms = Math.round(performance.now() - t0);
         }
+        track("ask", { mode, intent: r.intent, cards: r.cards.length, card_ids: r.cards.map((c) => c.food_id), latency_ms, first_audio_ms, offline });
       } catch (e) {
         // fetch 의 TypeError = 네트워크 끊김. 브라우저 원문("Failed to fetch") 대신 사람 말로
         const message = e instanceof TypeError ? "인터넷 연결이 끊겼어요. 연결되면 다시 물어봐 주세요." : (e as Error).message;
         setTurns((t) => t.map((x) => (x.id === id ? { ...x, error: message } : x)));
         setVoice("idle");
+        track("ask", { mode, error: true, latency_ms: Math.round(performance.now() - t0) });
       }
     },
     [muted],
@@ -281,7 +288,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
           {t.res.cards.length > 0 && (
             <div className="snap-row -mx-5 px-5">
               {t.res.cards.map((c) => (
-                <div key={c.food_id} className="w-[82%]">
+                <div key={c.food_id} className="w-[82%]" onClickCapture={(e) => void ((e.target as HTMLElement).closest("a") && track("rec_accept", { food_id: c.food_id, via: "open" }))}>
                   <FoodCard
                     size="L"
                     reason={c.reason}

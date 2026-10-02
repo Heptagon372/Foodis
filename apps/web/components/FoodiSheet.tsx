@@ -214,11 +214,12 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="푸디와 대화">
           <button type="button" aria-label="닫기" onClick={close} className="absolute inset-0 bg-shade/40 backdrop-blur-[2px]" />
           {/* 바탕색 유리 시트: 뒤 화면이 살짝 비치되 글은 또렷하게 (95% 불투명) */}
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] max-w-md animate-sheet flex-col rounded-t-[28px] border-t border-line bg-canvas/95 shadow-[0_-16px_44px_-16px_var(--glass-shadow)] backdrop-blur-xl">
-            <div className="flex justify-center pt-2.5">
+          {/* 모바일: 아래에서 올라오는 시트 / 데스크톱: 오른쪽에서 열리는 패널 (본문을 보면서 묻는다) */}
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] max-w-md animate-sheet flex-col rounded-t-[28px] border-t border-line bg-canvas/95 shadow-[0_-16px_44px_-16px_var(--glass-shadow)] backdrop-blur-xl lg:inset-y-3 lg:left-auto lg:right-3 lg:max-h-none lg:w-[440px] lg:max-w-none lg:animate-panel lg:rounded-[28px] lg:border">
+            <div className="flex justify-center pt-2.5 lg:hidden">
               <span className="h-1.5 w-10 rounded-full bg-line" aria-hidden />
             </div>
-            <div className="flex items-center justify-between gap-3 py-1 pl-5 pr-3">
+            <div className="flex items-center justify-between gap-3 py-1 pl-5 pr-3 lg:pt-3">
               <p className="min-w-0 truncate text-title font-bold text-ink">
                 푸디{context.name && <span className="text-sm font-medium text-muted"> · {context.name} 보는 중</span>}
               </p>

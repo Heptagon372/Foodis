@@ -36,8 +36,8 @@ export function ExploreHub(p: {
   // 안 가본 음식 먼저 — 다음 탐험이 위에
   const foods = [...p.foods].sort((a, b) => Number(explored.includes(a.id)) - Number(explored.includes(b.id)));
   return (
-    <main>
-      <header className="flex h-60 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))]" style={accentBg(p.accent)}>
+    <main className="lg:pt-8">
+      <header className="flex h-60 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:h-64 lg:rounded-[32px] lg:p-8 lg:shadow-soft" style={accentBg(p.accent)}>
         <BackLink href={p.back.href} label={p.back.label} />
         <div className="space-y-2">
           <div className="text-6xl leading-none drop-shadow-sm" aria-hidden>
@@ -50,7 +50,7 @@ export function ExploreHub(p: {
           </div>
         </div>
       </header>
-      <div className="space-y-5 px-5 pb-8 pt-5">
+      <div className="space-y-5 px-5 pb-8 pt-5 lg:px-0 lg:pt-6">
         {p.preview && <PreviewBanner />}
         {p.foods.length > 0 && (
           <div className="flex items-center gap-3">
@@ -61,12 +61,12 @@ export function ExploreHub(p: {
           </div>
         )}
         {p.ask && (
-          <button type="button" onClick={() => open({ question: p.ask!.question })} className={`${btn("primary", "md")} w-full`}>
+          <button type="button" onClick={() => open({ question: p.ask!.question })} className={`${btn("primary", "md")} w-full lg:w-fit`}>
             <MicIcon className="size-5" /> {p.ask.label}
           </button>
         )}
         {foods.length ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {foods.map((f) => (
               <FoodCard
                 key={f.id}

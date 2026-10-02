@@ -13,7 +13,8 @@ import { useFoodi } from "./FoodiSheet";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner } from "./bits";
 import { Icon, type IconName } from "./icons";
-import { BackLink, Eyebrow, IconButton, btn } from "./ui";
+import { TopBar } from "./TopBar";
+import { Eyebrow, IconButton, btn } from "./ui";
 
 // 접시 위 상태 표시 (흰 원 + 라인 아이콘). 탐험은 모든 접시의 기본 상태라 표시하지 않는다
 const MARK: Partial<Record<PassportStatus, { icon: IconName; tone: string }>> = {
@@ -74,14 +75,8 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
   const empty = hydrated && total === 0;
 
   return (
-    <main className="space-y-6 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between gap-3">
-        <BackLink href="/passport" label="Passport" />
-        <span className="glass inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink">
-          <Icon name="table" className="size-[18px] text-leaf" />
-          My Table
-        </span>
-      </header>
+    <main className="space-y-6 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:mx-auto lg:max-w-4xl lg:pt-8">
+      <TopBar back={{ href: "/passport", label: "Passport" }} />
       {preview && <PreviewBanner />}
 
       <div className="space-y-2">

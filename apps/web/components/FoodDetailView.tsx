@@ -88,8 +88,9 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   stats.push({ icon: "pin", label: "어디서", value: `${food.country.name_ko}${food.region_in_country ? ` · ${food.region_in_country}` : ""}` });
 
   return (
-    <main>
-      <header className="relative flex h-80 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))]" style={accentBg(food.accent, food.image_url)}>
+    // 데스크톱: 왼쪽 사진 카드(고정) | 오른쪽 정보 — 모바일은 사진 위 + 시트처럼 겹친 본문
+    <main className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8 lg:pt-8">
+      <header className="relative flex h-80 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:sticky lg:top-8 lg:h-[min(36rem,calc(100dvh-4rem))] lg:overflow-hidden lg:rounded-[32px] lg:pt-5 lg:shadow-lift" style={accentBg(food.accent, food.image_url)}>
         <BackLink href="/" label="홈" onPhoto={!!food.image_url} />
         {/* 사진이 없을 때만 큰 국기가 히어로 — 사진이 있으면 사진이 주인공 */}
         {!food.image_url && (
@@ -97,10 +98,10 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
             {food.flag}
           </span>
         )}
-        <ImageCredit credit={food.image_credit} className="absolute bottom-10 right-4" />
+        <ImageCredit credit={food.image_credit} className="absolute bottom-10 right-4 lg:bottom-4" />
       </header>
 
-      <div className="relative -mt-7 space-y-6 rounded-t-[28px] bg-canvas px-5 pb-8 pt-6">
+      <div className="relative -mt-7 space-y-6 rounded-t-[28px] bg-canvas px-5 pb-8 pt-6 lg:mt-0 lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0">
         {preview && <PreviewBanner />}
 
         <div className="space-y-2">

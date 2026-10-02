@@ -7,9 +7,10 @@ import { useState, type CSSProperties } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import type { JourneyMap } from "@/lib/journey/map";
 import { startRadio } from "@/lib/client/radio";
-import { PreviewBanner, RelationRow, Wordmark } from "./bits";
+import { PreviewBanner, RelationRow } from "./bits";
+import { TopBar } from "./TopBar";
 import { Icon } from "./icons";
-import { BackLink, Eyebrow, IconTile, btn } from "./ui";
+import { Eyebrow, IconTile, btn } from "./ui";
 
 export type JourneyStopView = {
   slug: string;
@@ -47,12 +48,9 @@ export function JourneyView({ food, stops, map, similar, preview }: { food: { sl
   const routeLabel = stops.map((s) => `${s.name_ko}(${s.country})`).join(" → ");
 
   return (
-    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:mx-auto lg:max-w-4xl lg:pt-8">
       <style>{CSS}</style>
-      <header className="flex items-center justify-between gap-3">
-        <BackLink href={`/food/${food.slug}`} label={food.name_ko} />
-        <Wordmark className="text-xl" />
-      </header>
+      <TopBar back={{ href: `/food/${food.slug}`, label: food.name_ko }} />
       {preview && <PreviewBanner />}
 
       <div className="space-y-1">

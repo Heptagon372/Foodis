@@ -12,6 +12,8 @@ export const env = {
   // 09 문서 선정: 의도 분류 = Haiku 4.5, 답변 = Sonnet 5
   llmModelFast: str("LLM_MODEL_FAST", "claude-haiku-4-5")!,
   llmModelSmart: str("LLM_MODEL_SMART", "claude-sonnet-5")!,
+  // 사진 인식(F-VIS-01) 모델. 비우면 LLM_MODEL_FAST 를 쓴다 — 후보 목록에서 고르기만 하므로 작은 모델로 충분
+  llmModelVision: str("LLM_MODEL_VISION"),
   // 음성 지연 예산(답변 1.5초) 때문에 smart 모델은 낮은 effort 로 시작. Haiku 4.5 는 effort 미지원이라 smart 에만 적용
   llmSmartEffort: str("LLM_SMART_EFFORT", "low") as "low" | "medium" | "high",
 

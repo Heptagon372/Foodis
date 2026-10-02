@@ -24,7 +24,8 @@ export type FoodRow = {
 };
 
 export type CountryRow = { code: string; name_ko: string; name_en: string; continent_group: string };
-export type FoodName = { id: string; name_ko: string; name_en: string };
+/** country_code: 사진 인식 후보 목록에 나라를 함께 보여주려고 (F-VIS-01). 테스트 가짜 데이터는 생략 가능 */
+export type FoodName = { id: string; name_ko: string; name_en: string; country_code?: string };
 
 export type UserContext = {
   userId: string | null;

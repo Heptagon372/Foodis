@@ -95,7 +95,7 @@ export function previewRepo(): FoodisRepo {
       return f ? relationsOf(f.slug).filter((r) => !type || r.type === type).slice(0, limit).map((r) => previewId(bySlug.get(r.other)!.n)) : [];
     },
     countries: async () => PREVIEW_COUNTRIES.map(({ code, name_ko, name_en, continent_group }) => ({ code, name_ko, name_en, continent_group })),
-    allFoodNames: async () => PREVIEW_FOODS.map((f) => ({ id: previewId(f.n), name_ko: f.name_ko, name_en: f.name_en })),
+    allFoodNames: async () => PREVIEW_FOODS.map((f) => ({ id: previewId(f.n), name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc })),
     getUserContext: async (userId) => ({ userId, diet: emptyDiet(), allergens: [], tagWeights: {}, exploredCountries: [], exploredFoodIds: [] }),
     recordConversation: async () => null,
     recordUsage: async () => {},

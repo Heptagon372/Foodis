@@ -1,16 +1,18 @@
 // 라디오 편성: 시작 음식에서 관계 그래프를 따라 다음 이야기를 고른다 (03 문서 #5: 터키 커피 → 비엔나 커피).
 // 이어질 관계가 없으면 아직 안 가본 다른 나라로 "점프". 같은 날·같은 채널이면 모두 같은 편성 (공유·대화 소재).
+import type { IconName } from "@/components/icons";
 import type { ContentSource, FoodDetail, FoodSummary, RelationType } from "@/lib/content/types";
 import { buildEpisode, type Bridge, type Episode, type RadioFood } from "./script";
 
+// 채널 아이콘은 이름만 (화면에서 <Icon name=…> 으로 그린다 — 디자인 v2: 이모지 아이콘 대신 라인 아이콘)
 export const CHANNELS = {
-  today: { title: "오늘의 라디오", emoji: "📻", continent: null },
-  asia: { title: "아시아 한 바퀴", emoji: "🥢", continent: "asia" },
-  europe: { title: "유럽 카페 골목", emoji: "☕", continent: "europe" },
-  mena_africa: { title: "중동·아프리카 시장", emoji: "🫓", continent: "mena_africa" },
-  americas: { title: "아메리카 대륙", emoji: "🌽", continent: "americas" },
-  oceania: { title: "오세아니아 섬 식탁", emoji: "🥥", continent: "oceania" },
-} as const;
+  today: { title: "오늘의 라디오", icon: "radio", continent: null },
+  asia: { title: "아시아 한 바퀴", icon: "utensils", continent: "asia" },
+  europe: { title: "유럽 카페 골목", icon: "coffee", continent: "europe" },
+  mena_africa: { title: "중동·아프리카 시장", icon: "wheat", continent: "mena_africa" },
+  americas: { title: "아메리카 대륙", icon: "carrot", continent: "americas" },
+  oceania: { title: "오세아니아 섬 식탁", icon: "citrus", continent: "oceania" },
+} as const satisfies Record<string, { title: string; icon: IconName; continent: string | null }>;
 export type ChannelId = keyof typeof CHANNELS;
 export const isChannel = (v: string | null): v is ChannelId => !!v && v in CHANNELS;
 
@@ -52,7 +54,8 @@ export async function buildRadio(
   const ch = CHANNELS[opts.channel];
   const [foods, countries] = await Promise.all([content.listFoods(), ch.continent ? content.listCountries() : Promise.resolve([])]);
   const inChannel = ch.continent ? new Set(countries.filter((c) => c.continent_group === ch.continent).map((c) => c.code)) : null;
-  const pool = foods.filter((f) => !inChannel || inChannel.has(f.country_code));
+  // 라디오는 검수된 이야기가 있는 음식만 (이름·사진만 있는 카탈로그 음식은 들려줄 내용이 없다)
+  const pool = foods.filter((f) => f.summary && (!inChannel || inChannel.has(f.country_code)));
   const rand = seeded(`${opts.day ?? new Date().toISOString().slice(0, 10)}:${opts.channel}`);
 
   // 안 가본 나라 우선, 그 안에서 날짜 시드

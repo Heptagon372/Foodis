@@ -46,7 +46,7 @@ function refresh(celebrate: boolean) {
 
 function pushToasts(fresh: Celebration[]) {
   // 로그인 직후 동기화처럼 한꺼번에 여럿이 열리면 토스트를 줄 세우지 않고 하나로 묶는다
-  const list: Omit<Toast, "id">[] = fresh.length > 2 ? [{ kind: "badge", emoji: "🎉", label: "축하해요!", title: `퀘스트·배지 ${fresh.length}개를 모았어요` }] : fresh;
+  const list: Omit<Toast, "id">[] = fresh.length > 2 ? [{ kind: "badge", icon: "party", label: "축하해요!", title: `퀘스트·배지 ${fresh.length}개를 모았어요` }] : fresh;
   toasts = [...toasts, ...list.map((c) => ({ ...c, id: ++toastSeq }))];
   toastListeners.forEach((l) => l());
 }

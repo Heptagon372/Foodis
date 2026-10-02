@@ -5,7 +5,10 @@
 //  - 다 받은 뒤 재생: 이전 방식 (MP3 blob 을 끝까지 받고 재생). 미리 받아 둔 라디오 구간·MSE 미지원 브라우저가 이 경로
 // 브라우저 음성: speechSynthesis.speak → utterance start. 휴대폰에선 이게 fallback 이라 같이 본다.
 // 서버 쪽 구간(STT·/ask·합성)은 pnpm bench:voice 가 docs/design/08 문서에 정리한다 — 여기 표는 그 문서 §3 에 붙인다.
+import { Copy } from "lucide-react";
 import { useState } from "react";
+import { Icon, type IconName } from "@/components/icons";
+import { btn } from "@/components/ui";
 import { BENCH_SENTENCES, FIRST_AUDIO_TARGET_MS } from "@/lib/bench/sentences";
 import { fmtMs, markdownTable, summarize } from "@/lib/bench/stats";
 import { attachResponse, canStreamAudio } from "@/lib/client/stream-audio";
@@ -191,32 +194,44 @@ export function VoiceBench() {
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[15px] font-semibold">지연 측정 — 데모 문장 10개 첫 소리까지</h2>
-      <p className="text-caption text-muted">
+      <h2 className="text-title font-bold text-ink">지연 측정 — 데모 문장 10개 첫 소리까지</h2>
+      <p className="text-caption text-ink-soft">
         이 기기에서 실제 재생 경로를 잽니다. 목표: 질문 종료 → 첫 음성 {FIRST_AUDIO_TARGET_MS / 1000}초 (여기 값 + 서버 측 STT·답변 시간). 서버 TTS 는 분당 20회 제한이 있어요 (두 방식을 다 재고 나면 1분 쉬었다가 다시).
       </p>
       <div className="grid grid-cols-3 gap-2">
         {(
           [
-            ["stream", "서버 TTS · 받는 대로"],
-            ["blob", "서버 TTS · 다 받고"],
-            ["browser", "브라우저 음성"],
-          ] as const
-        ).map(([m, label]) => (
-          <button key={m} type="button" onClick={() => run(m)} disabled={!!busy} className="rounded-2xl bg-surface px-2 py-3 text-sm font-semibold text-green-800 shadow-sm disabled:opacity-40">
+            ["stream", "서버 TTS · 받는 대로", "wave"],
+            ["blob", "서버 TTS · 다 받고", "package"],
+            ["browser", "브라우저 음성", "volume-on"],
+          ] as const satisfies readonly (readonly [Mode, string, IconName])[]
+        ).map(([m, label, icon]) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => run(m)}
+            disabled={!!busy}
+            className="card flex min-h-14 flex-col items-center justify-center gap-1 break-keep rounded-2xl px-2 py-3 text-center text-sm font-semibold text-ink transition active:scale-[0.98] disabled:opacity-40"
+          >
+            <Icon name={icon} className="size-5 text-leaf" />
             {label}
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={listen} onChange={(e) => setListen(e.target.checked)} disabled={!!busy} className="size-4 accent-green-800" />
+      <label className="flex min-h-10 items-center gap-2 text-sm text-ink">
+        <input type="checkbox" checked={listen} onChange={(e) => setListen(e.target.checked)} disabled={!!busy} className="size-4 shrink-0 accent-brand" />
         끝까지 듣기 (청취 비교 — 꺼 두면 첫 소리만 내고 바로 멈춰요)
       </label>
-      {busy && <p className="rounded-xl bg-mint-100 px-3 py-2 text-sm text-green-800">{busy} 측정 중…</p>}
+      {busy && (
+        <p role="status" className="flex items-center gap-2 rounded-2xl bg-lime-soft px-4 py-3 text-sm text-leaf">
+          <Icon name="wave" className="size-[18px] shrink-0" />
+          {busy} 측정 중…
+        </p>
+      )}
 
       {summaryRows.length > 0 && (
         <div className="space-y-2">
-          <div className="overflow-x-auto rounded-2xl bg-surface shadow-sm">
+          <div className="card overflow-x-auto rounded-3xl">
             <table className="w-full text-left text-xs tabular-nums">
               <thead className="text-muted">
                 <tr>
@@ -226,30 +241,51 @@ export function VoiceBench() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {summaryRows.map((r) => (
-                  <tr key={r.mode}>
-                    {r.cells.map((c, i) => (
-                      <td key={i} className={`whitespace-nowrap px-3 py-2 ${i === 3 && Number.isFinite(r.p95) ? (r.p95 <= FIRST_AUDIO_TARGET_MS ? "text-green-800" : "font-semibold text-diet-no") : ""} ${i === 0 ? "font-semibold" : ""}`}>
-                        {c}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                {summaryRows.map((r) => {
+                  // p95 칸: 목표 안이면 체크, 넘으면 X — 색만으로 말하지 않게
+                  const judged = Number.isFinite(r.p95);
+                  const met = r.p95 <= FIRST_AUDIO_TARGET_MS;
+                  return (
+                    <tr key={r.mode} className="text-ink">
+                      {r.cells.map((c, i) => (
+                        <td key={i} className={`whitespace-nowrap px-3 py-2 ${i === 3 && judged ? (met ? "text-leaf" : "font-semibold text-diet-no") : ""} ${i === 0 ? "font-semibold" : ""}`}>
+                          {i === 3 && judged ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name={met ? "check" : "close"} className="size-3.5" strokeWidth={2.25} />
+                              {c}
+                              <span className="sr-only">{met ? "(목표 안)" : "(목표 초과)"}</span>
+                            </span>
+                          ) : (
+                            c
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {summaryRows
             .filter((r) => r.errors.length)
             .map((r) => (
-              <p key={r.mode} className="text-caption text-diet-no">
-                {MODE_LABEL[r.mode]}: {r.errors.join(" / ")}
+              <p key={r.mode} className="flex items-start gap-1.5 text-caption text-diet-no">
+                <Icon name="warn" className="mt-px size-3.5 shrink-0" />
+                <span>
+                  {MODE_LABEL[r.mode]}: {r.errors.join(" / ")}
+                </span>
               </p>
             ))}
-          <button type="button" onClick={copy} disabled={!!busy} className="rounded-full border border-line px-3 py-1.5 text-sm disabled:opacity-40">
+          <button type="button" onClick={copy} disabled={!!busy} className={btn("outline", "sm")}>
+            <Copy aria-hidden className="size-4" strokeWidth={1.75} />
             마크다운으로 복사
           </button>
-          {copied && <p className="text-caption text-muted">{copied}</p>}
-          {md && <textarea readOnly value={md} rows={8} className="w-full rounded-xl border border-line bg-surface p-2 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />}
+          {copied && (
+            <p role="status" className="text-caption text-ink-soft">
+              {copied}
+            </p>
+          )}
+          {md && <textarea readOnly value={md} rows={8} aria-label="측정 결과 마크다운" className="w-full rounded-xl border border-line bg-surface p-3 font-mono text-xs text-ink" onFocus={(e) => e.currentTarget.select()} />}
         </div>
       )}
     </section>

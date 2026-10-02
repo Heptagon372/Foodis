@@ -2,13 +2,14 @@
 // 한국에서 맛보기 (docs/design/12): 이 음식을 한국 어디서 먹을 수 있는지 — 지도 + 목록.
 // 위치: '내 주변'을 눌렀을 때만 브라우저 GPS 를 묻는다. 좌표는 우리 서버를 거쳐 카카오 검색에만 쓰이고 저장되지 않는다.
 // 기본은 서울시청 기준(화면에 알림) · 지역 검색으로 바꿀 수 있다.
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MapProvider } from "@/lib/client/map-provider";
 import { DEFAULT_CENTER, DEFAULT_RADIUS, inKorea, RADIUS_STEPS } from "@/lib/places/geo";
 import type { FilterKey, NearbyResponse } from "@/lib/places/types";
 import type { PlacesSetup } from "@/lib/places/server";
 import { useFoodi } from "../FoodiSheet";
+import { Icon } from "../icons";
+import { BackLink, btn, chip, IconTile, SegTabs } from "../ui";
 import { PlaceCard } from "./PlaceCard";
 import { TasteMap } from "./TasteMap";
 
@@ -106,30 +107,45 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const fromLabel = loc.kind === "gps" ? null : (data?.center.label ?? loc.label);
 
   return (
-    <main className="space-y-4 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="space-y-1">
-        <Link href={`/food/${food.slug}`} className="text-sm text-muted">
-          ← {food.flag} {food.name_ko}
-        </Link>
-        <h1 className="text-h2 font-semibold">📍 한국에서 {food.name_ko} 맛보기</h1>
-        <p className="text-caption text-muted">카카오 장소 검색으로 찾은 근처 음식점이에요. 메뉴·영업 여부는 가게에 꼭 확인해 주세요.</p>
+    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <header className="space-y-3">
+        <BackLink href={`/food/${food.slug}`} label={`${food.flag} ${food.name_ko}`} />
+        <div className="space-y-1.5">
+          <h1 className="flex items-center gap-2.5 text-h2 font-bold text-ink">
+            <IconTile icon="pin" size="sm" />
+            한국에서 {food.name_ko} 맛보기
+          </h1>
+          <p className="text-caption text-muted">카카오 장소 검색으로 찾은 근처 음식점이에요. 메뉴·영업 여부는 가게에 꼭 확인해 주세요.</p>
+        </div>
       </header>
 
       {(!setup.kakaoRest || !setup.mapKey) && <SetupPanel setup={setup} dev={dev} />}
 
       {canSearch && (
         <>
-          <section className="space-y-2 rounded-2xl bg-surface p-3 shadow-sm">
+          <section className="card space-y-3 rounded-3xl p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={nearMe} disabled={gps === "asking"} className="rounded-full bg-green-800 px-4 py-2 text-sm font-semibold text-ivory transition active:scale-95 disabled:opacity-60">
-                {gps === "asking" ? "위치 확인 중…" : "📍 내 주변"}
+              <button type="button" onClick={nearMe} disabled={gps === "asking"} className={btn("primary", "sm")}>
+                <Icon name="locate" className="size-4" />
+                {gps === "asking" ? "위치 확인 중…" : "내 주변"}
               </button>
-              <form onSubmit={searchArea} className="flex min-w-0 flex-1 gap-1.5">
-                <input value={area} onChange={(e) => setArea(e.target.value)} maxLength={60} placeholder="지역·역 이름 (예: 강남역)" aria-label="지역으로 찾기" className="min-w-0 flex-1 rounded-full border border-line px-3 py-2 text-sm" />
-                <button className="shrink-0 rounded-full border border-line px-3 py-2 text-sm font-medium">찾기</button>
+              {/* 좁은 화면에선 검색칸이 다음 줄 전체 폭으로 내려가 placeholder 가 잘리지 않게 */}
+              <form onSubmit={searchArea} className="flex min-w-[15rem] flex-1 gap-1.5">
+                <input
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  maxLength={60}
+                  placeholder="지역·역 이름 (예: 강남역)"
+                  aria-label="지역으로 찾기"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-line bg-sunken px-4 text-sm text-ink placeholder:text-muted focus:border-brand"
+                />
+                <button className={`${btn("outline", "sm")} shrink-0 px-3.5`}>
+                  <Icon name="search" className="size-4" />
+                  찾기
+                </button>
               </form>
             </div>
-            <p className="text-caption text-muted">
+            <p className="text-caption text-ink-soft">
               {loc.kind === "gps" ? "내 위치 기준" : `${fromLabel ?? "선택한 지역"} 기준`} · 반경 {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}
               {gps === "denied" && " · 위치 권한이 없어 지역 검색이나 서울시청 기준으로 보여드려요"}
               {gps === "unsupported" && " · 이 브라우저는 위치를 지원하지 않아요"}
@@ -139,21 +155,14 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
             <p className="text-caption text-muted">위치는 주변 검색에만 쓰고 저장하지 않아요.</p>
           </section>
 
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-full bg-line/50 p-1 text-sm" role="tablist" aria-label="정렬">
-              {(
-                [
-                  ["distance", "가까운 순"],
-                  ["best", "맛있는 순"],
-                ] as const
-              ).map(([k, label]) => (
-                <button key={k} role="tab" aria-selected={sort === k} onClick={() => setSort(k)} className={`rounded-full px-3 py-1.5 font-semibold transition ${sort === k ? "bg-surface text-green-800 shadow-sm" : "text-muted"}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+          <SegTabs
+            tabs={["distance", "best"] as const}
+            value={sort}
+            onChange={setSort}
+            label="정렬"
+            labels={{ distance: "가까운 순", best: "맛있는 순" }}
+          />
+          <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
             {FILTERS.map(([k, label]) => (
               <Chip key={k} on={filters.includes(k)} onClick={() => toggle(k)}>
                 {label}
@@ -163,53 +172,70 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
               프랜차이즈 제외
             </Chip>
           </div>
-          {indieOnly && !data?.sources.franchiseSyncedAt && !example && <p className="text-caption text-[#7a5a10]">가맹 브랜드 목록을 아직 받지 않아 &lsquo;개인 음식점&rsquo;을 가릴 수 없어요.</p>}
+          {indieOnly && !data?.sources.franchiseSyncedAt && !example && <p className="text-caption text-diet-warn-ink">가맹 브랜드 목록을 아직 받지 않아 &lsquo;개인 음식점&rsquo;을 가릴 수 없어요.</p>}
 
-          {example && <p className="rounded-xl border-2 border-dashed border-diet-warn bg-diet-warn/10 px-3 py-2 text-sm font-semibold text-[#7a5a10]">예시 데이터 — 개발 미리보기 전용이에요. 실제 음식점·평점·혜택이 아니에요.</p>}
+          {example && (
+            <p className="flex items-start gap-2 rounded-2xl border-2 border-dashed border-diet-warn bg-diet-warn/10 px-3.5 py-3 text-sm font-semibold text-diet-warn-ink">
+              <Icon name="warn" className="mt-0.5 size-4 shrink-0" />
+              예시 데이터 — 개발 미리보기 전용이에요. 실제 음식점·평점·혜택이 아니에요.
+            </p>
+          )}
 
           {showMap && <TasteMap provider={setup.mapProvider as MapProvider} mapKey={mapKey!} center={center} me={me} pins={pins} selected={selected} onPick={(id) => (setSelected(id), document.getElementById(`place-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }))} />}
-          {googleList && <p className="rounded-xl bg-line/40 px-3 py-2 text-caption text-muted">Google 평점이 들어간 목록은 Google 정책상 다른 지도와 함께 보여줄 수 없어서 목록으로만 보여드려요. 지도는 &lsquo;가까운 순&rsquo;에서 볼 수 있어요.</p>}
+          {googleList && (
+            <p className="flex items-start gap-2 rounded-2xl bg-sunken px-3.5 py-3 text-caption text-ink-soft">
+              <Icon name="info" className="mt-px size-4 shrink-0 text-leaf" />
+              <span>Google 평점이 들어간 목록은 Google 정책상 다른 지도와 함께 보여줄 수 없어서 목록으로만 보여드려요. 지도는 &lsquo;가까운 순&rsquo;에서 볼 수 있어요.</span>
+            </p>
+          )}
 
           {status === "loading" && !data && <p className="py-8 text-center text-sm text-muted">근처 음식점을 찾는 중…</p>}
-          {status === "error" && <p className="rounded-xl bg-diet-no/10 px-3 py-2 text-sm text-diet-no">{error}</p>}
+          {status === "error" && (
+            <p className="flex items-start gap-2 rounded-2xl bg-diet-no/10 px-3.5 py-3 text-sm text-diet-no">
+              <Icon name="warn" className="mt-0.5 size-4 shrink-0" />
+              {error}
+            </p>
+          )}
 
           {data && (
             <section className={`space-y-3 transition-opacity ${status === "loading" ? "opacity-50" : ""}`} aria-busy={status === "loading"}>
               {/* 예시 데이터 안내는 위 점선 배너로 이미 크게 보여준다 */}
               {data.notices.filter((n) => !(example && n.startsWith("예시 데이터"))).map((n) => (
-                <p key={n} className="text-caption text-[#7a5a10]">
-                  ⓘ {n}
+                <p key={n} className="flex items-start gap-1.5 text-caption text-diet-warn-ink">
+                  <Icon name="info" className="mt-px size-4 shrink-0" />
+                  {n}
                 </p>
               ))}
               {places.map((p, i) => (
                 <PlaceCard key={p.id} place={p} index={i} foodName={food.name_ko} foodSlug={food.slug} countryName={food.country_name} fromLabel={fromLabel} example={example} selected={selected === p.id} onSelect={() => setSelected(p.id)} />
               ))}
               {!places.length && (
-                <div className="space-y-3 rounded-2xl bg-surface p-5 text-center shadow-sm">
+                <div className="card space-y-3 rounded-3xl p-5 text-center">
                   {data.totalBeforeFilter > 0 ? (
                     <>
-                      <p className="text-sm">조건에 맞는 곳이 없어요. 필터를 풀면 {data.totalBeforeFilter}곳이 있어요.</p>
-                      <button type="button" onClick={() => (setFilters([]), setIndieOnly(false))} className="rounded-full border border-line px-4 py-2 text-sm font-semibold">
+                      <p className="text-sm text-ink">조건에 맞는 곳이 없어요. 필터를 풀면 {data.totalBeforeFilter}곳이 있어요.</p>
+                      <button type="button" onClick={() => (setFilters([]), setIndieOnly(false))} className={btn("outline", "sm")}>
                         필터 모두 풀기
                       </button>
                     </>
                   ) : (
                     <>
-                      <p className="text-sm">근처에서 {food.name_ko} 파는 곳을 찾지 못했어요.</p>
+                      <p className="text-sm text-ink">근처에서 {food.name_ko} 파는 곳을 찾지 못했어요.</p>
                       {nextRadius && (
-                        <button type="button" onClick={() => setRadius(nextRadius)} className="rounded-full bg-green-800 px-4 py-2 text-sm font-semibold text-ivory">
+                        <button type="button" onClick={() => setRadius(nextRadius)} className={btn("primary", "sm")}>
                           반경 {nextRadius / 1000}km로 넓히기
                         </button>
                       )}
                     </>
                   )}
-                  <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, question: `${food.name_ko}랑 비슷한데 한국에서 먹기 쉬운 음식 추천해 줘` })} className="block w-full rounded-2xl border border-mint-500/60 py-3 text-sm font-semibold text-green-800">
+                  <button type="button" onClick={() => open({ contextFoodId: food.id, contextName: food.name_ko, question: `${food.name_ko}랑 비슷한데 한국에서 먹기 쉬운 음식 추천해 줘` })} className={`${btn("soft", "md")} w-full`}>
+                    <Icon name="sparkle" className="size-5" />
                     푸디에게 다른 음식 추천받기
                   </button>
                 </div>
               )}
               {places.length > 0 && nextRadius && (
-                <button type="button" onClick={() => setRadius(nextRadius)} className="w-full rounded-2xl border border-line py-3 text-sm font-medium text-muted">
+                <button type="button" onClick={() => setRadius(nextRadius)} className={`${btn("glass", "md")} w-full`}>
                   반경 {nextRadius / 1000}km로 넓혀서 더 찾기
                 </button>
               )}
@@ -228,7 +254,8 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" aria-pressed={on} onClick={onClick} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition active:scale-95 ${on ? "border-green-800 bg-green-800 text-ivory" : "border-line bg-surface text-charcoal/80"}`}>
+    <button type="button" aria-pressed={on} onClick={onClick} className={`${chip(on)} shrink-0`}>
+      {on && <Icon name="check" className="size-4" strokeWidth={2.25} />}
       {children}
     </button>
   );
@@ -244,15 +271,19 @@ function SetupPanel({ setup, dev }: { setup: PlacesSetup; dev: boolean }) {
     [setup.ftc, "FTC_FRANCHISE_API_KEY", "선택 · 가맹 브랜드 동기화 (어드민)"],
   ];
   if (!dev)
-    return <p className="rounded-2xl bg-surface p-4 text-sm text-muted shadow-sm">{setup.kakaoRest ? "지도를 준비 중이에요. 목록으로 먼저 보여드릴게요." : "음식점 찾기를 준비 중이에요. 조금만 기다려 주세요."}</p>;
+    return <p className="card rounded-3xl p-4 text-sm text-ink-soft">{setup.kakaoRest ? "지도를 준비 중이에요. 목록으로 먼저 보여드릴게요." : "음식점 찾기를 준비 중이에요. 조금만 기다려 주세요."}</p>;
   return (
-    <section className="space-y-2 rounded-2xl border border-diet-warn/50 bg-diet-warn/10 p-4">
-      <p className="font-semibold text-[#7a5a10]">지도 키 설정 필요</p>
-      <p className="text-caption text-[#7a5a10]">apps/web/.env.local 에 아래 값을 넣고 개발 서버를 다시 켜세요. 발급 방법: docs/design/12_한국에서_맛보기_지도.md</p>
-      <ul className="space-y-1 text-caption">
+    <section className="space-y-2 rounded-3xl border border-diet-warn/50 bg-diet-warn/10 p-4">
+      <p className="flex items-center gap-1.5 font-semibold text-diet-warn-ink">
+        <Icon name="key" className="size-4" />
+        지도 키 설정 필요
+      </p>
+      <p className="text-caption text-diet-warn-ink">apps/web/.env.local 에 아래 값을 넣고 개발 서버를 다시 켜세요. 발급 방법: docs/design/12_한국에서_맛보기_지도.md</p>
+      <ul className="space-y-1 text-caption text-ink">
         {rows.map(([ok, name, what]) => (
           <li key={name} className="flex gap-2">
-            <span aria-hidden>{ok ? "✅" : "⬜"}</span>
+            <Icon name={ok ? "check-circle" : "circle"} className={`mt-px size-4 shrink-0 ${ok ? "text-leaf" : "text-muted"}`} />
+            <span className="sr-only">{ok ? "설정됨: " : "없음: "}</span>
             <span>
               <code className="font-semibold">{name}</code> — {what}
             </span>

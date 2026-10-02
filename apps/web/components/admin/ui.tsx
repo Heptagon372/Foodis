@@ -1,7 +1,10 @@
 "use client";
 // 어드민 공용 클라이언트 조각: API 호출 버튼, 로그아웃
+// 모양은 디자인 v2 부품(btn) + 테마 토큰만 → 라이트/다크가 같이 맞는다 (docs/design/09)
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { btn } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 
 export async function callApi(url: string, method: string, body?: unknown) {
@@ -19,7 +22,13 @@ export function ActionButton(p: { url: string; method?: string; body?: unknown; 
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const tone = { primary: "bg-green-800 text-ivory", plain: "border border-line bg-surface", danger: "border border-diet-no/40 text-diet-no bg-surface" }[p.tone ?? "plain"];
+  // 위험 동작은 초록 대신 의미색 테두리 — 주 버튼과 헷갈리지 않게
+  const tone = {
+    primary: btn("primary", "sm"),
+    plain: btn("outline", "sm"),
+    danger:
+      "inline-flex h-10 select-none items-center justify-center gap-2 rounded-full border border-diet-no/40 bg-surface px-4 text-[13px] font-semibold text-diet-no transition hover:border-diet-no/70 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45",
+  }[p.tone ?? "plain"];
   return (
     <span className="inline-flex flex-col gap-1">
       <button
@@ -39,11 +48,15 @@ export function ActionButton(p: { url: string; method?: string; body?: unknown; 
             setBusy(false);
           }
         }}
-        className={`rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 ${tone}`}
+        className={tone}
       >
         {busy ? "처리 중…" : p.children}
       </button>
-      {msg && <span className="max-w-xs whitespace-pre-line text-caption text-muted">{msg}</span>}
+      {msg && (
+        <span role="status" className="max-w-xs whitespace-pre-line text-caption text-ink-soft">
+          {msg}
+        </span>
+      )}
     </span>
   );
 }
@@ -58,8 +71,9 @@ export function LogoutButton() {
         router.replace("/admin/login");
         router.refresh();
       }}
-      className="text-caption text-muted underline"
+      className={btn("ghost", "sm")}
     >
+      <LogOut aria-hidden className="size-4" strokeWidth={1.75} />
       로그아웃
     </button>
   );

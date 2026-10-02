@@ -1,6 +1,8 @@
 "use client";
 // 상세 화면 "정보가 틀렸나요?" → /api/reports → 어드민 신고 큐 (F-ADM-03)
 import { useState } from "react";
+import { Icon } from "./icons";
+import { btn, chip } from "./ui";
 
 const FIELDS: [string, string][] = [
   ["diet_vegan", "비건 정보"],
@@ -23,15 +25,22 @@ export function ReportForm({ foodId }: { foodId: string }) {
 
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-caption text-muted underline decoration-line underline-offset-2">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-1.5 text-caption text-muted underline decoration-line underline-offset-2 hover:text-ink-soft">
+        <Icon name="warn" className="size-4 shrink-0" />
         정보가 틀렸나요? 신고하기
       </button>
     );
-  if (state === "done") return <p className="rounded-xl bg-mint-100 px-3 py-2 text-sm text-green-800">고마워요! 검수팀이 확인할게요. {note}</p>;
+  if (state === "done")
+    return (
+      <p className="flex items-start gap-2 rounded-2xl bg-lime-soft px-3.5 py-2.5 text-sm text-ink" role="status">
+        <Icon name="check-circle" className="mt-px size-[18px] shrink-0 text-leaf" />
+        <span className="min-w-0">고마워요! 검수팀이 확인할게요. {note}</span>
+      </p>
+    );
 
   return (
     <form
-      className="space-y-2 rounded-2xl bg-surface p-4 shadow-sm"
+      className="card space-y-3 rounded-3xl p-4"
       onSubmit={async (e) => {
         e.preventDefault();
         setState("sending");
@@ -46,21 +55,27 @@ export function ReportForm({ foodId }: { foodId: string }) {
         }
       }}
     >
-      <p className="text-sm font-semibold">어떤 정보가 틀렸나요?</p>
-      <div className="flex flex-wrap gap-1.5">
+      <p className="text-sm font-semibold text-ink">어떤 정보가 틀렸나요?</p>
+      <div className="flex flex-wrap gap-2">
         {FIELDS.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setField(k)} className={`rounded-full border px-3 py-1 text-caption ${field === k ? "border-green-800 bg-green-800 text-ivory" : "border-line"}`}>
+          <button key={k} type="button" onClick={() => setField(k)} aria-pressed={field === k} className={chip(field === k)}>
+            {field === k && <Icon name="check" className="-ml-1 size-4" />}
             {label}
           </button>
         ))}
       </div>
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={2} placeholder="어디서 확인했는지 알려주면 큰 도움이 돼요 (선택)" className="w-full rounded-xl border border-line px-3 py-2 text-sm" />
-      {state === "error" && <p className="text-caption text-diet-no">{note}</p>}
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={2} placeholder="어디서 확인했는지 알려주면 큰 도움이 돼요 (선택)" aria-label="확인한 곳 (선택)" className="w-full rounded-2xl border border-line bg-sunken px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-leaf/50 focus:ring-2 focus:ring-leaf/25" />
+      {state === "error" && (
+        <p className="flex items-center gap-1.5 text-caption text-diet-no" role="alert">
+          <Icon name="warn" className="size-4 shrink-0" />
+          {note}
+        </p>
+      )}
       <div className="flex gap-2">
-        <button disabled={state === "sending"} className="rounded-full bg-green-800 px-4 py-2 text-sm font-semibold text-ivory disabled:opacity-50">
+        <button disabled={state === "sending"} className={btn("primary", "sm")}>
           {state === "sending" ? "보내는 중…" : "신고 보내기"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-full px-4 py-2 text-sm text-muted">
+        <button type="button" onClick={() => setOpen(false)} className={btn("ghost", "sm")}>
           취소
         </button>
       </div>

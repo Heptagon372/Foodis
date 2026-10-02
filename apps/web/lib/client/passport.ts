@@ -3,6 +3,7 @@
 // localStorage 는 사파리 비공개 모드 등에서 막힐 수 있어 모든 접근을 try/catch 로 감싼다.
 import { useRef, useSyncExternalStore } from "react";
 import type { Allergen, DietKey } from "@/lib/foodi/schema";
+import { signal } from "./taste";
 import { track } from "./track";
 
 export type PassportStatus = "explored" | "tried" | "liked" | "saved";
@@ -93,6 +94,7 @@ export function record(food: FoodRef, status: PassportStatus) {
 export function toggle(food: FoodRef, status: Exclude<PassportStatus, "explored">) {
   const has = getState().entries[food.id]?.statuses.includes(status);
   if (!has && status === "liked") track("rec_accept", { food_id: food.id, via: "like" }); // 추천 카드였는지는 KPI 계산에서 가린다
+  if (!has) signal(status === "liked" ? "like" : status, food); // 취향 엔진: 좋아요 4 · 먹어봤어요 3 · 저장 2.5
   if (!has) return record(food, status);
   update((s) => {
     const e = s.entries[food.id];

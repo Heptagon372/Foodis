@@ -1,9 +1,12 @@
 "use client";
 // 음식 편집·검수 (F-ADM-01). 규칙 위반은 저장 전에 바로 보여 주고, 근거 링크를 옆에 둔다.
 // 저장하면 검수가 풀리고(내가 작성자), 승인은 다른 사람이 한다 — 07 문서 거버넌스.
+import { Clock, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { DIET_LABEL } from "@/components/DietBadge";
+import { Icon } from "@/components/icons";
+import { btn, chip } from "@/components/ui";
 import { ALLERGEN_LABEL } from "@/components/DietBadge";
 import { TASTE_LABEL } from "@/lib/content/types";
 import { dietProblems, levelLabel, type FoodEdit } from "@/lib/admin/rules";
@@ -23,7 +26,16 @@ type Props = {
 };
 
 const LEVELS: DietLevel[] = ["yes", "depends", "no", "unknown"];
-const LEVEL_TONE: Record<DietLevel, string> = { yes: "bg-diet-ok text-white", depends: "bg-diet-warn text-charcoal", no: "bg-diet-no text-white", unknown: "bg-diet-unknown/40 text-charcoal" };
+// 고른 값 = 의미색 채움 + 체크 아이콘. 글자색은 테마 토큰(on-brand·on-lime·ink)이라 다크에서도 읽힌다
+const LEVEL_TONE: Record<DietLevel, string> = {
+  yes: "border-diet-ok bg-diet-ok text-on-brand",
+  depends: "border-diet-warn bg-diet-warn text-on-lime",
+  no: "border-diet-no bg-diet-no text-on-brand",
+  unknown: "border-diet-unknown bg-diet-unknown/40 text-ink",
+};
+const FIELD = "w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-brand";
+const INPUT = `${FIELD} h-10`;
+const CARD = "card space-y-3 rounded-3xl p-5";
 const METHODS = ["fermented", "grilled", "steamed", "stewed", "raw", "fried", "baked", "boiled", "stir_fried", "mixed"];
 const COURSES = ["main", "side", "soup", "street", "dessert", "drink", "bread", "condiment"];
 
@@ -66,9 +78,9 @@ export function FoodEditor(p: Props) {
         {hint && <span className="font-normal"> · {hint}</span>}
       </span>
       {rows === 1 ? (
-        <input value={(f[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+        <input value={(f[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} className={INPUT} />
       ) : (
-        <textarea value={(f[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} rows={rows} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm leading-relaxed" />
+        <textarea value={(f[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} rows={rows} className={`${FIELD} py-2 leading-relaxed`} />
       )}
     </label>
   );
@@ -77,7 +89,8 @@ export function FoodEditor(p: Props) {
       {all.map((v) => {
         const on = (f[key] as string[]).includes(v);
         return (
-          <button key={v} type="button" onClick={() => set(key, (on ? (f[key] as string[]).filter((x) => x !== v) : [...(f[key] as string[]), v]) as never)} className={`rounded-full border px-2.5 py-1 text-caption ${on ? "border-green-800 bg-green-800 text-ivory" : "border-line bg-surface"}`}>
+          <button key={v} type="button" aria-pressed={on} onClick={() => set(key, (on ? (f[key] as string[]).filter((x) => x !== v) : [...(f[key] as string[]), v]) as never)} className={chip(on)}>
+            {on && <Icon name="check" className="size-4" />}
             {label(v)}
           </button>
         );
@@ -89,11 +102,24 @@ export function FoodEditor(p: Props) {
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-5">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-h2 font-semibold">{p.id ? f.name_ko || "음식" : "새 음식"}</h1>
-          {p.id && (p.verified ? <span className="rounded-full bg-diet-ok/15 px-2.5 py-1 text-caption font-semibold text-diet-ok">✓ 검수 완료</span> : <span className="rounded-full bg-diet-warn/20 px-2.5 py-1 text-caption font-semibold text-[#7a5a10]">검수 대기</span>)}
+          <h1 className="text-h2 font-bold text-ink">{p.id ? f.name_ko || "음식" : "새 음식"}</h1>
+          {p.id &&
+            (p.verified ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-diet-ok/15 px-2.5 py-1 text-caption font-semibold text-diet-ok">
+                <Icon name="check-circle" className="size-4" />
+                검수 완료
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-diet-warn/20 px-2.5 py-1 text-caption font-semibold text-diet-warn-ink">
+                <Clock aria-hidden className="size-4" strokeWidth={1.75} />
+                검수 대기
+              </span>
+            ))}
           {p.slug && (
-            <a href={`/food/${p.slug}`} target="_blank" rel="noreferrer" className="text-caption text-muted underline">
-              앱에서 보기 ↗
+            <a href={`/food/${p.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1 text-caption text-leaf underline">
+              앱에서 보기
+              <ExternalLink aria-hidden className="size-3.5" strokeWidth={1.75} />
+              <span className="sr-only">(새 창)</span>
             </a>
           )}
         </div>
@@ -101,7 +127,7 @@ export function FoodEditor(p: Props) {
         {!p.id && (
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-muted">slug · 영소문자·숫자·하이픈 (예: doro-wat)</span>
-            <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+            <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} className={INPUT} />
           </label>
         )}
 
@@ -111,7 +137,7 @@ export function FoodEditor(p: Props) {
           {text("name_local", "현지 표기")}
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-muted">국가</span>
-            <select value={f.country_code} onChange={(e) => set("country_code", e.target.value)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <select value={f.country_code} onChange={(e) => set("country_code", e.target.value)} className={INPUT}>
               {p.countries.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} {c.name_ko}
@@ -132,7 +158,7 @@ export function FoodEditor(p: Props) {
         <section className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-muted">조리법</span>
-            <select value={f.cooking_method ?? ""} onChange={(e) => set("cooking_method", e.target.value || null)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <select value={f.cooking_method ?? ""} onChange={(e) => set("cooking_method", e.target.value || null)} className={INPUT}>
               <option value="">—</option>
               {METHODS.map((m) => (
                 <option key={m}>{m}</option>
@@ -141,7 +167,7 @@ export function FoodEditor(p: Props) {
           </label>
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-muted">분류</span>
-            <select value={f.course_type ?? ""} onChange={(e) => set("course_type", e.target.value || null)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <select value={f.course_type ?? ""} onChange={(e) => set("course_type", e.target.value || null)} className={INPUT}>
               <option value="">—</option>
               {COURSES.map((m) => (
                 <option key={m}>{m}</option>
@@ -154,21 +180,33 @@ export function FoodEditor(p: Props) {
           {chips(Object.keys(TASTE_LABEL), "taste_tags", (v) => TASTE_LABEL[v] ?? v)}
         </div>
 
-        <section className="space-y-3 rounded-2xl bg-surface p-4 shadow-sm">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-semibold">식이 정보</h2>
-            <a href="https://github.com/Heptagon372/Foodis/blob/main/docs/design/03_%EC%8B%9D%EC%9D%B4_%ED%83%9C%EA%B9%85_%EA%B0%80%EC%9D%B4%EB%93%9C.md" target="_blank" rel="noreferrer" className="text-caption text-muted underline">
-              태깅 기준 ↗
+        <section className={CARD}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-title font-bold text-ink">식이 정보</h2>
+            <a href="https://github.com/Heptagon372/Foodis/blob/main/docs/design/03_%EC%8B%9D%EC%9D%B4_%ED%83%9C%EA%B9%85_%EA%B0%80%EC%9D%B4%EB%93%9C.md" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1 text-caption text-leaf underline">
+              태깅 기준
+              <ExternalLink aria-hidden className="size-3.5" strokeWidth={1.75} />
+              <span className="sr-only">(새 창)</span>
             </a>
           </div>
           {DIET_KEYS.map((k) => (
-            <div key={k} className="flex flex-wrap items-center gap-2">
-              <span className="w-24 text-sm font-medium">{DIET_LABEL[k]}</span>
-              {LEVELS.map((lv) => (
-                <button key={lv} type="button" onClick={() => set("diet", { ...f.diet, [k]: lv })} className={`rounded-lg px-2.5 py-1 text-caption font-semibold ${f.diet[k] === lv ? LEVEL_TONE[lv] : "border border-line text-muted"}`}>
-                  {levelLabel[lv]}
-                </button>
-              ))}
+            <div key={k} role="group" aria-label={DIET_LABEL[k]} className="flex flex-wrap items-center gap-1.5">
+              <span className="w-24 text-sm font-medium text-ink">{DIET_LABEL[k]}</span>
+              {LEVELS.map((lv) => {
+                const on = f.diet[k] === lv;
+                return (
+                  <button
+                    key={lv}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => set("diet", { ...f.diet, [k]: lv })}
+                    className={`inline-flex h-10 items-center gap-1 rounded-full border px-3 text-caption font-semibold transition active:scale-[0.97] ${on ? LEVEL_TONE[lv] : "border-line bg-surface text-ink-soft hover:border-leaf/40"}`}
+                  >
+                    {on && <Icon name="check" className="size-3.5" strokeWidth={2.25} />}
+                    {levelLabel[lv]}
+                  </button>
+                );
+              })}
             </div>
           ))}
           <div className="space-y-1.5">
@@ -178,7 +216,7 @@ export function FoodEditor(p: Props) {
           {text("diet_note", "식이 메모", 2, "depends 면 필수 — 주문할 때 무엇을 확인할지")}
           <label className="block space-y-1">
             <span className="text-caption font-semibold text-muted">식이 출처 URL · 줄마다 하나 · 확정값(가능/불가)은 서로 다른 출처 2개 이상</span>
-            <textarea value={sourcesText} onChange={(e) => setSourcesText(e.target.value)} rows={3} className="w-full rounded-lg border border-line bg-surface px-3 py-2 font-mono text-caption" placeholder="https://..." />
+            <textarea value={sourcesText} onChange={(e) => setSourcesText(e.target.value)} rows={3} className={`${FIELD} py-2 font-mono text-caption`} placeholder="https://..." />
           </label>
         </section>
 
@@ -189,20 +227,31 @@ export function FoodEditor(p: Props) {
       </div>
 
       <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
-        <div className="space-y-3 rounded-2xl bg-surface p-4 shadow-sm">
+        <div className={CARD}>
           {problems.length ? (
             <ul className="space-y-1 text-caption text-diet-no">
               {problems.map((x) => (
-                <li key={x}>✕ {x}</li>
+                <li key={x} className="flex items-start gap-1.5">
+                  <Icon name="close" className="mt-px size-3.5 shrink-0" strokeWidth={2.25} />
+                  {x}
+                </li>
               ))}
             </ul>
           ) : (
-            <p className="text-caption text-diet-ok">✓ 검수 규칙 통과</p>
+            <p className="flex items-center gap-1.5 text-caption font-semibold text-diet-ok">
+              <Icon name="check-circle" className="size-4" />
+              검수 규칙 통과
+            </p>
           )}
-          <button type="button" disabled={busy || problems.length > 0} onClick={save} className="w-full rounded-xl bg-green-800 py-2.5 font-semibold text-ivory disabled:opacity-40">
+          <button type="button" disabled={busy || problems.length > 0} onClick={save} className={`${btn("primary", "md")} w-full`}>
             {busy ? "저장 중…" : p.id ? "저장 (검수 대기로)" : "만들기"}
           </button>
-          {msg && <p className={`whitespace-pre-line text-caption ${msg.ok ? "text-green-800" : "text-diet-no"}`}>{msg.text}</p>}
+          {msg && (
+            <p role="status" className={`flex items-start gap-1.5 whitespace-pre-line text-caption ${msg.ok ? "text-leaf" : "text-diet-no"}`}>
+              <Icon name={msg.ok ? "check-circle" : "warn"} className="mt-px size-4 shrink-0" />
+              <span>{msg.text}</span>
+            </p>
+          )}
           {p.id && canReview && (
             <div className="space-y-2 border-t border-line pt-3">
               {p.verified ? (
@@ -219,7 +268,8 @@ export function FoodEditor(p: Props) {
                 )
               ) : (
                 <ActionButton url={`/api/admin/foods/${p.id}/verify`} tone="primary" confirm="출처와 식이 정보를 확인했나요? 승인하면 앱·푸디에 바로 나와요">
-                  ✓ 검수 승인
+                  <Icon name="check" className="size-4" />
+                  검수 승인
                 </ActionButton>
               )}
             </div>
@@ -227,10 +277,13 @@ export function FoodEditor(p: Props) {
         </div>
 
         {p.reports.length > 0 && (
-          <div className="space-y-2 rounded-2xl border border-diet-no/30 bg-surface p-4">
-            <p className="font-semibold text-diet-no">열린 신고 {p.reports.length}건</p>
+          <div className="space-y-2 rounded-3xl border border-diet-no/30 bg-surface p-5">
+            <p className="flex items-center gap-1.5 font-semibold text-diet-no">
+              <Icon name="warn" className="size-[18px]" />
+              열린 신고 {p.reports.length}건
+            </p>
             {p.reports.map((r) => (
-              <p key={r.id} className="text-caption">
+              <p key={r.id} className="text-caption text-ink-soft">
                 <b>{r.field}</b> — {r.message ?? "(내용 없음)"}
               </p>
             ))}
@@ -238,10 +291,10 @@ export function FoodEditor(p: Props) {
         )}
 
         {p.evidence.length > 0 && (
-          <div className="space-y-2 rounded-2xl bg-surface p-4 shadow-sm">
-            <p className="font-semibold">근거 자료</p>
+          <div className="card space-y-2 rounded-3xl p-5">
+            <p className="font-semibold text-ink">근거 자료</p>
             {p.evidence.map((e) => (
-              <a key={e.url + e.field} href={e.url.startsWith("http") ? e.url : undefined} target="_blank" rel="noreferrer" className="block truncate text-caption text-green-800 underline">
+              <a key={e.url + e.field} href={e.url.startsWith("http") ? e.url : undefined} target="_blank" rel="noreferrer" className="block truncate text-caption text-leaf underline">
                 {e.title ?? e.url} <span className="text-muted no-underline">· {e.field}</span>
               </a>
             ))}

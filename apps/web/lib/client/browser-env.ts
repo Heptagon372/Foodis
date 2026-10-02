@@ -44,15 +44,16 @@ export function externalOpenUrl(env: BrowserEnv, url: string): string | null {
   return null;
 }
 
-/** 지금 환경에서 마이크 권한을 다시 켜는 순서 (짧게, 3단계 이내) */
+/** 지금 환경에서 마이크 권한을 다시 켜는 순서 (짧게, 3단계 이내).
+ *  기호·이모지 아이콘 대신 말로 — 화면 읽기 프로그램도 읽고, 기기마다 다른 아이콘 모양에 기대지 않게 */
 export function micSteps(env: BrowserEnv): string[] {
   if (!env.secure) return ["이 주소(http)에서는 브라우저가 마이크를 막아요", "https 주소나 이 컴퓨터의 localhost 로 열어 주세요"];
   if (env.inApp) {
     return env.os === "ios"
-      ? [`${IN_APP_LABEL[env.inApp]} 화면 오른쪽 아래(또는 위) ⋯ 버튼`, "‘Safari로 열기’ 또는 ‘기본 브라우저로 열기’", "Safari 에서 🎙 을 누르고 ‘허용’"]
-      : [`${IN_APP_LABEL[env.inApp]} 화면 오른쪽 위 ⋮ 버튼`, "‘다른 브라우저로 열기’ → Chrome", "Chrome 에서 🎙 을 누르고 ‘허용’"];
+      ? [`${IN_APP_LABEL[env.inApp]} 화면 오른쪽 아래(또는 위) 점 세 개(더보기) 버튼`, "‘Safari로 열기’ 또는 ‘기본 브라우저로 열기’", "Safari 에서 마이크 버튼을 누르고 ‘허용’"]
+      : [`${IN_APP_LABEL[env.inApp]} 화면 오른쪽 위 세로 점 세 개(더보기) 버튼`, "‘다른 브라우저로 열기’ → Chrome", "Chrome 에서 마이크 버튼을 누르고 ‘허용’"];
   }
-  if (env.os === "ios") return ["주소창 왼쪽 ‘가가’(또는 ⓐA) 버튼", "‘웹 사이트 설정’ → 마이크 → ‘허용’", "돌아와서 🎙 다시 누르기"];
-  if (env.os === "android") return ["주소창 왼쪽 자물쇠(또는 ⚙) 버튼", "‘권한’ → 마이크 → ‘허용’", "돌아와서 🎙 다시 누르기"];
-  return ["주소창 왼쪽 자물쇠(사이트 정보) 버튼", "마이크 → ‘허용’", "새로고침 후 🎙 다시 누르기"];
+  if (env.os === "ios") return ["주소창 왼쪽 ‘가가’(또는 ‘aA’) 버튼", "‘웹 사이트 설정’ → 마이크 → ‘허용’", "돌아와서 마이크 버튼 다시 누르기"];
+  if (env.os === "android") return ["주소창 왼쪽 자물쇠(또는 설정 톱니바퀴) 버튼", "‘권한’ → 마이크 → ‘허용’", "돌아와서 마이크 버튼 다시 누르기"];
+  return ["주소창 왼쪽 자물쇠(사이트 정보) 버튼", "마이크 → ‘허용’", "새로고침 후 마이크 버튼 다시 누르기"];
 }

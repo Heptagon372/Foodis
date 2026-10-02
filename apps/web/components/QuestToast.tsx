@@ -3,6 +3,7 @@
 // 터지는 점은 CSS 만으로 — 움직임 줄이기 설정이면 점은 숨기고 토스트만 보인다.
 import { useEffect } from "react";
 import { dismissToast, useQuestToasts } from "@/lib/client/quest";
+import { Icon } from "./icons";
 
 const DOTS = 8;
 const CSS = `
@@ -22,18 +23,19 @@ export function QuestToast() {
   return (
     <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] mx-auto flex max-w-md justify-center px-4">
       {head && (
-        <div key={head.id} className="relative flex animate-rise items-center gap-2.5 rounded-full bg-green-800 py-2 pl-2 pr-4 text-sm text-ivory shadow-[0_12px_30px_-12px_#00000080]">
+        // 숲 패널 알약: 두 테마 모두 진한 초록 + 흰 글자라 어느 바탕 위에서도 떠 보인다
+        <div key={head.id} className="forest-panel relative flex animate-rise items-center gap-2.5 rounded-full py-2 pl-2 pr-4 text-sm shadow-lift">
           <style>{CSS}</style>
-          <span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-mint-500 text-base" aria-hidden>
-            {head.emoji}
+          <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-lime text-on-lime shadow-glow" aria-hidden>
+            <Icon name={head.icon} className="size-[18px]" />
             <span className="motion-reduce:hidden">
               {Array.from({ length: DOTS }, (_, i) => (
-                <span key={i} className="quest-dot" style={{ ["--a" as string]: `${(360 / DOTS) * i}deg`, background: i % 2 ? "var(--color-mint-500)" : "var(--color-diet-warn)" }} />
+                <span key={i} className="quest-dot" style={{ ["--a" as string]: `${(360 / DOTS) * i}deg`, background: i % 2 ? "var(--color-lime)" : "#fff" }} />
               ))}
             </span>
           </span>
           <span>
-            <span className="text-mint-500">{head.label ?? (head.kind === "quest" ? "퀘스트 완료!" : "새 배지!")}</span> <b className="font-semibold">{head.title}</b>
+            <span className="font-medium text-lime">{head.label ?? (head.kind === "quest" ? "퀘스트 완료!" : "새 배지!")}</span> <b className="font-semibold">{head.title}</b>
           </span>
         </div>
       )}

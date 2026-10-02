@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/bits";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/admin/ui";
 import { hasRole, requirePage } from "@/lib/admin/auth";
 
@@ -21,22 +22,23 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const s = await requirePage("editor");
   return (
     <div className="mx-auto max-w-6xl px-5 py-5">
-      <header className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-line pb-4">
+      <header className="glass mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-[28px] px-5 py-3">
         <div className="flex items-baseline gap-2">
           <Wordmark className="text-xl" />
-          <span className="text-sm font-semibold text-muted">검수 어드민</span>
+          <span className="text-sm font-semibold text-ink-soft">검수 어드민</span>
         </div>
         <nav className="flex flex-wrap gap-1 text-sm">
           {NAV.filter(([href]) => href !== "/admin/kpi" || hasRole(s, "reviewer")).map(([href, label]) => (
-            <Link key={href} href={href} className="rounded-lg px-3 py-1.5 font-medium text-charcoal/80 hover:bg-mint-100 hover:text-green-800">
+            <Link key={href} href={href} className="inline-flex h-10 items-center rounded-full px-4 font-medium text-ink-soft transition hover:bg-lime-soft hover:text-leaf">
               {label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3 text-caption">
+        <div className="ml-auto flex items-center gap-2 text-caption">
           <span className="text-muted">{s.email}</span>
-          <span className="rounded-full bg-green-800 px-2 py-0.5 font-semibold text-ivory">{s.role}</span>
+          <span className="rounded-full bg-brand px-2.5 py-0.5 font-semibold text-on-brand">{s.role}</span>
           <LogoutButton />
+          <ThemeToggle />
         </div>
       </header>
       {children}

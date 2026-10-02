@@ -7,6 +7,13 @@ import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import { PREVIEW_COUNTRIES } from "./countries";
 import { PREVIEW_FOODS, PREVIEW_RELATIONS, previewId, type PreviewFood } from "./foods";
 import { PREVIEW_IMAGES } from "./images";
+import CATALOG from "./catalog.json";
+
+/** 전체 음식 목록 (tools/gen-preview-catalog.mjs 가 foodis-data 시드·근거 수집 결과로 만든다).
+ *  이름 · 나라 · 유명도 순위 · 사진만 확인된 상태 — 소개·식이 정보는 검수 전이라 비워 둔다 */
+type CatalogItem = { s: string; ko: string; en: string; cc: string; r: number; tg: string[]; img?: string; cr?: string; w: string };
+const catalog = CATALOG as CatalogItem[];
+const catalogBySlug = new Map(catalog.map((c) => [c.s, c]));
 
 const countryOf = (cc: string): Country => PREVIEW_COUNTRIES.find((c) => c.code === cc)!;
 const fullDiet = (d: PreviewFood["diet"]) => Object.fromEntries(DIET_KEYS.map((k) => [k, d[k] ?? "unknown"])) as Record<DietKey, DietLevel>;
@@ -17,9 +24,27 @@ function summaryOf(f: PreviewFood): FoodSummary {
   return {
     id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc,
     flag: c.flag_emoji, accent: c.accent_color, country_name: c.name_ko,
-    summary: f.summary, taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? null, diet: fullDiet(f.diet), allergens: f.allergens ?? [],
+    summary: f.summary, taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? catalogBySlug.get(f.slug)?.img ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? catalogBySlug.get(f.slug)?.cr ?? null, diet: fullDiet(f.diet), allergens: f.allergens ?? [],
+    fame_rank: catalogBySlug.get(f.slug)?.r ?? null,
   };
 }
+
+// 직접 쓴 미리보기 음식(PREVIEW_FOODS)에 없는 카탈로그 음식. id 는 1000번대부터
+const written = new Set(PREVIEW_FOODS.map((f) => f.slug));
+const extra = catalog.filter((c) => !written.has(c.s)).map((c, i) => ({ c, id: previewId(1000 + i) }));
+const extraBySlug = new Map(extra.map((x) => [x.c.s, x]));
+const UNKNOWN_DIET = Object.fromEntries(DIET_KEYS.map((k) => [k, "unknown"])) as Record<DietKey, DietLevel>;
+
+function catalogSummary({ c, id }: { c: CatalogItem; id: string }): FoodSummary {
+  const country = countryOf(c.cc);
+  return {
+    id, slug: c.s, name_ko: c.ko, name_en: c.en, country_code: c.cc, flag: country.flag_emoji, accent: country.accent_color, country_name: country.name_ko,
+    summary: null, taste_tags: c.tg, image_url: c.img ?? null, image_credit: c.cr ?? null, diet: UNKNOWN_DIET, allergens: [], fame_rank: c.r,
+  };
+}
+
+const byFame = (a: FoodSummary, b: FoodSummary) => (a.fame_rank ?? 999) - (b.fame_rank ?? 999);
+const allSummaries = () => [...PREVIEW_FOODS.map(summaryOf), ...extra.map(catalogSummary)];
 
 const bySlug = new Map(PREVIEW_FOODS.map((f) => [f.slug, f]));
 const byId = new Map(PREVIEW_FOODS.map((f) => [previewId(f.n), f]));
@@ -31,9 +56,21 @@ const relationsOf = (slug: string) =>
 export const previewContent: ContentSource = {
   mode: "preview",
   listCountries: async () => PREVIEW_COUNTRIES,
-  listFoods: async () => PREVIEW_FOODS.map(summaryOf),
+  listFoods: async () => allSummaries(),
   async getFood(slug) {
     const f = bySlug.get(slug);
+    const x = f ? null : extraBySlug.get(slug);
+    if (x) {
+      const country = countryOf(x.c.cc);
+      return {
+        ...catalogSummary(x),
+        name_local: null, country, region_in_country: null, origin_note: null, history: null, culture_story: null, cooking_method: null, course_type: null, diet_note: null,
+        ingredients: [],
+        sources: [{ field: "name", url: x.c.w, title: `Wikipedia — ${x.c.en}`, license: "CC BY-SA 4.0" }],
+        relations: [],
+        sameCountry: allSummaries().filter((o) => o.country_code === x.c.cc && o.slug !== slug).sort(byFame).slice(0, 10),
+      };
+    }
     if (!f) return null;
     const detail: FoodDetail = {
       ...summaryOf(f),
@@ -49,7 +86,7 @@ export const previewContent: ContentSource = {
       ingredients: f.ingredients.map((name, i) => ({ slug: name, name_ko: name, role: i < 2 ? "main" : "seasoning" })),
       sources: [{ field: "summary", url: wiki(f), title: `Wikipedia — ${f.name_en}`, license: "CC BY-SA 4.0" }],
       relations: relationsOf(slug).map((r) => ({ type: r.type, description: r.description, food: summaryOf(bySlug.get(r.other)!) })),
-      sameCountry: PREVIEW_FOODS.filter((o) => o.cc === f.cc && o.slug !== slug).map(summaryOf),
+      sameCountry: allSummaries().filter((o) => o.country_code === f.cc && o.slug !== slug).sort(byFame).slice(0, 10),
     };
     return detail;
   },
@@ -60,7 +97,7 @@ export const previewContent: ContentSource = {
   },
   async getCountry(code) {
     const country = PREVIEW_COUNTRIES.find((c) => c.code === code);
-    return country ? { country, foods: PREVIEW_FOODS.filter((f) => f.cc === code).map(summaryOf) } : null;
+    return country ? { country, foods: allSummaries().filter((f) => f.country_code === code).sort(byFame) } : null;
   },
 };
 

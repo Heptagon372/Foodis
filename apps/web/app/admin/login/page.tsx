@@ -3,7 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Wordmark } from "@/components/bits";
+import { Icon } from "@/components/icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { btn } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
+
+const INPUT = "h-12 w-full rounded-xl border border-line bg-surface px-4 text-ink placeholder:text-muted focus:border-brand";
 
 export default function AdminLogin() {
   return (
@@ -45,25 +50,33 @@ function Login() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
+    <main className="relative mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
+      <ThemeToggle className="absolute right-6 top-[max(1.25rem,env(safe-area-inset-top))]" />
       <div className="space-y-1">
         <Wordmark />
-        <h1 className="font-display text-h2 font-semibold">콘텐츠 검수 어드민</h1>
-        <p className="text-sm text-muted">DB가 사실의 기준 — 검수를 거친 음식만 푸디가 말해요.</p>
+        <h1 className="text-h2 font-bold text-ink">콘텐츠 검수 어드민</h1>
+        <p className="text-sm text-ink-soft">DB가 사실의 기준 — 검수를 거친 음식만 푸디가 말해요.</p>
       </div>
       {step === "email" ? (
         <form className="space-y-3" onSubmit={(e) => (e.preventDefault(), void send())}>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="팀 이메일" className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-mint-500" autoFocus />
-          <button disabled={busy} className="w-full rounded-xl bg-green-800 py-3 font-semibold text-ivory disabled:opacity-50">{busy ? "보내는 중…" : "코드 받기"}</button>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="팀 이메일" aria-label="팀 이메일" className={INPUT} autoFocus />
+          <button disabled={busy} className={`${btn("primary", "md")} w-full`}>{busy ? "보내는 중…" : "코드 받기"}</button>
         </form>
       ) : (
         <form className="space-y-3" onSubmit={(e) => (e.preventDefault(), void verify())}>
-          <input inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6자리 코드" className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-center text-xl tracking-[0.4em] outline-none focus:border-mint-500" autoFocus />
-          <button disabled={busy} className="w-full rounded-xl bg-green-800 py-3 font-semibold text-ivory disabled:opacity-50">{busy ? "확인 중…" : "로그인"}</button>
-          <button type="button" onClick={() => setStep("email")} className="w-full text-sm text-muted">이메일 다시 입력</button>
+          <input inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6자리 코드" aria-label="6자리 코드" className={`${INPUT} text-center text-xl tracking-[0.4em]`} autoFocus />
+          <button disabled={busy} className={`${btn("primary", "md")} w-full`}>{busy ? "확인 중…" : "로그인"}</button>
+          <button type="button" onClick={() => setStep("email")} className={`${btn("ghost", "sm")} w-full`}>
+            이메일 다시 입력
+          </button>
         </form>
       )}
-      {msg && <p className="rounded-xl bg-mint-100 px-3 py-2 text-sm text-green-800">{msg}</p>}
+      {msg && (
+        <p role="status" className="flex items-start gap-2 rounded-2xl bg-lime-soft px-4 py-3 text-sm text-leaf">
+          <Icon name="info" className="mt-px size-[18px] shrink-0" />
+          <span>{msg}</span>
+        </p>
+      )}
     </main>
   );
 }

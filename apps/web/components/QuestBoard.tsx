@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useQuest } from "@/lib/client/quest";
 import type { BadgeProgress, QuestProgress } from "@/lib/quest/quests";
+import { Icon } from "./icons";
+import { IconTile, ProgressBar } from "./ui";
 
 const day = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" });
 const date = (ts: number) => day.format(ts);
@@ -13,7 +15,7 @@ export function QuestBoard() {
     // 홈 카드의 /passport#quest 가 하이드레이션 전에도 닿도록 id 는 항상 그린다
     <div id="quest" className="scroll-mt-14 space-y-5">
       {!q.ready ? (
-        <div className="h-56 rounded-3xl bg-surface/60" aria-hidden />
+        <div className="h-56 rounded-3xl bg-sunken/70" aria-hidden />
       ) : (
         <>
           <ul className="space-y-2.5">
@@ -23,7 +25,12 @@ export function QuestBoard() {
           </ul>
           <p className="text-caption text-muted">
             매주 월요일(한국 시간)에 새 퀘스트가 열려요. 3개를 모두 끝내면 연속 기록이 이어져요
-            {q.streak > 0 && <b className="font-semibold text-green-800"> · 🔥 {q.streak}주 연속</b>}
+            {q.streak > 0 && (
+              <b className="font-semibold text-leaf">
+                {" · "}
+                <Icon name="flame" className="-mt-0.5 inline size-4" /> {q.streak}주 연속
+              </b>
+            )}
           </p>
           <BadgeShelf badges={q.badges} />
         </>
@@ -34,21 +41,21 @@ export function QuestBoard() {
 
 function QuestRow({ q }: { q: QuestProgress }) {
   return (
-    <li className={`rounded-2xl p-3.5 ${q.done ? "bg-mint-100" : "bg-surface shadow-sm"}`}>
+    <li className={`rounded-3xl p-4 ${q.done ? "border border-brand/25 bg-lime-soft" : "card"}`}>
       <div className="flex items-center gap-3">
-        <span className={`grid size-10 shrink-0 place-items-center rounded-xl text-xl ${q.done ? "bg-mint-500 font-bold text-green-800" : "bg-ivory"}`} aria-hidden>
-          {q.done ? "✓" : q.emoji}
-        </span>
+        {/* 완료는 색만이 아니라 체크 아이콘 + '완료' 글자로도 알린다 */}
+        <IconTile icon={q.done ? "check" : q.icon} tone={q.done ? "brand" : "soft"} />
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-semibold ${q.done ? "text-green-800" : ""}`}>{q.title}</p>
-          <p className="text-caption text-muted">{q.done ? `${q.doneAt ? date(q.doneAt) : "이번 주"} 완료` : `다음: ${q.next}`}</p>
+          <p className="text-sm font-semibold text-ink">{q.title}</p>
+          <p className={`text-caption ${q.done ? "font-medium text-leaf" : "text-muted"}`}>{q.done ? `${q.doneAt ? date(q.doneAt) : "이번 주"} 완료` : `다음: ${q.next}`}</p>
         </div>
-        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-caption font-medium ${q.done ? "border-mint-500 bg-surface text-green-800" : "border-line text-muted"}`}>{q.reward}</span>
-      </div>
-      <div className="mt-2.5 flex items-center gap-2">
-        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-line" role="progressbar" aria-label={`${q.title} 진행`} aria-valuemin={0} aria-valuemax={q.target} aria-valuenow={q.value}>
-          <span className="block h-full rounded-full bg-mint-500 transition-[width] duration-300" style={{ width: `${(q.value / q.target) * 100}%` }} />
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-caption font-medium ${q.done ? "border-brand/30 bg-surface text-leaf" : "border-line text-ink-soft"}`}>
+          <Icon name={q.done ? "check" : "stamp"} className="size-3.5" />
+          {q.reward}
         </span>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <ProgressBar value={q.value} max={q.target} label={`${q.title} 진행`} className="h-1.5" />
         <span className="w-8 text-right text-caption tabular-nums text-muted">
           {q.value}/{q.target}
         </span>
@@ -60,8 +67,8 @@ function QuestRow({ q }: { q: QuestProgress }) {
 function BadgeShelf({ badges }: { badges: BadgeProgress[] }) {
   const earned = badges.filter((b) => b.earnedAt != null).length;
   return (
-    <div className="space-y-2">
-      <p className="flex items-baseline justify-between text-sm font-semibold text-charcoal/80">
+    <div className="space-y-2.5">
+      <p className="flex items-baseline justify-between text-sm font-semibold text-ink">
         배지
         <span className="text-caption font-medium tabular-nums text-muted">
           {earned}/{badges.length}
@@ -71,12 +78,11 @@ function BadgeShelf({ badges }: { badges: BadgeProgress[] }) {
         {badges.map((b) => {
           const on = b.earnedAt != null;
           return (
-            <li key={b.id} className={`flex flex-col items-center gap-1 rounded-2xl p-2.5 text-center ${on ? "bg-surface shadow-sm" : "bg-line/40"}`}>
-              <span className={`text-[1.75rem] leading-none ${on ? "" : "opacity-40 grayscale"}`} aria-hidden>
-                {b.emoji}
-              </span>
-              <span className={`text-caption font-semibold ${on ? "text-green-800" : "text-charcoal/60"}`}>{b.name}</span>
-              <span className="text-[11px] leading-snug text-muted">{on ? `${date(b.earnedAt!)} 획득` : `${b.hint} (${b.value}/${b.target})`}</span>
+            // 받은 배지 = 초록 메달 타일, 아직 = 점선 테두리 + 흐린 아이콘 (글자로도 '획득'/'조건' 구분)
+            <li key={b.id} className={`flex flex-col items-center gap-1.5 rounded-3xl p-3 text-center ${on ? "card" : "border border-dashed border-line bg-sunken/50"}`}>
+              <IconTile icon={b.icon} tone={on ? "brand" : "outline"} className={on ? "shadow-brand" : "opacity-60"} />
+              <span className={`text-caption font-semibold ${on ? "text-ink" : "text-ink-soft"}`}>{b.name}</span>
+              <span className={`text-[11px] leading-snug ${on ? "font-medium text-leaf" : "text-muted"}`}>{on ? `${date(b.earnedAt!)} 획득` : `${b.hint} (${b.value}/${b.target})`}</span>
             </li>
           );
         })}
@@ -85,23 +91,36 @@ function BadgeShelf({ badges }: { badges: BadgeProgress[] }) {
   );
 }
 
-/** 홈: "이번 주 퀘스트 1/3 · 다음: 발효 음식 1개 더" — 시끄럽지 않게 한 줄 */
+/** 홈: "이번 주 퀘스트 1/3 · 다음: 발효 음식 1개 더" — 시끄럽지 않게 한 줄 + 작은 진행 링 */
 export function QuestHomeCard() {
   const q = useQuest();
   if (!q.ready || !q.quests.length) return null;
   const next = q.quests.find((x) => !x.done);
   return (
-    <Link href="/passport#quest" className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-sm shadow-sm transition active:scale-[0.98]">
-      <span aria-hidden>🎮</span>
-      <span className="min-w-0 flex-1 truncate">
-        <b className="font-semibold text-green-800">
+    <Link href="/passport#quest" className="glass flex min-h-16 items-center gap-3 rounded-3xl py-3 pl-3 pr-2 text-sm transition active:scale-[0.98]">
+      <IconTile icon="quest" />
+      <span className="min-w-0 flex-1">
+        <b className="block font-semibold text-ink">
           이번 주 퀘스트 {q.doneCount}/{q.quests.length}
         </b>
-        <span className="text-muted"> · {next ? `다음: ${next.next}` : "모두 완료했어요 🎉"}</span>
+        <span className="block truncate text-caption text-ink-soft">{next ? `다음: ${next.next}` : "모두 완료했어요"}</span>
       </span>
-      <span className="text-muted" aria-hidden>
-        ›
-      </span>
+      <ProgressRing value={q.doneCount} max={q.quests.length} />
+      <Icon name="next" className="size-5 shrink-0 text-muted" />
     </Link>
+  );
+}
+
+/** 진행 링 (레퍼런스 GreenBite 의 75% 링). 숫자는 옆 글자에 있으니 그림만 */
+function ProgressRing({ value, max }: { value: number; max: number }) {
+  const r = 14;
+  const len = 2 * Math.PI * r;
+  const pct = max > 0 ? Math.min(1, value / max) : 0;
+  return (
+    <svg viewBox="0 0 36 36" className="size-9 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-sunken)" strokeWidth="4" />
+      {/* 0 일 때 둥근 끝이 점으로 남지 않게 그리지 않는다 */}
+      {pct > 0 && <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-brand)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${len * pct} ${len}`} className="transition-[stroke-dasharray] duration-300" />}
+    </svg>
   );
 }

@@ -69,6 +69,15 @@ def test_full_pipeline(tmp_path):
     assert img("burek")["source"] == "p18" and "NC" not in img("burek")["license"]
     assert "Burek NC.jpg" in out and "CC BY-NC-SA 4.0" in out and "이미지 없음 2건" in out
 
+    # 사진 보강: s02 가 못 찾은 코로바츠 → 공용 검색(지도 SVG 는 버림), 마타파 → Openverse(Flickr), 나머지 맞는 사진 · 교체 지정은 그대로
+    out = run(tmp, "s02b_images.py"); print(out); wp = json.loads((tmp / "data/raw/wikipedia.json").read_text(encoding="utf-8"))
+    k, m = wp["khorovats"]["image"], wp["matapa"]["image"]
+    assert k["source"] == "commons_search" and k["file"] == "Khorovats on the grill.jpg" and k["fit"] == 1.0
+    assert m["source"] == "openverse" and m["provider"] == "flickr" and m["license"] == "CC BY 2.0" and m["artist"] == "Traveler" and m["page"].startswith("https://www.flickr.com/")
+    assert wp["kimchi"]["image"]["source"] == "p18" and wp["yomari"]["image"]["source"] == "pageimage" and wp["mumu"]["image"]["source"] == "override"
+    report = json.loads((tmp / "data/raw/image_report.json").read_text(encoding="utf-8"))
+    assert set(report) == {"khorovats", "matapa"}
+
     run(tmp, "s03_themealdb.py"); assert set(json.loads((tmp / "data/raw/themealdb.json").read_text(encoding="utf-8"))) == {"kimchi", "injera"}
     run(tmp, "s04_hansik800.py"); hs = json.loads((tmp / "data/raw/hansik800.json").read_text(encoding="utf-8"))
     assert hs["kimchi"]["name_en_std"] == "Kimchi" and hs["bibimbap"]["desc_en"] == "Mixed rice"
@@ -91,7 +100,7 @@ def test_full_pipeline(tmp_path):
     assert any(r["type"] == "historical_link" and {r["from"], r["to"]} == {"mandu", "pierogi"} for r in rels)
     assert any(r["type"] == "shares_ingredient" and {r["from"], r["to"]} == {"falafel", "chana-masala"} for r in rels)
     assert not any("wheat flour" in r["description"] for r in rels)   # 흔한 재료는 관계 근거에서 제외
-    assert len(rels) < 1500                                           # 유형별 상한으로 검수 가능한 규모 유지
+    assert len(rels) < 3 * n                                          # 유형별 상한으로 검수 가능한 규모 유지 (음식 수에 비례)
 
     out = run(tmp, "s07_review.py", "export"); print(out)
     sheet = list(csv.DictReader(open(tmp / "data/draft/review_sheet.csv", encoding="utf-8-sig")))
@@ -121,7 +130,7 @@ def test_full_pipeline(tmp_path):
     assert final["injera"]["image_credit"].startswith("Someone / CC BY-SA 4.0")
 
     out = run(tmp, "s08_load.py", "--dry-run"); print(out); assert f"foods: {len(final)}행" in out and "lechon" not in final  # 돼지고기+halal≠no 도 차단
-    out = run(tmp, "s08_load.py"); print(out); assert "food_relations" in out and "data_sources: 33행" in out
+    out = run(tmp, "s08_load.py"); print(out); assert "food_relations" in out and "data_sources: 34행" in out
     sys.path.insert(0, str(tmp / "scripts"))
     from s08_load import build_payloads
     from common import read_csv as _rc

@@ -30,4 +30,15 @@ describe("browser-env", () => {
     }
     expect(micSteps({ os: "android", inApp: null, secure: false })[0]).toContain("http");
   });
+
+  it("안내 문구에 기호·이모지 아이콘이 없다 (말로 설명)", () => {
+    const envs = [
+      ...[UA.kakaoAndroid, UA.instaIos, UA.safariIos, UA.chromeAndroid].map((ua) => detectEnv(ua)),
+      { os: "other" as const, inApp: null, secure: true },
+      { os: "android" as const, inApp: null, secure: false },
+    ];
+    for (const env of envs) {
+      for (const step of micSteps(env)) expect(step).not.toMatch(/[⋯⋮⚙ⓐ]|\p{Extended_Pictographic}/u);
+    }
+  });
 });

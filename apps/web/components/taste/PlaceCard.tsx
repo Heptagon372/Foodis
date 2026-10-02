@@ -1,7 +1,7 @@
 "use client";
 // 음식점 카드: 거리 · 평점(출처·개수) · 배지(포장·혜택·가맹) · 카카오맵/전화/길찾기 · 평점 남기기/제보.
 // 모든 정보에 출처를 붙인다 — 확인 안 된 건 확인 안 됐다고 말한다.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { directionsUrl } from "@/lib/client/map-provider";
 import { franchiseLabel } from "@/lib/places/franchise";
 import { formatDistance } from "@/lib/places/geo";
@@ -11,12 +11,30 @@ import { Icon } from "../icons";
 import { btn } from "../ui";
 import { RateForm, ReportPlaceForm } from "./PlaceForms";
 
+type KakaoReview = { username: string; rating: number; date: string; text: string };
+type KakaoReviews = { rating: number | null; reviewCount: number; reviews: KakaoReview[] };
+
+function useKakaoReviews(placeId: string) {
+  const [data, setData] = useState<KakaoReviews | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/places/${placeId}/kakao-reviews`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setData(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [placeId]);
+  return data;
+}
+
 export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void }) {
   const x = p.place;
-  const [open, setOpen] = useState<null | "rate" | "report">(null);
+  const [open, setOpen] = useState<null | "rate" | "report" | "reviews">(null);
+  const kakao = useKakaoReviews(x.id);
   const cat = x.category?.split(">").pop()?.trim();
   const g = x.rating.google;
   const a = x.rating.app;
+  const k = kakao;
   const fr = franchiseLabel(x.franchise);
   const verifiedOffers = x.offers.filter((o) => o.verified);
   const pendingKinds = [...new Set(x.offers.filter((o) => !o.verified).map((o) => o.kind))];
@@ -52,6 +70,12 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
       </p>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink">
+        {k?.rating != null && (
+          <span className="inline-flex items-center gap-1">
+            <Icon name="star" className="size-4 text-amber-400" fill="currentColor" />
+            <span className="font-semibold tabular-nums">{k.rating.toFixed(1)}</span> <span className="text-caption text-muted">카카오 리뷰 {k.reviewCount.toLocaleString("ko-KR")}개</span>
+          </span>
+        )}
         {g && (
           <span className="inline-flex items-center gap-1">
             <Icon name="star" className="size-4 text-diet-warn" fill="currentColor" />
@@ -64,7 +88,7 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
             <span className="font-semibold tabular-nums">{a.avg.toFixed(1)}</span> <span className="text-caption text-muted">푸디 이용자 {a.count}명</span>
           </span>
         )}
-        {!g && !a && <span className="text-caption text-muted">평점 정보가 아직 없어요</span>}
+        {!g && !a && !k?.rating && <span className="text-caption text-muted">{k === null ? "카카오 리뷰 불러오는 중…" : "평점 정보가 아직 없어요"}</span>}
         {(g || a) && x.fewRatings && <span className="text-caption text-diet-warn-ink">평가가 아직 적어요</span>}
       </div>
 
@@ -114,6 +138,12 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
             길찾기
           </a>
         )}
+        {k && k.reviews.length > 0 && (
+          <button type="button" aria-expanded={open === "reviews"} onClick={() => setOpen(open === "reviews" ? null : "reviews")} className={link}>
+            <Icon name="message" className="size-4 text-leaf" />
+            카카오 리뷰 보기
+          </button>
+        )}
         <button type="button" aria-expanded={open === "rate"} onClick={() => setOpen(open === "rate" ? null : "rate")} className={link}>
           <Icon name="star" className="size-4 text-leaf" />
           평점 남기기
@@ -125,7 +155,31 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
       </div>
       {open && (
         <div className="rounded-2xl bg-sunken p-3.5" onClick={(e) => e.stopPropagation()}>
-          {open === "rate" ? <RateForm target={{ id: x.id, name: x.name, example: p.example }} foodSlug={p.foodSlug} onDone={() => undefined} /> : <ReportPlaceForm target={{ id: x.id, name: x.name, example: p.example }} onDone={() => undefined} />}
+          {open === "rate" && <RateForm target={{ id: x.id, name: x.name, example: p.example }} foodSlug={p.foodSlug} onDone={() => undefined} />}
+          {open === "report" && <ReportPlaceForm target={{ id: x.id, name: x.name, example: p.example }} onDone={() => undefined} />}
+          {open === "reviews" && k && (
+            <div className="space-y-3">
+              <h4 className="font-bold text-ink">카카오맵 리뷰</h4>
+              {k.reviews.map((r, i) => (
+                <div key={i} className="space-y-1 border-t border-line pt-2 first:border-0 first:pt-0">
+                  <div className="flex items-center gap-2 text-caption">
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="star" className="size-3.5 text-amber-400" fill="currentColor" />
+                      <span className="font-semibold tabular-nums">{r.rating}</span>
+                    </span>
+                    <span className="text-muted">{r.username}</span>
+                    {r.date && <span className="text-muted">{r.date}</span>}
+                  </div>
+                  {r.text && <p className="text-sm text-ink-soft">{r.text}</p>}
+                </div>
+              ))}
+              {x.place_url && (
+                <a href={x.place_url} target="_blank" rel="noreferrer" className="block text-center text-caption font-medium text-leaf hover:underline">
+                  카카오맵에서 리뷰 더 보기 →
+                </a>
+              )}
+            </div>
+          )}
         </div>
       )}
     </article>

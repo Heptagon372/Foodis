@@ -1,0 +1,149 @@
+"use client";
+// S9 음식의 여정 (기능 #14): 지도 위에 정류장 순서대로 경로를 그리고, 아래 타임라인에 관계 설명을 DB 문장 그대로 싣는다.
+// 경로·좌표는 서버(lib/journey/)에서 계산 — 여기서는 그리기 애니메이션(CSS, ≤1.2초)과 라디오 버튼만.
+import Link from "next/link";
+import { useState, type CSSProperties } from "react";
+import type { FoodSummary } from "@/lib/content/types";
+import type { JourneyMap } from "@/lib/journey/map";
+import { startRadio } from "@/lib/client/radio";
+import { PreviewBanner, RelationRow, Wordmark } from "./bits";
+
+export type JourneyStopView = {
+  slug: string;
+  name_ko: string;
+  flag: string;
+  country: string;
+  via: { from: number; label: string; description: string } | null;
+};
+
+/** 선 그리기에 쓰는 전체 시간 — 마지막 마커가 나타나는 200ms 를 더해도 1.2초 안 */
+const DRAW_MS = 1000;
+const POP_MS = 200;
+
+// 움직임 줄이기 설정이면 처음부터 다 그려진 상태 (애니메이션 규칙을 media query 안에만 둔다)
+const CSS = `
+@keyframes jr-draw { from { stroke-dashoffset: 1; opacity: 0 } 6% { opacity: 1 } to { stroke-dashoffset: 0; opacity: 1 } }
+@keyframes jr-pop { from { opacity: 0; transform: scale(.4) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: no-preference) {
+  .jr-seg { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; animation: jr-draw var(--jr-d) ease-in-out var(--jr-at) forwards }
+  .jr-pin { opacity: 0; transform-box: fill-box; transform-origin: center; animation: jr-pop ${POP_MS}ms ease-out var(--jr-at) forwards }
+}`;
+
+const timing = (at: number, d = 0) => ({ "--jr-at": `${Math.round(at)}ms`, "--jr-d": `${Math.round(d)}ms` }) as CSSProperties;
+
+export function JourneyView({ food, stops, map, similar, preview }: { food: { slug: string; name_ko: string }; stops: JourneyStopView[]; map: JourneyMap; similar: FoodSummary[]; preview: boolean }) {
+  const [run, setRun] = useState(0);
+  const countries = new Set(stops.map((s) => s.country)).size;
+  const hasRoute = stops.length > 1;
+
+  // 구간은 정류장 순서대로 하나씩, 마커는 자기 구간이 거의 다 그려질 때 나타난다
+  const per = map.segs.length ? Math.min(450, DRAW_MS / map.segs.length) : 0;
+  const pinAt = stops.map(() => 0);
+  map.segs.forEach((s, k) => (pinAt[s.to] = k * per + per * 0.7));
+  const { r } = map;
+  const routeLabel = stops.map((s) => `${s.name_ko}(${s.country})`).join(" → ");
+
+  return (
+    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <style>{CSS}</style>
+      <header className="flex items-center justify-between">
+        <Link href={`/food/${food.slug}`} className="w-fit rounded-full border border-line bg-surface px-3 py-1.5 text-sm">
+          ← {food.name_ko}
+        </Link>
+        <Wordmark className="text-xl" />
+      </header>
+      {preview && <PreviewBanner />}
+
+      <div className="space-y-1">
+        <p className="text-caption font-semibold uppercase tracking-wide text-muted">Food Journey</p>
+        <h1 className="font-display text-h1 font-semibold">{food.name_ko}의 여정</h1>
+        <p className="text-sm text-muted">{hasRoute ? `${countries}개 나라 · ${stops.length}곳을 이어요` : "아직 한 나라에 머물러 있어요"}</p>
+      </div>
+
+      <figure className="relative overflow-hidden rounded-3xl border border-line bg-surface" style={{ aspectRatio: map.aspect }}>
+        <svg viewBox={map.box.join(" ")} className="block size-full" role="img" aria-label={hasRoute ? `여정 지도: ${routeLabel}` : `${stops[0].name_ko} — ${stops[0].country}`}>
+          <path d={map.land} fill="var(--color-line)" stroke="var(--color-surface)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+          {map.lit.map((l) => (
+            <path key={l.code} d={l.d} fill="var(--color-mint-100)" stroke="var(--color-mint-500)" strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+          ))}
+          {/* key 를 바꾸면 CSS 애니메이션이 처음부터 다시 돈다 (다시 보기) */}
+          <g key={run}>
+            {map.segs.map((s, k) => (
+              <path key={s.to} d={s.d} pathLength={1} className="jr-seg" style={timing(k * per, per)} fill="none" stroke="var(--color-green-800)" strokeWidth={r * 0.16} strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+            {map.pins.map((p, i) =>
+              p ? (
+                <g key={i} transform={`translate(${p[0]} ${p[1]})`}>
+                  <g className="jr-pin" style={timing(pinAt[i])}>
+                    <circle r={r} fill="var(--color-surface)" stroke={i === 0 ? "var(--color-mint-600)" : "var(--color-green-800)"} strokeWidth={r * (i === 0 ? 0.2 : 0.12)} />
+                    <text fontSize={r * 1.1} textAnchor="middle" dominantBaseline="central" aria-hidden>
+                      {stops[i].flag}
+                    </text>
+                    {hasRoute && (
+                      <>
+                        <circle cx={r * 0.78} cy={-r * 0.78} r={r * 0.44} fill="var(--color-green-800)" />
+                        <text x={r * 0.78} y={-r * 0.78} fontSize={r * 0.56} fontWeight={700} fill="var(--color-ivory)" textAnchor="middle" dominantBaseline="central" aria-hidden>
+                          {i + 1}
+                        </text>
+                      </>
+                    )}
+                  </g>
+                </g>
+              ) : null,
+            )}
+          </g>
+        </svg>
+        {hasRoute && (
+          <button type="button" onClick={() => setRun((n) => n + 1)} className="absolute bottom-3 right-3 rounded-full border border-line bg-surface/90 px-3 py-1 text-caption font-semibold text-green-800 backdrop-blur transition active:scale-95">
+            ↻ 다시 보기
+          </button>
+        )}
+      </figure>
+
+      {hasRoute ? (
+        <>
+          <ol className="relative space-y-3 before:absolute before:bottom-8 before:left-[19px] before:top-8 before:w-0.5 before:bg-line" aria-label="여정 정류장">
+            {stops.map((s, i) => (
+              <li key={s.slug} className="relative flex gap-3">
+                <span className="relative z-10 mt-2 grid size-10 shrink-0 place-items-center rounded-full border-2 border-green-800 bg-surface text-xl" aria-hidden>
+                  {s.flag}
+                  <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-green-800 text-[11px] font-bold text-ivory">{i + 1}</span>
+                </span>
+                <Link href={`/food/${s.slug}`} className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-3.5 transition active:scale-[0.99]">
+                  <p className="text-caption text-muted">
+                    {i + 1}. {s.country}
+                    {i === 0 ? " · 출발" : ""}
+                  </p>
+                  <p className="font-semibold">{s.name_ko} ›</p>
+                  {s.via && (
+                    <>
+                      <p className="mt-2 flex flex-wrap items-center gap-1.5 text-caption">
+                        <span className="rounded-full bg-mint-100 px-2 py-0.5 font-semibold text-green-800">{s.via.label}</span>
+                        {/* 바로 앞 정류장이 아니라 앞선 곳에서 갈라진 가지면 어디서 왔는지 */}
+                        {s.via.from !== i - 1 && <span className="text-muted">{stops[s.via.from].name_ko}에서</span>}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-charcoal/80">{s.via.description}</p>
+                    </>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ol>
+          <button type="button" onClick={() => void startRadio({ channel: "today", start: food.slug })} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-green-800 py-3.5 font-semibold text-ivory transition active:scale-[0.98]">
+            🎧 이 여정을 라디오로 듣기
+          </button>
+        </>
+      ) : (
+        <div className="space-y-4">
+          <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-center text-sm text-muted">
+            아직 이어진 역사 기록이 없어요. 출처가 확인된 연결만 여정에 올라와요.
+          </p>
+          <RelationRow label="이런 음식도 둘러보세요" foods={similar} />
+          <Link href={`/food/${food.slug}`} className="block text-center text-sm font-semibold text-green-800">
+            {stops[0].flag} {food.name_ko} 이야기로 돌아가기 →
+          </Link>
+        </div>
+      )}
+    </main>
+  );
+}

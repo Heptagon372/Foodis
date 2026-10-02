@@ -7,9 +7,10 @@ import { clearInterest, useTopInterests } from "@/lib/client/community";
 import { CATEGORY } from "@/lib/community/categories";
 import { update, useLocal } from "@/lib/client/passport";
 import { setTheme } from "@/lib/client/theme";
-import { ALLERGENS, DIET_KEYS } from "@/lib/foodi/schema";
+import { ALLERGENS } from "@/lib/foodi/schema";
 import { AccountCard } from "../AccountCard";
-import { ALLERGEN_LABEL, DIET_LABEL } from "../DietBadge";
+import { ALLERGEN_LABEL } from "../DietBadge";
+import { GuardPicker } from "../DietGuard";
 import { Icon, type IconName } from "../icons";
 import { useTheme } from "../ThemeToggle";
 import { TopBar } from "../TopBar";
@@ -136,22 +137,15 @@ function CommunityInterest() {
 
 function DietSettings({ signedIn }: { signedIn: boolean }) {
   const diet = useLocal((s) => s.diet);
+  const guards = useLocal((s) => s.guards ?? []);
   const allergens = useLocal((s) => s.allergens ?? []);
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <SettingCard icon="leaf" title="식이 조건" desc="고른 조건에 맞는 음식만 추천해요.">
-        <div className="flex flex-wrap gap-2">
-          {DIET_KEYS.map((k) => {
-            const on = diet.includes(k);
-            return (
-              <button key={k} type="button" aria-pressed={on} onClick={() => update((s) => ({ ...s, diet: on ? s.diet.filter((x) => x !== k) : [...s.diet, k] }))} className={chip(on)}>
-                {on && <Icon name="check" className="size-4" strokeWidth={2.25} />}
-                {DIET_LABEL[k]}
-              </button>
-            );
-          })}
-        </div>
-      </SettingCard>
+      <div className="xl:col-span-2">
+        <SettingCard icon="leaf" title="식단 조건" desc="종교·채식 단계·다이어트·건강 조건을 고르면, 맞지 않는 음식은 빨간 라인, 확인이 필요한 음식은 노란 라인으로 표시해요. 비건·채식·할랄·글루텐 프리·유제품 X 는 추천에서도 빼요.">
+          <GuardPicker diet={diet} guards={guards} onChange={(n) => update((s) => ({ ...s, diet: n.diet, guards: n.guards }))} />
+        </SettingCard>
+      </div>
       <SettingCard icon="warn" title="알레르기" desc="빨간 재료가 든 음식은 추천하지 않아요.">
         <div className="flex flex-wrap gap-2">
           {ALLERGENS.map((a) => {
@@ -172,7 +166,9 @@ function DietSettings({ signedIn }: { signedIn: boolean }) {
           })}
         </div>
       </SettingCard>
-      <p className="text-caption text-muted xl:col-span-2">추천 필터에만 쓰이고 {signedIn ? "내 계정에만" : "이 기기에만"} 저장돼요.</p>
+      <p className="text-caption text-muted xl:col-span-2">
+        추천·경고에만 쓰이고 {signedIn ? "내 계정에" : "이 기기에만"} 저장돼요{signedIn ? " (종교·다이어트·건강 조건은 이 기기에만)" : ""}. 경고는 대표 조리법 기준이라 식당마다 다를 수 있어요 — 주문할 때 꼭 확인하세요.
+      </p>
     </div>
   );
 }

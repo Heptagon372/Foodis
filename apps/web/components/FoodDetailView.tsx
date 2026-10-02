@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { RELATION_LABEL, TASTE_LABEL, type FoodDetail, type RelationType } from "@/lib/content/types";
 import { record, toggle, useLocal, type FoodRef, type PassportStatus } from "@/lib/client/passport";
 import { startRadio } from "@/lib/client/radio";
@@ -10,6 +10,7 @@ import { speak, stopSpeaking } from "@/lib/client/voice";
 import { DIET_KEYS } from "@/lib/foodi/schema";
 import { localSpeech } from "@/lib/voice/local";
 import { ALLERGEN_LABEL, DietBadge } from "./DietBadge";
+import { GuardBanner, GuardTable } from "./DietGuard";
 import { accentBg } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, RelationRow, SourceFooter } from "./bits";
@@ -43,6 +44,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   const { open } = useFoodi();
   const ref: FoodRef = { id: food.id, slug: food.slug, name_ko: food.name_ko, flag: food.flag, country_code: food.country_code, taste_tags: food.taste_tags };
   const statuses = useLocal((s) => s.entries[food.id]?.statuses ?? []);
+  const guardFood = useMemo(() => ({ ...food, ingredients: food.ingredients.map((i) => i.name_ko) }), [food]);
 
   // 상세를 연 것 자체가 탐험 (F-REC-02)
   useEffect(() => {
@@ -145,6 +147,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
             <DietBadge key={k} k={k} level={food.diet[k]} />
           ))}
         </div>
+        <GuardBanner food={guardFood} />
 
         {/* 기록 토글 한 줄 + 묻기는 넓게 한 줄 — 좁은 화면에서 버튼 하나만 외따로 접히지 않게 */}
         <div className="space-y-2.5">
@@ -239,6 +242,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
 
           {tab === "식이" && (
             <>
+              <GuardTable food={guardFood} />
               <table className="card w-full overflow-hidden rounded-3xl text-sm">
                 <caption className="sr-only">식이 조건별 가능 여부</caption>
                 <tbody>

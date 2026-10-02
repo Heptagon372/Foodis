@@ -24,7 +24,7 @@ function summaryOf(f: PreviewFood): FoodSummary {
   return {
     id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc,
     flag: c.flag_emoji, accent: c.accent_color, country_name: c.name_ko,
-    summary: f.summary, taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? catalogBySlug.get(f.slug)?.img ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? catalogBySlug.get(f.slug)?.cr ?? null, diet: fullDiet(f.diet), allergens: f.allergens ?? [],
+    summary: f.summary, taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? catalogBySlug.get(f.slug)?.img ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? catalogBySlug.get(f.slug)?.cr ?? null, diet: fullDiet(f.diet), allergens: f.allergens ?? [], ingredient_names: f.ingredients,
     fame_rank: catalogBySlug.get(f.slug)?.r ?? null,
   };
 }

@@ -8,6 +8,7 @@ import { TASTE_LABEL } from "@/lib/content/types";
 import { getState, update, useHydrated } from "@/lib/client/passport";
 import { DIET_KEYS, type Allergen, type DietKey } from "@/lib/foodi/schema";
 import { ALLERGEN_LABEL } from "@/components/DietBadge";
+import { GuardPicker } from "@/components/DietGuard";
 import { Icon } from "@/components/icons";
 import { btn, chip } from "@/components/ui";
 
@@ -30,10 +31,12 @@ function OnboardingForm() {
   const [diet, setDiet] = useState<DietKey[]>(() => getState().diet);
   const [tastes, setTastes] = useState<string[]>(() => getState().tastes);
   const [allergens, setAllergens] = useState<Allergen[]>(() => getState().allergens ?? []);
+  const [guards, setGuards] = useState<string[]>(() => getState().guards ?? []);
+  const [more, setMore] = useState(() => guards.length > 0);
   const flip = <T,>(list: T[], v: T, max = 99) => (list.includes(v) ? list.filter((x) => x !== v) : list.length < max ? [...list, v] : list);
 
   const finish = (save: boolean) => {
-    update((s) => ({ ...s, introSeen: true, onboarded: true, ...(save ? { diet, tastes, allergens } : {}) }));
+    update((s) => ({ ...s, introSeen: true, onboarded: true, ...(save ? { diet, guards, tastes, allergens } : {}) }));
     router.push("/");
   };
 
@@ -78,6 +81,21 @@ function OnboardingForm() {
               );
             })}
           </div>
+          <button type="button" aria-expanded={more} onClick={() => setMore((m) => !m)} className={`${btn("ghost", "sm")} w-full justify-between`}>
+            종교 · 채식 단계 · 다이어트 · 건강 조건 {guards.length ? `(${guards.length})` : "더 보기"}
+            <Icon name="next" className={`size-4 transition ${more ? "rotate-90" : ""}`} />
+          </button>
+          {more && (
+            <GuardPicker
+              extraOnly
+              diet={diet}
+              guards={guards}
+              onChange={(n) => {
+                setDiet(n.diet);
+                setGuards(n.guards);
+              }}
+            />
+          )}
         </section>
 
         <section className="space-y-3">

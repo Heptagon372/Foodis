@@ -13,13 +13,15 @@ export type LocalState = {
   introSeen: boolean;
   onboarded: boolean;
   diet: DietKey[];
+  /** 식단 카테고리 중 추천 필터(diet)에 없는 것 — 종교·채식 단계·다이어트·건강 (lib/diet/guard). 이 기기에만 저장 */
+  guards?: string[];
   allergens: Allergen[];
   tastes: string[];
   entries: Record<string, PassportEntry>;
 };
 
 const KEY = "foodis:v1";
-const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], allergens: [], tastes: [], entries: {} };
+const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], guards: [], allergens: [], tastes: [], entries: {} };
 
 let state: LocalState = INITIAL;
 let loaded = false;

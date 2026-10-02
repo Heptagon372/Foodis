@@ -9,6 +9,7 @@ import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
 import { getState, guestProfile, record } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { pauseRadio } from "@/lib/client/radio";
+import { questEvent } from "@/lib/client/quest";
 import { track } from "@/lib/client/track";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
@@ -62,6 +63,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
       setMicHelp(null);
       setInterim("");
       pauseRadio(); // 푸디가 답하는 동안 라디오는 잠시 멈춤
+      if (mode === "voice") questEvent("voice_ask"); // Food Quest: 음성으로 묻기
       const id = ++seq.current;
       const t0 = performance.now(); // KPI: 질의 → 응답 / (음성) 발화 확정 → 첫 음성 재생
       setTurns((t) => [...t, { id, q: text, mode, contextFoodId }]);

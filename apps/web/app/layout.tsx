@@ -4,6 +4,7 @@ import { AccountSync } from "@/components/AccountSync";
 import { AppFrame } from "@/components/AppFrame";
 import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
+import { QuestToast } from "@/components/QuestToast";
 import { RadioMini } from "@/components/RadioMini";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <FoodiProvider>
           <AppFrame>{children}</AppFrame>
           <RadioMini />
+          <QuestToast />
           <TabBar />
         </FoodiProvider>
       </body>

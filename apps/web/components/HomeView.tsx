@@ -11,6 +11,7 @@ import { Intro } from "./Intro";
 import { PreviewBanner, Section, Wordmark } from "./bits";
 import { startRadio } from "@/lib/client/radio";
 import { VoiceButton } from "./VoiceButton";
+import { QuestHomeCard } from "./QuestBoard";
 
 /** 날짜로 고정되는 '오늘의 탐험' — 같은 날엔 모두 같은 음식 (공유·대화 소재) */
 const todayIndex = (n: number) => {
@@ -125,6 +126,7 @@ export function HomeView({ foods, preview }: { foods: FoodSummary[]; preview: bo
           </Link>
         </div>
       </section>
+      <QuestHomeCard />
 
       {picks.length > 0 && (
         <Section title="나를 위한 추천" more={diet.length > 0 ? <span className="text-caption text-muted">식이 조건 반영</span> : undefined}>

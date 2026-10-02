@@ -8,6 +8,7 @@ import { ALLERGEN_LABEL, DIET_LABEL } from "./DietBadge";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section, Wordmark } from "./bits";
 import { ShareCardButton } from "./ShareCardButton";
+import { VoiceSettings } from "./settings/VoiceSettings";
 import { MyTablePreview } from "./MyTable";
 import { AccountCard, AccountNudge } from "./AccountCard";
 import { useAccount } from "@/lib/client/account";
@@ -166,6 +167,10 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
           })}
         </div>
         <p className="text-caption text-muted">추천 필터에만 쓰이고 {signedIn ? "내 계정에만" : "이 기기에만"} 저장돼요. 빨간 재료가 든 음식은 추천하지 않아요.</p>
+      </Section>
+
+      <Section title="음성 설정">
+        <VoiceSettings />
       </Section>
 
       <Section title="계정">

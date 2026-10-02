@@ -8,6 +8,7 @@ export const env = {
   supabaseAnonKey: str("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   supabaseServiceKey: str("SUPABASE_SERVICE_ROLE_KEY"),
 
+  // ── LLM (lib/providers/registry/llm.ts)
   llmProvider: str("LLM_PROVIDER", "anthropic") as "anthropic",
   // 09 문서 선정: 의도 분류 = Haiku 4.5, 답변 = Sonnet 5
   llmModelFast: str("LLM_MODEL_FAST", "claude-haiku-4-5")!,
@@ -17,14 +18,20 @@ export const env = {
   // 음성 지연 예산(답변 1.5초) 때문에 smart 모델은 낮은 effort 로 시작. Haiku 4.5 는 effort 미지원이라 smart 에만 적용
   llmSmartEffort: str("LLM_SMART_EFFORT", "low") as "low" | "medium" | "high",
 
+
+  // ── 임베딩 (registry/embed.ts)
   embeddingModel: str("EMBEDDING_MODEL", "text-embedding-3-small")!,
+
+  // ── STT (registry/stt.ts)
   sttModel: str("STT_MODEL", "gpt-transcribe")!,
 
+  // ── TTS (registry/tts.ts)
   ttsProvider: str("TTS_PROVIDER", "google") as "google" | "openai",
   googleTtsCredentials: str("GOOGLE_TTS_CREDENTIALS_JSON"),
   googleTtsVoice: str("GOOGLE_TTS_VOICE", "ko-KR-Wavenet-A")!, // P3 에서 Chirp 3 HD 한국어 확인 후 교체
   openaiTtsVoice: str("OPENAI_TTS_VOICE", "coral")!,
 
+  // ── 운영
   dailyBudgetUsd: Number(str("DAILY_BUDGET_USD", "5")),
   demoMode: str("DEMO_MODE", "false") === "true",
 };

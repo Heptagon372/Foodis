@@ -3,25 +3,24 @@ import { NextResponse } from "next/server";
 import { dataStatus } from "@/lib/content";
 import { supabasePublic } from "@/lib/db/supabase-server";
 import { env } from "@/lib/env";
+import { embedStatus, llmStatus, sttStatus, ttsStatus } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const keys = {
-    supabase: Boolean(env.supabaseUrl && env.supabaseAnonKey && env.supabaseServiceKey),
-    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
-    openai: Boolean(process.env.OPENAI_API_KEY),
-    google_tts: Boolean(env.googleTtsCredentials),
-  };
+  const keys = { supabase: Boolean(env.supabaseUrl && env.supabaseAnonKey && env.supabaseServiceKey) };
+  // 영역별 제공자 준비 상태 (키 값은 넣지 않는다). 영역마다 하나 이상 준비돼야 ok
+  const providers = { llm: llmStatus(), stt: sttStatus(), tts: ttsStatus(), embed: embedStatus() };
+  const anyReady = (xs: { ready: boolean }[]) => xs.some((x) => x.ready);
   let db: { ok: boolean; countries?: number; error?: string } = { ok: false };
   if (keys.supabase) {
     // head:true 는 테이블이 없어도(404) error 가 비어 오는 경우가 있어 실제로 한 행을 읽어 본다
     const { count, error } = await supabasePublic().from("countries").select("code", { count: "exact" }).limit(1);
     db = error ? { ok: false, error: error.code === "PGRST205" ? "테이블 없음 — supabase/migrations 를 SQL Editor 에서 실행하세요" : error.message } : { ok: true, countries: count ?? 0 };
   }
-  const ok = db.ok && keys.anthropic && keys.openai;
+  const ok = db.ok && anyReady(providers.llm) && anyReady(providers.embed);
   return NextResponse.json(
-    { ok, keys, db, content: await dataStatus().catch(() => ({ live: false, reason: "확인 실패" })), models: { fast: env.llmModelFast, smart: env.llmModelSmart, tts: env.ttsProvider }, demoMode: env.demoMode },
+    { ok, keys, providers, db, content: await dataStatus().catch(() => ({ live: false, reason: "확인 실패" })), models: { fast: env.llmModelFast, smart: env.llmModelSmart }, demoMode: env.demoMode },
     { status: ok ? 200 : 503 },
   );
 }

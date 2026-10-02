@@ -81,7 +81,7 @@ insert into data_sources (id, name, category, region, status, phase, license, co
   ('recipe1m', 'Recipe1M+ / RecipeNLG', 'dataset', 'global', 'excluded', null, '비상업 연구', false, 'prohibited', '제외: 비상업 연구용', null, null, 'http://pic2recipe.csail.mit.edu', null),
   ('10000recipe', '만개의레시피', 'recipe', 'KR', 'excluded', null, '공식 API 없음', false, 'prohibited', '제외: 크롤링 금지', null, null, 'https://www.10000recipe.com', null),
   ('foodis_review', 'FOODIS 검수 출처', 'internal', 'internal', 'adopted', 'MVP', '검수자 기록', true, 'store', '검수자가 식이 판정에 첨부한 URL(2개 이상 규칙)', null, '식이 정보: FOODIS 검수 (출처 링크 참조)', null, null),
-  ('foodis_llm_draft', 'FOODIS AI 초안 (근거 기반)', 'internal', 'internal', 'adopted', 'MVP', '자체 작성', true, 'store', '근거 자료로 Claude가 쓴 요약·문화 이야기 (사람 검수 후 노출)', null, '설명: FOODIS 편집 (근거 출처 별도 표기)', null, '근거 없는 사실 생성 금지')
+  ('foodis_llm_draft', 'FOODIS AI 초안 (근거 기반)', 'internal', 'internal', 'adopted', 'MVP', '자체 작성', true, 'store', '근거 자료로 AI(Gemini·GPT 등)가 쓴 요약·문화 이야기 (사람 검수 후 노출)', null, '설명: FOODIS 편집 (근거 출처 별도 표기)', null, '근거 없는 사실 생성 금지')
 on conflict (id) do update set
   name = excluded.name, category = excluded.category, region = excluded.region, status = excluded.status, phase = excluded.phase,
   license = excluded.license, commercial_use = excluded.commercial_use, storage_policy = excluded.storage_policy,

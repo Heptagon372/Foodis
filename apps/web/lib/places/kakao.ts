@@ -66,8 +66,20 @@ export function buildQueries(f: FoodQueryInput): PlannedQuery[] {
   };
   add(f.name_ko, "dish");
   if (/[a-z]/i.test(f.name_en) && f.name_en.trim().length >= 3) add(f.name_en, "dish");
-  if (category === "FD6") add(CUISINE[f.country_code] ?? `${f.country_name} 음식`, "cuisine");
+  if (category === "FD6") add(cuisineQuery(f), "cuisine");
   return out;
+}
+
+const cuisineQuery = (f: FoodQueryInput) => CUISINE[f.country_code] ?? `${f.country_name} 음식`;
+
+/**
+ * 나라 요리 검색(cuisine)은 카카오 키워드 검색이 느슨해서 엉뚱한 가게가 섞인다 ('베트남음식' → 포차·한식집).
+ * 분류(category_name)나 가게 이름에 그 요리·나라 이름이 들어 있는 곳만 남긴다.
+ */
+export function isCuisineMatch(d: Pick<KakaoDoc, "place_name" | "category_name">, f: FoodQueryInput): boolean {
+  const stems = [cuisineQuery(f).replace(/\s*음식$/, ""), f.country_name].filter((s) => s.length >= 2);
+  const hay = `${d.category_name} ${d.place_name}`;
+  return stems.some((s) => hay.includes(s));
 }
 
 async function call<T>(path: string, params: Record<string, string | number>, deps: KakaoDeps): Promise<T> {
@@ -95,17 +107,23 @@ export async function searchNearby(food: FoodQueryInput, center: LatLng, radius:
   for (const q of buildQueries(food)) {
     if (byId.size >= ENOUGH) break;
     calls++;
-    for (const d of await keywordSearch({ query: q.query, category: q.category, center, radius }, deps)) if (!byId.has(d.id)) byId.set(d.id, { ...d, match: q.match });
+    for (const d of await keywordSearch({ query: q.query, category: q.category, center, radius }, deps)) {
+      if (byId.has(d.id) || (q.match === "cuisine" && !isCuisineMatch(d, food))) continue;
+      byId.set(d.id, { ...d, match: q.match });
+    }
   }
   return { docs: [...byId.values()], calls };
 }
 
-/** 주소·지역 이름 → 좌표. 주소 검색이 비면 키워드 검색(역·동네 이름)으로 한 번 더 */
+/** 지역 기준점으로 쓰지 않는 가게 업종 — '도쿄역' 이 '도쿄스테이크 ○○역점' 으로 잡히는 걸 막는다 (FD6 음식점 · CE7 카페 · CS2 편의점) */
+const NOT_AREA = new Set(["FD6", "CE7", "CS2"]);
+
+/** 주소·지역 이름 → 좌표. 주소 검색이 비면 키워드 검색(역·동네 이름)으로 한 번 더 — 가게는 건너뛴다 */
 export async function geocode(q: string, deps: KakaoDeps): Promise<(LatLng & { label: string }) | null> {
   const addr = await call<{ documents: { address_name: string; x: string; y: string }[] }>("/search/address.json", { query: q, size: 1 }, deps);
   const a = addr.documents?.[0];
   if (a) return { lat: Number(a.y), lng: Number(a.x), label: a.address_name };
-  const kw = await call<{ documents: KakaoDoc[] }>("/search/keyword.json", { query: q, size: 1 }, deps);
-  const k = kw.documents?.[0];
+  const kw = await call<{ documents: KakaoDoc[] }>("/search/keyword.json", { query: q, size: 5 }, deps);
+  const k = kw.documents?.find((d) => !NOT_AREA.has(d.category_group_code));
   return k ? { lat: Number(k.y), lng: Number(k.x), label: k.place_name } : null;
 }

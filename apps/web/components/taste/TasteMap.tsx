@@ -18,7 +18,12 @@ export function TasteMap(p: { provider: MapProvider; mapKey: string; center: { l
   // 지도는 한 번만 만든다 (제공자·키가 바뀔 때만 다시)
   useEffect(() => {
     let alive = true;
-    createMap(p.provider, p.mapKey, box.current!, p.center)
+    // 지도마다 자기 그릇을 따로 준다 — 개발 모드(StrictMode)의 마운트→해제→마운트에서
+    // 늦게 끝난 첫 지도의 destroy() 가 같은 그릇에 그려진 두 번째 지도까지 지워 버리던 문제
+    const mount = document.createElement("div");
+    mount.style.cssText = "position:absolute;inset:0";
+    box.current!.appendChild(mount);
+    createMap(p.provider, p.mapKey, mount, p.center)
       .then((h) => {
         if (!alive) return h.destroy();
         handle.current = h;
@@ -29,13 +34,15 @@ export function TasteMap(p: { provider: MapProvider; mapKey: string; center: { l
       alive = false;
       handle.current?.destroy();
       handle.current = null;
+      mount.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 중심 이동은 아래 effect 가 맡는다
   }, [p.provider, p.mapKey]);
 
+  // 결과(핀)·기준 위치가 바뀔 때만 기준점과 핀이 다 보이게 맞춘다 — 핀 선택만 바뀔 때는 사용자가 옮긴 화면을 건드리지 않는다
   useEffect(() => {
-    if (state === "ready") handle.current?.setCenter(p.center);
-  }, [state, p.center]);
+    if (state === "ready") handle.current?.fit([p.me ?? p.center, ...p.pins]);
+  }, [state, p.center, p.me, p.pins]);
   useEffect(() => {
     if (state === "ready") handle.current?.setMe(p.me);
   }, [state, p.me]);

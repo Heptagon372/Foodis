@@ -92,11 +92,38 @@ describe("카카오 로컬 API 호출", () => {
     ]);
   });
 
+  it("나라 요리 검색은 분류·이름에 그 나라 요리가 없는 가게를 버린다 (포차·한식집 섞임 방지)", async () => {
+    const { fn } = fakeFetch({
+      kakao: (q) =>
+        q === "베트남음식"
+          ? [
+              doc("3", "사이공 식당", 300),
+              doc("4", "포차천국 제주시청점", 400, { category_name: "음식점 > 술집 > 실내포장마차" }),
+              doc("5", "일구교자", 500, { category_name: "음식점 > 한식" }),
+              doc("6", "드렁킨타이", 600, { category_name: "음식점 > 아시아음식 > 동남아음식 > 태국음식" }),
+              doc("7", "베트남 집밥", 700, { category_name: "음식점 > 아시아음식" }),
+            ]
+          : [],
+    });
+    const r = await searchNearby(PHO, { lat: 33.5, lng: 126.53 }, 20000, { key: "k", fetch: fn });
+    expect(r.docs.map((d) => d.id)).toEqual(["3", "7"]);
+  });
+
   it("주소 검색이 비면 키워드 검색으로", async () => {
     const fn = vi.fn(async (url: string) =>
-      new Response(JSON.stringify({ documents: url.includes("address.json") ? [] : [{ ...doc("9", "강남역 2호선", 0), x: "127.0276", y: "37.4979" }] })),
+      new Response(JSON.stringify({ documents: url.includes("address.json") ? [] : [{ ...doc("9", "강남역 2호선", 0, { category_group_code: "SW8" }), x: "127.0276", y: "37.4979" }] })),
     );
     expect(await geocode("강남역", { key: "k", fetch: fn })).toEqual({ lat: 37.4979, lng: 127.0276, label: "강남역 2호선" });
+  });
+
+  it("키워드 검색의 음식점·카페는 지역 기준점으로 쓰지 않는다 ('도쿄역' → '도쿄스테이크 서현역점' 방지)", async () => {
+    const steak = doc("8", "도쿄스테이크 서현역점", 0, { category_group_code: "FD6" });
+    const fn = vi.fn(async (url: string) => new Response(JSON.stringify({ documents: url.includes("address.json") ? [] : [steak] })));
+    expect(await geocode("도쿄역", { key: "k", fetch: fn })).toBeNull();
+    const fn2 = vi.fn(async (url: string) =>
+      new Response(JSON.stringify({ documents: url.includes("address.json") ? [] : [steak, { ...doc("9", "서현역 수인분당선", 0, { category_group_code: "SW8" }), x: "127.1234", y: "37.3851" }] })),
+    );
+    expect(await geocode("서현역", { key: "k", fetch: fn2 })).toEqual({ lat: 37.3851, lng: 127.1234, label: "서현역 수인분당선" });
   });
 });
 

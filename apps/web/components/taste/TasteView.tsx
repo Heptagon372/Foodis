@@ -34,7 +34,7 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const [data, setData] = useState<NearbyResponse | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState("");
-  const [gps, setGps] = useState<"idle" | "asking" | "denied" | "unsupported" | "outside">("idle");
+  const [gps, setGps] = useState<"idle" | "asking" | "denied" | "failed" | "unsupported" | "outside">("idle");
   const [area, setArea] = useState("");
   const [areaMsg, setAreaMsg] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -71,14 +71,21 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const nearMe = useCallback(() => {
     if (!("geolocation" in navigator)) return setGps("unsupported");
     setGps("asking");
+    setAreaMsg("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        if (!inKorea(p)) return setGps("outside");
+        if (!inKorea(p)) {
+          setGps("outside");
+          // 예전 '내 위치'는 이제 틀린 위치라 서울시청으로 되돌린다 (지역 검색으로 고른 곳은 그대로 둔다)
+          setLoc((cur) => (cur.kind === "gps" ? { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, label: DEFAULT_CENTER.label, kind: "default" } : cur));
+          return;
+        }
         setGps("idle");
         setLoc({ ...p, label: null, kind: "gps" });
       },
-      () => setGps("denied"),
+      // 1 = 권한 거부, 2·3 = 위치를 못 잡음·시간 초과 — 문구를 나눈다. 기준 위치는 바꾸지 않는다
+      (err) => setGps(err.code === 1 ? "denied" : "failed"),
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
     );
   }, []);
@@ -86,12 +93,13 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const searchArea = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = area.trim();
-    if (q.length < 2) return;
+    if (q.length < 2) return setAreaMsg("지역 이름을 2글자 이상 적어 주세요.");
     setAreaMsg("찾는 중…");
     const res = await fetch(`/api/places/geocode?q=${encodeURIComponent(q)}`).catch(() => null);
     const body = res ? await res.json().catch(() => ({})) : {};
     if (!res?.ok) return setAreaMsg(body?.error?.message ?? "그 지역을 찾지 못했어요.");
     setAreaMsg("");
+    setGps("idle"); // 지역으로 바꿨으니 앞선 위치 오류 문구는 지운다
     setLoc({ lat: body.lat, lng: body.lng, label: body.label ?? q, kind: "area" });
   };
 
@@ -102,6 +110,7 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const me = useMemo(() => (loc.kind === "gps" ? { lat: loc.lat, lng: loc.lng } : null), [loc]);
   const nextRadius = RADIUS_STEPS.find((r) => r > radius);
   const example = Boolean(data?.example);
+  const franchiseReady = example || Boolean(data?.sources.franchiseSyncedAt);
   // Google 평점이 든 목록은 카카오·네이버 지도와 함께 보여주지 않는다 (Google 약관 §14.2)
   const googleList = Boolean(data?.sources.google);
   const showMap = Boolean(mapKey && setup.mapKey && data && !example && !googleList);
@@ -148,9 +157,11 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
             </div>
             <p className="text-caption text-ink-soft">
               {loc.kind === "gps" ? "내 위치 기준" : `${fromLabel ?? "선택한 지역"} 기준`} · 반경 {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}
-              {gps === "denied" && " · 위치 권한이 없어 지역 검색이나 서울시청 기준으로 보여드려요"}
+              {/* 실제 기준은 앞의 "○○ 기준"이 말한다 — 여기서는 왜 내 위치를 못 썼는지만 */}
+              {gps === "denied" && " · 위치 권한이 없어요. 지역 이름으로 찾아보세요"}
+              {gps === "failed" && " · 지금 위치를 잡지 못했어요. 잠시 뒤 다시 하거나 지역 이름으로 찾아보세요"}
               {gps === "unsupported" && " · 이 브라우저는 위치를 지원하지 않아요"}
-              {gps === "outside" && " · 지금 위치가 한국 밖이라 서울시청 기준으로 보여드려요"}
+              {gps === "outside" && " · 지금 위치가 한국 밖이라 쓸 수 없어요"}
               {areaMsg && ` · ${areaMsg}`}
             </p>
             <p className="text-caption text-muted">위치는 주변 검색에만 쓰고 저장하지 않아요.</p>
@@ -169,11 +180,13 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
                 {label}
               </Chip>
             ))}
-            <Chip on={indieOnly} onClick={() => setIndieOnly((v) => !v)}>
-              프랜차이즈 제외
-            </Chip>
+            {/* 가맹 브랜드 목록(공정위)을 받기 전에는 모든 가게가 '모름'이라 이 필터가 전부 지워 버린다 — 받은 뒤에만 보여준다 */}
+            {franchiseReady && (
+              <Chip on={indieOnly} onClick={() => setIndieOnly((v) => !v)}>
+                프랜차이즈 제외
+              </Chip>
+            )}
           </div>
-          {indieOnly && !data?.sources.franchiseSyncedAt && !example && <p className="text-caption text-diet-warn-ink">가맹 브랜드 목록을 아직 받지 않아 &lsquo;개인 음식점&rsquo;을 가릴 수 없어요.</p>}
 
           {example && (
             <p className="flex items-start gap-2 rounded-2xl border-2 border-dashed border-diet-warn bg-diet-warn/10 px-3.5 py-3 text-sm font-semibold text-diet-warn-ink">

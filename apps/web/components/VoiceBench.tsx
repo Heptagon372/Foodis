@@ -1,22 +1,29 @@
 "use client";
 // /demo "지연 측정" 패널 (로드맵 P0: 질문 종료 → 첫 음성 3초). 발표 기기에서 실제 재생 경로의 '첫 소리'까지 잰다.
-// 서버 TTS: /api/foodi/tts 요청 → <audio> playing (lib/client/voice.ts speak() 와 같이 MP3 를 다 받은 뒤 재생)
+// 서버 TTS 두 가지를 같은 기기에서 비교한다 (둘 다 /api/foodi/tts 요청 → <audio> playing):
+//  - 받는 대로 재생: lib/client/voice.ts speak() · 라디오가 실제로 쓰는 경로 (stream-audio.ts — MediaSource 에 첫 조각부터)
+//  - 다 받은 뒤 재생: 이전 방식 (MP3 blob 을 끝까지 받고 재생). 미리 받아 둔 라디오 구간·MSE 미지원 브라우저가 이 경로
 // 브라우저 음성: speechSynthesis.speak → utterance start. 휴대폰에선 이게 fallback 이라 같이 본다.
 // 서버 쪽 구간(STT·/ask·합성)은 pnpm bench:voice 가 docs/design/08 문서에 정리한다 — 여기 표는 그 문서 §3 에 붙인다.
 import { useState } from "react";
 import { BENCH_SENTENCES, FIRST_AUDIO_TARGET_MS } from "@/lib/bench/sentences";
 import { fmtMs, markdownTable, summarize } from "@/lib/bench/stats";
+import { attachResponse, canStreamAudio } from "@/lib/client/stream-audio";
 import { stopSpeaking } from "@/lib/client/voice";
 
-type Mode = "server" | "browser";
+type Mode = "stream" | "blob" | "browser";
 type Row = { id: string; first?: number; headers?: number; received?: number; source?: string; error?: string };
 
-const MODE_LABEL: Record<Mode, string> = { server: "서버 TTS (/api/foodi/tts)", browser: "브라우저 speechSynthesis" };
+const MODE_LABEL: Record<Mode, string> = {
+  stream: "서버 TTS · 받는 대로 재생 (앱 경로)",
+  blob: "서버 TTS · 다 받은 뒤 재생 (이전 방식)",
+  browser: "브라우저 speechSynthesis",
+};
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const withTimeout = <T,>(p: Promise<T>, ms: number, msg: string) =>
   Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error(msg)), ms))]);
 
-async function measureServer(text: string, audio: HTMLAudioElement, listen: boolean): Promise<Row & { fatal?: boolean }> {
+async function measureServer(text: string, audio: HTMLAudioElement, listen: boolean, streaming: boolean): Promise<Row & { fatal?: boolean }> {
   const t0 = performance.now();
   const res = await fetch("/api/foodi/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
   const headers = performance.now() - t0;
@@ -24,26 +31,40 @@ async function measureServer(text: string, audio: HTMLAudioElement, listen: bool
   if (res.status === 503 || res.status === 429)
     return { id: "", error: res.status === 503 ? "서버 TTS 없음 (503) — 앱은 브라우저 음성으로 대체" : "속도 제한 (429) — 1분 뒤 다시", fatal: true };
   if (!res.ok) return { id: "", error: `HTTP ${res.status}` };
-  const blob = await res.blob();
-  const received = performance.now() - t0;
-  const url = URL.createObjectURL(blob);
+  // 서버가 실제로 흘려보냈는지 (Google 은 한 번에 합성 → buffered, 08 문서 §6)
+  let source = [res.headers.get("X-TTS-Provider") ?? "?", res.headers.get("X-TTS-Mode")].filter(Boolean).join(" · ");
+  let received = NaN;
+  let release = () => {};
+  let first: Promise<number>;
+  let all: Promise<unknown> = Promise.resolve();
+  if (streaming) {
+    const att = await attachResponse(res, audio, { startedAt: t0 });
+    release = att.release;
+    if (att.mode === "blob") source += " · MSE 미지원 → 다 받은 뒤 재생";
+    all = att.done.then(() => (received = performance.now() - t0));
+    first = att.firstAudio;
+  } else {
+    const blob = await res.blob();
+    received = performance.now() - t0;
+    const url = URL.createObjectURL(blob);
+    release = () => URL.revokeObjectURL(url);
+    first = new Promise<number>((resolve, reject) => {
+      audio.onplaying = () => resolve(performance.now() - t0);
+      audio.onerror = () => reject(new Error("재생 오류"));
+    });
+    audio.src = url;
+  }
   try {
-    const first = await withTimeout(
-      new Promise<number>((resolve, reject) => {
-        audio.onplaying = () => resolve(performance.now() - t0);
-        audio.onerror = () => reject(new Error("재생 오류"));
-        audio.src = url;
-        audio.play().catch(reject);
-      }),
-      15_000,
-      "playing 이벤트 없음 (15초)",
-    );
+    const [, ms] = await withTimeout(Promise.all([audio.play(), first]), 15_000, "playing 이벤트 없음 (15초)");
     if (listen) await new Promise<void>((r) => (audio.onended = audio.onerror = () => r()));
     else audio.pause();
-    return { id: "", first, headers, received, source: res.headers.get("X-TTS-Provider") ?? "?" };
+    // 멈춰도 받기는 이어진다 → 전체 수신 시각까지 기다려 '첫 소리 vs 다 받음' 차이를 같이 본다
+    await withTimeout(all, 15_000, "").catch(() => {});
+    return { id: "", first: ms, headers, received, source };
   } finally {
+    audio.pause();
     audio.onplaying = audio.onended = audio.onerror = null;
-    URL.revokeObjectURL(url);
+    release();
   }
 }
 
@@ -89,7 +110,7 @@ export function VoiceBench() {
         setBusy(`${MODE_LABEL[mode]} ${i + 1}/${BENCH_SENTENCES.length}`);
         let row: Row & { fatal?: boolean };
         try {
-          if (mode === "server") row = await measureServer(s.answer, audio, listen);
+          if (mode !== "browser") row = await measureServer(s.answer, audio, listen, mode === "stream");
           else if (!window.speechSynthesis) row = { id: "", error: "speechSynthesis 지원 안 함", fatal: true };
           else row = { id: "", first: await measureBrowser(s.answer, listen), source: window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("ko"))?.name ?? "기본 음성" };
         } catch (e) {
@@ -148,6 +169,7 @@ export function VoiceBench() {
       "",
       `- 브라우저: ${navigator.userAgent}`,
       "- 첫 소리 = 요청 시작 → `<audio>` playing / utterance start. 질문 인식(STT)·/ask 시간은 빠져 있다 (서버 측 표와 더해서 본다).",
+      `- 받는 대로 재생(MediaSource): 이 브라우저 ${canStreamAudio() ? "지원" : "미지원 — 앱도 다 받은 뒤 재생"}. 음성 비고의 stream/buffered = 서버가 흘려보냈는지 (Google 은 buffered).`,
       "",
       markdownTable(HEAD, summaryRows.map((r) => [...r.cells.slice(0, -1), [r.cells.at(-1), ...r.errors].filter((x) => x && x !== "—").join(" / ") || "—"])),
       "",
@@ -171,15 +193,20 @@ export function VoiceBench() {
     <section className="space-y-2">
       <h2 className="text-[15px] font-semibold">지연 측정 — 데모 문장 10개 첫 소리까지</h2>
       <p className="text-caption text-muted">
-        이 기기에서 실제 재생 경로를 잽니다. 목표: 질문 종료 → 첫 음성 {FIRST_AUDIO_TARGET_MS / 1000}초 (여기 값 + 서버 측 STT·답변 시간). 서버 TTS 는 분당 20회 제한이 있어요.
+        이 기기에서 실제 재생 경로를 잽니다. 목표: 질문 종료 → 첫 음성 {FIRST_AUDIO_TARGET_MS / 1000}초 (여기 값 + 서버 측 STT·답변 시간). 서버 TTS 는 분당 20회 제한이 있어요 (두 방식을 다 재고 나면 1분 쉬었다가 다시).
       </p>
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => run("server")} disabled={!!busy} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-green-800 shadow-sm disabled:opacity-40">
-          서버 TTS 측정
-        </button>
-        <button type="button" onClick={() => run("browser")} disabled={!!busy} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-green-800 shadow-sm disabled:opacity-40">
-          브라우저 음성 측정
-        </button>
+      <div className="grid grid-cols-3 gap-2">
+        {(
+          [
+            ["stream", "서버 TTS · 받는 대로"],
+            ["blob", "서버 TTS · 다 받고"],
+            ["browser", "브라우저 음성"],
+          ] as const
+        ).map(([m, label]) => (
+          <button key={m} type="button" onClick={() => run(m)} disabled={!!busy} className="rounded-2xl bg-surface px-2 py-3 text-sm font-semibold text-green-800 shadow-sm disabled:opacity-40">
+            {label}
+          </button>
+        ))}
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={listen} onChange={(e) => setListen(e.target.checked)} disabled={!!busy} className="size-4 accent-green-800" />

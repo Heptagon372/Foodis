@@ -1,4 +1,5 @@
 // 작은 공용 컴포넌트: FollowUpChip · RelationRow · SourceFooter · Section · Wordmark
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
@@ -69,11 +70,11 @@ export function SourceFooter({ sources }: { sources: { url: string; title: strin
   );
 }
 
-/** 워드마크: FOOD(잉크) + IS(리프), Fraunces — UI 에서 세리프는 여기와 영문 이탤릭 강조에만 */
+/** 워드마크: 로고 이미지(public/logo.png). 크기는 className 의 글자 크기(text-2xl 등)를 따른다 — 높이 1.8em. 다크 테마에선 어두운 초록이 묻히지 않게 살짝 밝히고 빛을 두른다 */
 export function Wordmark({ className = "text-2xl" }: { className?: string }) {
   return (
-    <Link href="/" className={`font-serif font-bold tracking-tight text-ink ${className}`} aria-label="FOODIS 홈">
-      FOOD<span className="text-leaf">IS</span>
+    <Link href="/" className={`inline-flex items-center ${className}`} aria-label="FOODIS 홈">
+      <Image src="/logo.png" alt="FOODIS" width={720} height={192} priority className="dark:drop-shadow-[0_0_6px_rgba(220,255,210,0.35)] dark:brightness-125" style={{ height: "1.8em", width: "auto" }} />
     </Link>
   );
 }

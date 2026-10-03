@@ -5,7 +5,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MapProvider } from "@/lib/client/map-provider";
 import { DEFAULT_CENTER, DEFAULT_RADIUS, inKorea, RADIUS_STEPS } from "@/lib/places/geo";
-import type { FilterKey, NearbyResponse } from "@/lib/places/types";
+import type { FilterKey, NearbyResponse, RankedPlace } from "@/lib/places/types";
+
+// 'reviews' = 리뷰 많은 순, 'rating' = 별점 높은 순 — 클라이언트에서 다시 정렬.
+// 서버에는 distance 또는 best(추천순)만 보낸다. 리뷰 수·별점은 평점이 모여 있는 가게는 서버 응답(google·app)으로, 나머지는 거리 폴백.
+type SortKey = "distance" | "best" | "reviews" | "rating";
 import type { PlacesSetup } from "@/lib/places/server";
 import { useFoodi } from "../FoodiSheet";
 import { Icon } from "../icons";
@@ -28,7 +32,7 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   const { open } = useFoodi();
   const [loc, setLoc] = useState<Loc>({ lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, label: DEFAULT_CENTER.label, kind: "default" });
   const [radius, setRadius] = useState<number>(DEFAULT_RADIUS);
-  const [sort, setSort] = useState<"distance" | "best">("distance");
+  const [sort, setSort] = useState<SortKey>("distance");
   const [filters, setFilters] = useState<FilterKey[]>([]);
   const [indieOnly, setIndieOnly] = useState(false);
   const [data, setData] = useState<NearbyResponse | null>(null);
@@ -44,7 +48,9 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   useEffect(() => {
     if (!canSearch) return;
     const ctl = new AbortController();
-    const qs = new URLSearchParams({ food: food.slug, sort, radius: String(radius) });
+    // 리뷰/별점 정렬은 서버에서 추천순(best)으로 받아 와서 화면에서 다시 정렬한다
+    const serverSort = sort === "distance" ? "distance" : "best";
+    const qs = new URLSearchParams({ food: food.slug, sort: serverSort, radius: String(radius) });
     // 기본 위치(서울시청)는 좌표를 보내지 않는다 — 서버가 기본값을 쓰고 "서울시청 기준"이라고 알린다
     if (loc.kind !== "default") {
       qs.set("lat", String(loc.lat));
@@ -67,6 +73,27 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
       });
     return () => ctl.abort();
   }, [canSearch, food.slug, loc, radius, sort, filters, indieOnly]);
+
+  // 리뷰 많은 순·별점 높은 순은 서버 응답을 받은 뒤 다시 정렬한다. 평점 없는 가게는 뒤로 보낸다.
+  const sortedPlaces = useMemo((): RankedPlace[] => {
+    const base = data?.places ?? [];
+    if (sort !== "reviews" && sort !== "rating") return base;
+    const score = (p: RankedPlace) => {
+      const g = p.rating.google;
+      const a = p.rating.app;
+      const count = (g?.count ?? 0) + (a?.count ?? 0);
+      // 별점은 가중 평균 (리뷰 수가 많은 쪽에 더 가깝게)
+      const sum = (g ? g.rating * g.count : 0) + (a ? a.avg * a.count : 0);
+      const avg = count > 0 ? sum / count : 0;
+      return { count, avg };
+    };
+    return [...base].sort((a, b) => {
+      const sa = score(a);
+      const sb = score(b);
+      if (sort === "reviews") return sb.count - sa.count || sb.avg - sa.avg || a.distance - b.distance;
+      return sb.avg - sa.avg || sb.count - sa.count || a.distance - b.distance;
+    });
+  }, [data?.places, sort]);
 
   const nearMe = useCallback(() => {
     if (!("geolocation" in navigator)) return setGps("unsupported");
@@ -104,7 +131,7 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
   };
 
   const toggle = (f: FilterKey) => setFilters((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
-  const places = useMemo(() => data?.places ?? [], [data]);
+  const places = sortedPlaces;
   const pins = useMemo(() => places.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng })), [places]);
   const center = useMemo(() => ({ lat: data?.center.lat ?? loc.lat, lng: data?.center.lng ?? loc.lng }), [data, loc]);
   const me = useMemo(() => (loc.kind === "gps" ? { lat: loc.lat, lng: loc.lng } : null), [loc]);
@@ -168,11 +195,11 @@ export function TasteView({ food, setup, mapKey, dev }: { food: FoodRef; setup: 
           </section>
 
           <SegTabs
-            tabs={["distance", "best"] as const}
+            tabs={["best", "reviews", "rating", "distance"] as const}
             value={sort}
             onChange={setSort}
             label="정렬"
-            labels={{ distance: "가까운 순", best: "맛있는 순" }}
+            labels={{ best: "추천순", reviews: "리뷰 많은 순", rating: "별점 높은 순", distance: "가까운 순" }}
           />
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
             {FILTERS.map(([k, label]) => (

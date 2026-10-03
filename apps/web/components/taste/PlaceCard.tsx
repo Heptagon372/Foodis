@@ -1,10 +1,10 @@
 "use client";
 // 음식점 카드: 거리 · 평점(출처·개수) · 배지(포장·혜택·가맹) · 카카오맵/전화/길찾기 · 평점 남기기/제보.
 // 모든 정보에 출처를 붙인다 — 확인 안 된 건 확인 안 됐다고 말한다.
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { directionsUrl } from "@/lib/client/map-provider";
 import { franchiseLabel } from "@/lib/places/franchise";
-import { formatDistance } from "@/lib/places/geo";
+import { formatDistance, formatEta } from "@/lib/places/geo";
 import { offerBadge } from "@/lib/places/offers";
 import type { RankedPlace } from "@/lib/places/types";
 import { Icon } from "../icons";
@@ -14,6 +14,22 @@ import { RateForm, ReportPlaceForm } from "./PlaceForms";
 type ReviewItem = { username: string; rating: number; date: string; text: string };
 type KakaoReviews = { rating: number | null; reviewCount: number; reviews: ReviewItem[] };
 type NaverReviews = { naverId: string | null; rating: number | null; reviewCount: number; reviews: ReviewItem[]; placeUrl: string | null };
+type MenuItem = { name: string; price: string | null; desc: string | null; photo: string | null };
+type DayHours = { day: string; text: string; open: number | null; close: number | null };
+type PlaceMenu = { menu: MenuItem[]; hours: DayHours[]; openNow: boolean | null; offDays: string | null; statusText: string };
+
+function useKakaoMenu(placeId: string) {
+  const [data, setData] = useState<PlaceMenu | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/places/${placeId}/menu`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setData(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [placeId]);
+  return data;
+}
 
 function useKakaoReviews(placeId: string) {
   const [data, setData] = useState<KakaoReviews | null>(null);
@@ -44,9 +60,13 @@ function useNaverReviews(placeId: string, name: string, address: string | null) 
 
 export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void }) {
   const x = p.place;
-  const [open, setOpen] = useState<null | "rate" | "report" | "kakao-reviews" | "naver-reviews">(null);
+  const [open, setOpen] = useState<null | "rate" | "report" | "kakao-reviews" | "naver-reviews" | "menu" | "hours">(null);
   const kakao = useKakaoReviews(x.id);
   const naver = useNaverReviews(x.id, x.name, x.road_address ?? x.address);
+  const menuData = useKakaoMenu(x.id);
+  // 메뉴판에 음식 이름이 있으면 "확인됨"으로 올린다 (국가 음식 유사 + 메뉴 있음 = 확률 ↑)
+  const menuHasFood = !!menuData?.menu.some((m) => m.name.includes(p.foodName));
+  const effectiveMatch: typeof x.match = menuHasFood ? "confirmed" : x.match;
   const cat = x.category?.split(">").pop()?.trim();
   const g = x.rating.google;
   const a = x.rating.app;
@@ -66,25 +86,43 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-title font-bold text-ink">{x.name}</h3>
           <p className="text-caption text-muted">
-            {formatDistance(x.distance)}
+            {formatDistance(x.distance)} · {formatEta(x.distance)}
             {p.fromLabel ? ` · ${p.fromLabel}에서` : ""}
             {cat ? ` · ${cat}` : ""}
           </p>
         </div>
       </div>
 
-      <p className="text-caption">
-        {x.match === "confirmed" ? (
+      <p className="flex flex-wrap items-center gap-2 text-caption">
+        {effectiveMatch === "confirmed" ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-lime-soft px-2.5 py-1 font-semibold text-leaf">
             <Icon name="check" className="size-3.5" strokeWidth={2.25} />
-            {p.foodName} 메뉴 확인됨
+            {p.foodName} 메뉴 확인됨{menuHasFood && x.match !== "confirmed" ? " · 메뉴판에서" : ""}
           </span>
         ) : x.match === "dish" ? (
           <span className="text-muted">&lsquo;{p.foodName}&rsquo; 검색 결과 · 메뉴는 가게에 확인해 주세요</span>
         ) : (
           <span className="text-diet-warn-ink">{p.countryName} 음식점 · {p.foodName} 메뉴는 확인 필요</span>
         )}
+        {menuData && menuData.openNow !== null && (
+          <button
+            type="button"
+            onClick={(e) => (e.stopPropagation(), setOpen(open === "hours" ? null : "hours"))}
+            aria-expanded={open === "hours"}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${menuData.openNow ? "bg-lime-soft text-leaf" : "bg-diet-warn/15 text-diet-warn-ink"}`}
+          >
+            <span className={`inline-block size-1.5 rounded-full ${menuData.openNow ? "bg-leaf" : "bg-diet-warn"}`} aria-hidden />
+            {menuData.statusText}
+          </button>
+        )}
       </p>
+
+      {(x.road_address || x.address) && (
+        <p className="flex items-start gap-1.5 text-caption text-ink-soft">
+          <Icon name="pin" className="mt-0.5 size-3.5 shrink-0 text-leaf" />
+          <span className="min-w-0 flex-1 truncate">{x.road_address ?? x.address}</span>
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink">
         {k?.rating != null && (
@@ -167,6 +205,12 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
             네이버에서 보기
           </a>
         )}
+        {menuData && menuData.menu.length > 0 && (
+          <button type="button" aria-expanded={open === "menu"} onClick={() => setOpen(open === "menu" ? null : "menu")} className={link}>
+            <Icon name="utensils" className="size-4 text-leaf" />
+            메뉴판 ({menuData.menu.length})
+          </button>
+        )}
         {k && k.reviews.length > 0 && (
           <button type="button" aria-expanded={open === "kakao-reviews"} onClick={() => setOpen(open === "kakao-reviews" ? null : "kakao-reviews")} className={link}>
             <Icon name="message" className="size-4 text-amber-400" />
@@ -198,6 +242,12 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
           {open === "naver-reviews" && n && (
             <ReviewList title="네이버 리뷰" reviews={n.reviews} starColor="text-green-500" moreUrl={n.placeUrl} moreLabel="네이버에서 더 보기" />
           )}
+          {open === "menu" && menuData && (
+            <MenuBoard menu={menuData.menu} foodName={p.foodName} placeUrl={x.place_url} />
+          )}
+          {open === "hours" && menuData && (
+            <HoursPanel hours={menuData.hours} offDays={menuData.offDays} statusText={menuData.statusText} />
+          )}
         </div>
       )}
     </article>
@@ -226,6 +276,63 @@ function ReviewList({ title, reviews, starColor, moreUrl, moreLabel }: { title: 
           {moreLabel} →
         </a>
       )}
+    </div>
+  );
+}
+
+function MenuBoard({ menu, foodName, placeUrl }: { menu: MenuItem[]; foodName: string; placeUrl: string | null }) {
+  return (
+    <div className="space-y-2.5">
+      <h4 className="font-bold text-ink">메뉴판</h4>
+      <ul className="divide-y divide-line">
+        {menu.map((m, i) => {
+          const hit = m.name.includes(foodName);
+          return (
+            <li key={i} className={`flex items-start gap-3 py-2 ${hit ? "-mx-1 rounded-lg bg-lime-soft/50 px-1" : ""}`}>
+              {m.photo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.photo} alt="" className="size-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1 text-sm font-semibold text-ink">
+                  {hit && <Icon name="check" className="size-3.5 shrink-0 text-leaf" strokeWidth={2.5} />}
+                  <span className="truncate">{m.name}</span>
+                </p>
+                {m.desc && <p className="line-clamp-2 text-caption text-ink-soft">{m.desc}</p>}
+              </div>
+              {m.price && <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">{m.price}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-caption text-muted">메뉴·가격은 카카오맵 공개 정보예요. 바뀔 수 있으니 가게에 꼭 확인해 주세요.</p>
+      {placeUrl && (
+        <a href={placeUrl} target="_blank" rel="noreferrer" className="block text-center text-caption font-medium text-leaf hover:underline">
+          카카오맵에서 더 보기 →
+        </a>
+      )}
+    </div>
+  );
+}
+
+function HoursPanel({ hours, offDays, statusText }: { hours: DayHours[]; offDays: string | null; statusText: string }) {
+  return (
+    <div className="space-y-2">
+      <h4 className="font-bold text-ink">영업시간</h4>
+      <p className="text-sm font-semibold text-ink">{statusText}</p>
+      {hours.length ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {hours.map((h, i) => (
+            <Fragment key={i}>
+              <dt className="font-semibold text-muted">{h.day}</dt>
+              <dd className="text-ink">{h.text}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-caption text-muted">영업시간 정보가 없어요.</p>
+      )}
+      {offDays && <p className="text-caption text-diet-warn-ink">휴무: {offDays}</p>}
     </div>
   );
 }

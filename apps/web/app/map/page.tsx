@@ -18,5 +18,20 @@ export default async function MapPage() {
     const list = (top[f.country_code] ??= []);
     if (list.length < 4) list.push({ slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, image_url: f.image_url, summary: f.summary });
   }
-  return <WorldMapView map={buildWorldMap()} countries={countries} counts={counts} top={top} preview={content.mode === "preview"} />;
+  // 맛집탐방 섹션: 지금은 대한민국만 잠금 해제. 그 나라 음식 목록을 그대로 보낸다 (유명도 순).
+  const unlockedCode = "KR";
+  const unlockedFoods = foods
+    .filter((f) => f.country_code === unlockedCode)
+    .sort((a, b) => rank(a.fame_rank) - rank(b.fame_rank))
+    .map((f) => ({ slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, image_url: f.image_url, taste_tags: f.taste_tags }));
+  return (
+    <WorldMapView
+      map={buildWorldMap()}
+      countries={countries}
+      counts={counts}
+      top={top}
+      preview={content.mode === "preview"}
+      unlocked={{ code: unlockedCode, foods: unlockedFoods }}
+    />
+  );
 }

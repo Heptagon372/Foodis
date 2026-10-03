@@ -22,6 +22,8 @@ import { COUNTRY_INFO } from "@/lib/map/country-info";
 
 /** 나라 패널의 대표 음식 (서버가 fame_rank 순으로 나라별 상위 몇 개만 넘긴다) */
 export type TopFood = { slug: string; name_ko: string; name_en: string; image_url: string | null; summary: string | null };
+export type UnlockedFood = { slug: string; name_ko: string; name_en: string; image_url: string | null; taste_tags: string[] };
+export type UnlockedCountry = { code: string; foods: UnlockedFood[] };
 
 const CHIPS: [string, string][] = [
   ["all", "전체"],
@@ -83,12 +85,14 @@ export function WorldMapView({
   counts,
   top,
   preview,
+  unlocked,
 }: {
   map: WorldMap;
   countries: Country[];
   counts: Record<string, number>;
   top: Record<string, TopFood[]>;
   preview: boolean;
+  unlocked: UnlockedCountry;
 }) {
   const { open } = useFoodi();
   const explored = useLocal(exploredCountries);
@@ -519,6 +523,8 @@ export function WorldMapView({
         </p>
       )}
 
+      <TasteExplore unlocked={unlocked} selectedCode={selected} selectedName={sel?.name_ko ?? null} />
+
       {/* 스크린리더용 목록: 지도를 못 보는 사용자도 같은 곳으로 */}
       <ul className="sr-only" aria-label="지도에 있는 나라">
         {countries.map((c) => (
@@ -530,5 +536,87 @@ export function WorldMapView({
         ))}
       </ul>
     </main>
+  );
+}
+
+/** 지도 아래 '맛집탐방' 섹션: 잠금 해제된 나라(지금은 KR)만 검색·선택 가능. 음식을 고르면 /taste/{slug} 로. */
+function TasteExplore({ unlocked, selectedCode, selectedName }: { unlocked: UnlockedCountry; selectedCode: string | null; selectedName: string | null }) {
+  const [q, setQ] = useState("");
+  // 지도에서 고른 나라가 잠금 해제된 나라면 그 나라 음식을 보여준다. 아무것도 안 골랐으면 기본으로 잠금 해제된 나라.
+  const showing = selectedCode == null || selectedCode === unlocked.code;
+  const locked = selectedCode != null && selectedCode !== unlocked.code;
+  const needle = q.trim().toLowerCase();
+  const list = useMemo(
+    () => unlocked.foods.filter((f) =>
+      !needle || f.name_ko.toLowerCase().includes(needle) || f.name_en.toLowerCase().includes(needle) || f.taste_tags.some((t) => t.toLowerCase().includes(needle)),
+    ),
+    [unlocked.foods, needle],
+  );
+
+  return (
+    <section aria-labelledby="taste-explore-h" className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="taste-explore-h" className="flex items-center gap-2 text-h2 font-bold text-ink">
+          <Icon name="utensils" className="size-5 text-leaf" />
+          맛집탐방
+        </h2>
+        <p className="text-caption text-muted">음식을 고르면 가까운 음식점·메뉴판·영업시간을 보여드려요.</p>
+      </div>
+
+      {locked ? (
+        <div className="card flex items-start gap-3 rounded-3xl p-4">
+          <Icon name="key" className="mt-1 size-5 shrink-0 text-muted" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-ink">{selectedName ?? "이 나라"}는 아직 잠겨 있어요</p>
+            <p className="mt-1 text-caption text-ink-soft">
+              지금은 <span className="font-semibold text-leaf">대한민국</span>의 음식점만 찾아드릴 수 있어요. 다른 나라도 곧 열립니다.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 rounded-full border border-line bg-sunken px-3.5">
+            <Icon name="search" className="size-4 shrink-0 text-muted" />
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              maxLength={40}
+              placeholder="예: 떡볶이, 김밥, spicy…"
+              aria-label="음식 검색"
+              className="h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+            />
+            {q && (
+              <button type="button" onClick={() => setQ("")} aria-label="지우기" className="text-caption text-muted hover:text-ink">
+                지우기
+              </button>
+            )}
+          </div>
+
+          {showing && list.length === 0 && (
+            <p className="card rounded-2xl p-4 text-center text-sm text-muted">&lsquo;{q}&rsquo;에 맞는 음식이 없어요.</p>
+          )}
+
+          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+            {list.slice(0, 24).map((f) => (
+              <li key={f.slug}>
+                <Link
+                  href={`/taste/${f.slug}`}
+                  className="group flex h-full items-center gap-3 rounded-2xl border border-line bg-surface p-2.5 transition hover:border-brand hover:shadow-soft active:scale-[0.98]"
+                >
+                  <span className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-line" style={accentBg("#1f5f46", f.image_url)} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-ink">{f.name_ko}</span>
+                    <span className="line-clamp-1 text-caption text-muted">{f.taste_tags.slice(0, 2).join(" · ") || f.name_en}</span>
+                  </span>
+                  <Icon name="next" className="size-4 shrink-0 text-muted group-hover:text-leaf" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {list.length > 24 && <p className="text-caption text-muted">{list.length - 24}개 더 있어요. 검색어로 좁혀 보세요.</p>}
+        </>
+      )}
+    </section>
   );
 }

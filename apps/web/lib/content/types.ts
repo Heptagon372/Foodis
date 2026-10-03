@@ -34,6 +34,31 @@ export type FoodSummary = {
 
 export type RelationType = "similar_taste" | "shares_ingredient" | "same_technique" | "historical_link" | "regional_variant";
 
+/** 갤러리 사진 한 장. 라이선스가 분명하지 않은 소스(web)는 "출처 페이지로 바로 가기"로만 쓴다 */
+export type GalleryPhoto = {
+  url: string;
+  thumb: string;
+  title: string;
+  /** wikimedia_commons · openverse · web (DuckDuckGo 결과) */
+  source: "wikimedia_commons" | "openverse" | "web";
+  license: string;
+  credit_url: string | null;
+  author: string | null;
+  /** 음식 이름 매칭 점수 (0~1). s10_gallery.py 가 매긴 값 */
+  fit: number;
+};
+
+/** 유튜브 영상 한 개 — s11_youtube.py 가 음식 이름 매칭·조회수·길이 검증을 통과한 결과 */
+export type YouTubeVideo = {
+  video_id: string;
+  url: string;
+  title: string;
+  channel: string;
+  duration_sec: number;
+  view_count: number;
+  fit?: number;
+};
+
 export type FoodDetail = FoodSummary & {
   name_local: string | null;
   country: Country;
@@ -48,6 +73,10 @@ export type FoodDetail = FoodSummary & {
   sources: { field: string; url: string; title: string | null; license: string | null }[];
   relations: { type: RelationType; description: string; food: FoodSummary }[];
   sameCountry: FoodSummary[];
+  /** 갤러리: 다양한 출처에서 모은 사진 (최대 5장). image_url 과 겹칠 수 있다 */
+  gallery: GalleryPhoto[];
+  /** 유튜브 대표 영상 (없을 수 있음). UI 는 유튜브 아이콘을 눌러 새 창으로 연다 */
+  youtube: YouTubeVideo | null;
 };
 
 export interface ContentSource {

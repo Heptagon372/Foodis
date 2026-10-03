@@ -66,6 +66,9 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
           .filter((x) => x.to)
           .map((x) => ({ type: x.relation_type as RelationType, description: x.description as string, food: toSummary(x.to as Row) })),
         sameCountry: ((same.data as unknown as Row[]) ?? []).map(toSummary),
+        // DB 스키마에 아직 미디어 테이블이 없어 빈 값으로. (migrations/0001_init.sql 에 food_media 추가 전까지)
+        gallery: [],
+        youtube: null,
       };
       return detail;
     },

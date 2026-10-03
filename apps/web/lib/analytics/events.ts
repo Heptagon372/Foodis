@@ -8,6 +8,7 @@ export const EVENT_NAMES = [
   "explore_country", // 로컬 Passport 에 처음 들어온 나라 {country}
   "radio_play", // 라디오 새 에피소드 시작 {food_id}
   "share_card", // Passport 공유 카드 만들기 {countries}
+  "youtube_open", // 음식 상세의 유튜브 아이콘 눌러 영상 외부 창 열기 {food_id, video_id}
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];

@@ -58,9 +58,12 @@ function useNaverReviews(placeId: string, name: string, address: string | null) 
   return data;
 }
 
-export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void }) {
+type OpenKey = null | "rate" | "report" | "kakao-reviews" | "naver-reviews" | "menu" | "hours";
+
+/** bare: 카드 틀 없이 (유리 패널 안에 넣을 때) · initialOpen: 처음부터 펼쳐 둘 칸 */
+export function PlaceCard(p: { place: RankedPlace; index: number; foodName: string; foodSlug: string; countryName: string; fromLabel: string | null; example: boolean; selected: boolean; onSelect: () => void; bare?: boolean; initialOpen?: OpenKey }) {
   const x = p.place;
-  const [open, setOpen] = useState<null | "rate" | "report" | "kakao-reviews" | "naver-reviews" | "menu" | "hours">(null);
+  const [open, setOpen] = useState<OpenKey>(p.initialOpen ?? null);
   const kakao = useKakaoReviews(x.id);
   const naver = useNaverReviews(x.id, x.name, x.road_address ?? x.address);
   const menuData = useKakaoMenu(x.id);
@@ -78,7 +81,7 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
   const link = btn("outline", "sm");
 
   return (
-    <article id={`place-${x.id}`} className={`card space-y-3 rounded-3xl p-4 transition ${p.selected ? "border-brand ring-2 ring-brand" : ""}`} onClick={p.onSelect}>
+    <article id={`place-${x.id}`} className={p.bare ? "space-y-3" : `card space-y-3 rounded-3xl p-4 transition ${p.selected ? "border-brand ring-2 ring-brand" : ""}`} onClick={p.onSelect}>
       <div className="flex items-start gap-3">
         <span className={`grid size-8 shrink-0 place-items-center rounded-full text-caption font-bold tabular-nums ${p.selected ? "bg-lime text-on-lime" : "bg-brand text-on-brand"}`} aria-hidden>
           {p.index + 1}

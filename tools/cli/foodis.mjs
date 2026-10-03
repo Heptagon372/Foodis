@@ -336,7 +336,7 @@ function frame() {
     L.push(rule("데이터 파이프라인 (foodis-data)"));
     L.push(`  ${existsSync(path.join(DATA, ".venv")) ? C.ok("✓ 파이썬 가상환경 있음") : C.warn("! 가상환경 없음 — 0 으로 만들기")}`);
     L.push(`  ${C.muted("순서: 1→2 근거 수집 · 5 AI 초안 · 7 검수 시트 · 8 적재 · 9 임베딩")}`);
-    L.push("", ...menuRows([key("0", "가상환경 설치"), key("1", "s01 Wikidata"), key("2", "s02 위키백과"), key("5", "s05 AI 초안"), key("6", "s06 관계 후보"), key("E", "s07 검수 시트 만들기"), key("I", "s07 검수 반영"), key("8", "s08 적재 (먼저 미리보기)"), key("9", "s09 임베딩"), key("ESC", "돌아가기")]));
+    L.push("", ...menuRows([key("0", "가상환경 설치"), key("T", "s00b TasteAtlas 발견"), key("1", "s01 Wikidata"), key("2", "s02 위키백과"), key("5", "s05 AI 초안"), key("6", "s06 관계 후보"), key("E", "s07 검수 시트 만들기"), key("I", "s07 검수 반영"), key("8", "s08 적재 (먼저 미리보기)"), key("9", "s09 임베딩"), key("ESC", "돌아가기")]));
   }
 
   if (S.msg) L.push("", "  " + C.mint(S.msg));
@@ -497,6 +497,15 @@ async function onKey(k) {
       if (k === "4") await runForeground("실제 Claude 로 30문항", "pnpm", ["--filter", "web", "eval:live"]);
     } else if (S.screen === "pipeline") {
       if (k === "0") await runForeground("가상환경 설치", IS_WIN ? "py" : "python3", ["-m", "venv", ".venv", "&&", `"${py}"`, "-m", "pip", "install", "-r", "requirements.txt"], { cwd: DATA });
+      if (k === "t") {
+        const ok = await pyRun("s00b TasteAtlas 발견 (조회만)", "s00b_tasteatlas_discover.py");
+        if (ok) {
+          pauseUi();
+          const yes = (await ask("새 후보를 dish_targets.csv 에 병합할까요? (y/N) ")).toLowerCase() === "y";
+          resumeUi();
+          if (yes) await pyRun("s00b TasteAtlas 병합", "s00b_tasteatlas_discover.py", ["--apply"]);
+        }
+      }
       if (k === "1") await pyRun("s01 Wikidata", "s01_wikidata.py");
       if (k === "2") await pyRun("s02 위키백과", "s02_wikipedia.py");
       if (k === "5") {

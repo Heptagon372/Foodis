@@ -1,10 +1,12 @@
 "use client";
-// /community — World Table. 맨 위 '지금 뜨는 음식'(급상승 순위) → 게시판 | 모임 (카페처럼 나눔).
+// /community — World Table. 맨 위 '지금 뜨는 음식'(급상승 순위) → 게시판 | 푸랜드 | 모임 (카페처럼 나눔).
 //  게시판: 전체 · 밥친구 · 주제 칩 + 정렬(AI 맞춤 · 최신 · 인기), 데스크톱은 피드 | 오른쪽(푸디 브리핑) 두 칸
-//  모임: 만들고 가입해서 안에서 글을 쓰는 모임 목록 (ClubDirectory). 탭은 주소 ?tab=clubs 로 기억
+//  푸랜드: 켜 둔 사람끼리 지도에서 서로 보고 바로 1:1 대화 (BuddyTab, docs/design/16)
+//  모임: 만들고 가입해서 안에서 글을 쓰는 모임 목록 (ClubDirectory). 탭은 주소 ?tab=buddy|clubs 로 기억
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import type { MapProvider } from "@/lib/client/map-provider";
 import { bump, fetchBriefing, fetchFeed, useTopInterests, type BriefingPage } from "@/lib/client/community";
 import { CATEGORY, CATEGORIES, isCategory, type CategoryKey, type FeedFilter } from "@/lib/community/categories";
 import { SORT_LABEL, SORTS, type PostView, type Sort } from "@/lib/community/types";
@@ -14,20 +16,22 @@ import { TopBar } from "../TopBar";
 import { btn, chip, Eyebrow, SegTabs } from "../ui";
 import { TrendingFoodsLive } from "../trending/TrendingFoods";
 import { Briefing } from "./Briefing";
+import { BuddyTab } from "./buddy/BuddyTab";
 import { ClubDirectory } from "./ClubDirectory";
 import { LoginPrompt } from "./parts";
 import { PostCard } from "./PostCard";
 
-type Tab = "board" | "clubs";
-const TABS: Tab[] = ["board", "clubs"];
-const TAB_LABEL: Record<Tab, string> = { board: "게시판", clubs: "모임" };
+type Tab = "board" | "buddy" | "clubs";
+const TABS: Tab[] = ["board", "buddy", "clubs"];
+const TAB_LABEL: Record<Tab, string> = { board: "게시판", buddy: "푸랜드", clubs: "모임" };
+const parseTab = (v: string | null): Tab => (v === "clubs" || v === "buddy" ? v : "board");
 
 const parseFilter = (v: string | null): FeedFilter => (v === "all" || isCategory(v) ? (v as FeedFilter) : "all");
 
-export function CommunityView() {
+export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvider; mapKey: string | null }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (params.get("tab") === "clubs" ? "clubs" : "board"));
+  const [tab, setTab] = useState<Tab>(() => parseTab(params.get("tab")));
   const [filter, setFilter] = useState<FeedFilter>(() => parseFilter(params.get("c")));
   const [sort, setSort] = useState<Sort>("foryou");
   const [posts, setPosts] = useState<PostView[] | null>(null);
@@ -88,10 +92,10 @@ export function CommunityView() {
 
   const switchTab = (t: Tab) => {
     setTab(t);
-    router.replace(t === "clubs" ? "/community?tab=clubs" : filter === "all" ? "/community" : `/community?c=${filter}`, { scroll: false });
+    router.replace(t !== "board" ? `/community?tab=${t}` : filter === "all" ? "/community" : `/community?c=${filter}`, { scroll: false });
   };
-  const writeHref = tab === "clubs" ? "/community/clubs/new" : `/community/write${isCategory(filter) ? `?category=${filter}` : ""}`;
-  const writeLabel = tab === "clubs" ? "모임 만들기" : "글쓰기";
+  const writeHref = tab === "clubs" ? "/community/clubs/new" : tab === "buddy" ? "/community/write?category=buddy" : `/community/write${isCategory(filter) ? `?category=${filter}` : ""}`;
+  const writeLabel = tab === "clubs" ? "모임 만들기" : tab === "buddy" ? "밥친구 글쓰기" : "글쓰기";
 
   return (
     <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
@@ -131,10 +135,12 @@ export function CommunityView() {
         <Icon name="next" className="size-4 text-muted" />
       </Link>
 
-      <SegTabs tabs={TABS} value={tab} onChange={switchTab} label="게시판과 모임" labels={TAB_LABEL} />
+      <SegTabs tabs={TABS} value={tab} onChange={switchTab} label="게시판 · 푸랜드 · 모임" labels={TAB_LABEL} />
 
       {tab === "clubs" ? (
         <ClubDirectory />
+      ) : tab === "buddy" ? (
+        <BuddyTab provider={mapProvider} mapKey={mapKey} />
       ) : (
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8">
           <div className="space-y-4">

@@ -15,8 +15,8 @@ type ReviewItem = { username: string; rating: number; date: string; text: string
 type KakaoReviews = { rating: number | null; reviewCount: number; reviews: ReviewItem[] };
 type NaverReviews = { naverId: string | null; rating: number | null; reviewCount: number; reviews: ReviewItem[]; placeUrl: string | null };
 type MenuItem = { name: string; price: string | null; desc: string | null; photo: string | null };
-type DayHours = { day: string; text: string; open: number | null; close: number | null };
-type PlaceMenu = { menu: MenuItem[]; hours: DayHours[]; openNow: boolean | null; offDays: string | null; statusText: string };
+type DayHours = { day: string; text: string };
+type PlaceMenu = { menu: MenuItem[]; hours: DayHours[]; openNow: boolean | null; offDays: string | null; statusText: string; subway: { station: string; exit: string | null; walkMin: number | null } | null };
 
 function useKakaoMenu(placeId: string) {
   const [data, setData] = useState<PlaceMenu | null>(null);
@@ -121,6 +121,15 @@ export function PlaceCard(p: { place: RankedPlace; index: number; foodName: stri
         <p className="flex items-start gap-1.5 text-caption text-ink-soft">
           <Icon name="pin" className="mt-0.5 size-3.5 shrink-0 text-leaf" />
           <span className="min-w-0 flex-1 truncate">{x.road_address ?? x.address}</span>
+        </p>
+      )}
+      {menuData?.subway && (
+        <p className="flex items-start gap-1.5 text-caption text-ink-soft">
+          <Icon name="navigation" className="mt-0.5 size-3.5 shrink-0 text-leaf" />
+          <span>
+            {menuData.subway.station}{menuData.subway.exit ? ` ${menuData.subway.exit}번 출구` : ""}
+            {menuData.subway.walkMin != null ? `에서 도보 ${menuData.subway.walkMin}분` : ""}
+          </span>
         </p>
       )}
 

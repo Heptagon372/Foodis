@@ -48,3 +48,23 @@ export function boundsAround(p: LatLng, r: number) {
 }
 
 export const formatDistance = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(m < 10_000 ? 1 : 0)}km`);
+
+/**
+ * 거리 → 어림 소요시간. 외부 길찾기 API 를 쓰지 않고 공개 통행 데이터 기준의 보수적 어림이다.
+ *  · 도보 5 km/h (83 m/분) — 신호 대기 포함
+ *  · 자동차 서울 평균 25 km/h (417 m/분, 서울시 교통정보센터 2024) — 지도 상 직선 거리라 실제보다 짧게 나올 수 있다
+ * 실제 경로 거리는 더 길고 신호·교통에 좌우되니 화면에서는 "약 X분"처럼 어림으로만 보여준다.
+ */
+export function etaMinutes(meters: number): { walk: number; drive: number } {
+  const walk = Math.max(1, Math.round(meters / 83));
+  const drive = Math.max(1, Math.round(meters / 417));
+  return { walk, drive };
+}
+
+export const formatEta = (m: number) => {
+  const { walk, drive } = etaMinutes(m);
+  // 500m 이하는 도보가 자연스러워 도보만, 2km 이상은 차/대중교통만, 중간은 둘 다
+  if (m <= 500) return `도보 약 ${walk}분`;
+  if (m >= 2000) return `차로 약 ${drive}분`;
+  return `도보 ${walk}분 · 차로 ${drive}분`;
+};

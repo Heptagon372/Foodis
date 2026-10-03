@@ -37,10 +37,26 @@ function loadScript(src: string): Promise<void> {
   return scripts.get(src)!;
 }
 
-// 핀·내 위치 점은 HTML 오버레이로 — 두 지도에서 같은 모양
-const pinHtml = (p: MapPin) =>
-  `<button type="button" data-pin="${p.id}" aria-label="${p.label.replace(/"/g, "&quot;")}" style="all:unset;cursor:pointer;display:grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:14px;font:600 12px/1 system-ui;box-shadow:0 1px 4px rgba(0,0,0,.25);${p.selected ? "background:#1f5f46;color:#fbf8f1;transform:scale(1.15)" : "background:#fff;color:#1f5f46;border:2px solid #1f5f46"}">${p.label.length > 2 ? "•" : p.label}</button>`;
-const meHtml = `<span aria-label="내 위치" style="display:block;width:16px;height:16px;border-radius:50%;background:#2f80ed;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,128,237,.2)"></span>`;
+// 핀·내 위치 점은 HTML 오버레이로 — 두 지도에서 같은 모양.
+// 위치 로고(물방울) 모양: 둥근 머리 + 아래로 뾰족한 꼬리. 바닥 끝(핀 아래 중앙)이 좌표 지점이다.
+const pinHtml = (p: MapPin) => {
+  const fill = p.selected ? "#d84a3a" : "#1f5f46";
+  const scale = p.selected ? 1.15 : 1;
+  const label = p.label.length > 2 ? "•" : p.label;
+  return `<button type="button" data-pin="${p.id}" aria-label="${p.label.replace(/"/g, "&quot;")}" style="all:unset;cursor:pointer;display:block;width:30px;height:40px;transform:scale(${scale});transform-origin:50% 100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">
+    <svg viewBox="0 0 30 40" width="30" height="40" aria-hidden="true" style="display:block;overflow:visible">
+      <path d="M15 1 C7.3 1 1.5 6.7 1.5 14.3 C1.5 23.2 14 38 15 39 C16 38 28.5 23.2 28.5 14.3 C28.5 6.7 22.7 1 15 1 Z" fill="${fill}" stroke="#fff" stroke-width="2"/>
+      <circle cx="15" cy="14" r="6.5" fill="#fff"/>
+      <text x="15" y="17.5" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="9.5" font-weight="700" fill="${fill}">${label}</text>
+    </svg>
+  </button>`;
+};
+// 내 위치 — 중앙 점은 그대로, 바깥 고리는 2초마다 깜박깜박 퍼져 나간다 (prefers-reduced-motion 이면 멈춤)
+const meHtml = `<span aria-label="내 위치" style="position:relative;display:block;width:16px;height:16px">
+  <style>@keyframes foodis-me-ping{0%{transform:scale(1);opacity:.65}100%{transform:scale(2.6);opacity:0}}@media (prefers-reduced-motion:reduce){.foodis-me-ping{animation:none!important;opacity:.3!important}}</style>
+  <span class="foodis-me-ping" style="position:absolute;inset:-6px;border-radius:50%;background:#2f80ed;animation:foodis-me-ping 1.8s cubic-bezier(0,0,.2,1) infinite"></span>
+  <span style="position:absolute;inset:0;border-radius:50%;background:#2f80ed;border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+</span>`;
 const el = (html: string) => {
   const d = document.createElement("div");
   d.innerHTML = html;
@@ -58,7 +74,7 @@ type KakaoNS = {
     LatLng: new (lat: number, lng: number) => KLatLng;
     LatLngBounds: new () => KBounds;
     Map: new (el: HTMLElement, o: { center: KLatLng; level: number }) => KMap;
-    CustomOverlay: new (o: { position: KLatLng; content: HTMLElement; yAnchor?: number; zIndex?: number; clickable?: boolean }) => KOverlay;
+    CustomOverlay: new (o: { position: KLatLng; content: HTMLElement; xAnchor?: number; yAnchor?: number; zIndex?: number; clickable?: boolean }) => KOverlay;
     MarkerClusterer?: new (o: { map: KMap; averageCenter: boolean; minLevel: number }) => { addMarkers(m: KOverlay[]): void; clear(): void };
   };
 };
@@ -86,7 +102,7 @@ async function kakaoMap(key: string, box: HTMLElement, center: MapPoint): Promis
       pins = list.map((p) => {
         const node = el(pinHtml(p));
         node.addEventListener("click", () => onPick(p.id));
-        return new k.CustomOverlay({ position: new k.LatLng(p.lat, p.lng), content: node, yAnchor: 0.5, zIndex: p.selected ? 3 : 2, clickable: true });
+        return new k.CustomOverlay({ position: new k.LatLng(p.lat, p.lng), content: node, yAnchor: 1, xAnchor: 0.5, zIndex: p.selected ? 3 : 2, clickable: true });
       });
       if (cluster) cluster.addMarkers(pins);
       else pins.forEach((o) => o.setMap(map));
@@ -139,7 +155,7 @@ async function naverMap(clientId: string, box: HTMLElement, center: MapPoint): P
     setPins(list, onPick) {
       pins.forEach((m) => m.setMap(null));
       pins = list.map((p) => {
-        const m = new n.Marker({ position: new n.LatLng(p.lat, p.lng), map, icon: { content: pinHtml(p), anchor: new n.Point(14, 14) }, zIndex: p.selected ? 3 : 2 });
+        const m = new n.Marker({ position: new n.LatLng(p.lat, p.lng), map, icon: { content: pinHtml(p), anchor: new n.Point(15, 40) }, zIndex: p.selected ? 3 : 2 });
         n.Event.addListener(m, "click", () => onPick(p.id));
         return m;
       });

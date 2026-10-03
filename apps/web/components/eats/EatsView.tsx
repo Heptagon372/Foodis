@@ -247,7 +247,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
         <div className="space-y-1">
           <Eyebrow>Taste Radar</Eyebrow>
           <h1 className="flex items-center gap-2.5 text-h1 font-bold text-ink">
-            <span className="grid size-10 place-items-center rounded-2xl bg-[#071210] text-[#5ef2c0] shadow-[0_0_24px_-4px_#5ef2c0]">
+            <span className="grid size-10 place-items-center rounded-2xl bg-lime-soft text-brand shadow-[0_8px_24px_-8px_#c8f06a]">
               <Icon name="map-pinned" className="size-5" />
             </span>
             맛집탐방
@@ -284,7 +284,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
               type="button"
               aria-pressed={cat === k}
               onClick={() => setCat(k)}
-              className={`h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition ${cat === k ? "bg-[#071210] text-[#5ef2c0] shadow-[0_0_0_1px_#5ef2c0,0_0_18px_-6px_#5ef2c0]" : "border border-line bg-surface text-ink-soft hover:text-ink"}`}
+              className={`h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition ${cat === k ? "bg-brand text-white shadow-[0_6px_18px_-6px_#2b8645]" : "border border-line bg-surface text-ink-soft hover:text-ink"}`}
             >
               {name}
             </button>
@@ -300,7 +300,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                     type="button"
                     aria-pressed={on}
                     onClick={() => chooseFood(f)}
-                    className={`group flex w-36 flex-col overflow-hidden rounded-2xl border text-left transition active:scale-[0.97] ${on ? "border-transparent shadow-[0_0_0_2px_#5ef2c0,0_10px_30px_-10px_#5ef2c0]" : "border-line hover:border-brand"}`}
+                    className={`group flex w-36 flex-col overflow-hidden rounded-2xl border text-left transition active:scale-[0.97] ${on ? "border-transparent shadow-[0_0_0_2px_#2b8645,0_10px_30px_-10px_#c8f06a]" : "border-line hover:border-brand"}`}
                   >
                     <span className="relative block h-20 bg-sunken bg-cover bg-center" style={f.image_url ? { backgroundImage: `url(${JSON.stringify(f.image_url)})` } : undefined}>
                       <span className="absolute left-1.5 top-1.5 rounded-full bg-black/45 px-1.5 text-sm backdrop-blur">{f.flag}</span>
@@ -320,7 +320,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
       </section>
 
       {/* 지도 무대 */}
-      <div className="rounded-[34px] bg-gradient-to-br from-[#5ef2c0]/70 via-white/10 to-[#c8f06a]/50 p-px shadow-[0_30px_80px_-30px_rgb(6_40_30/0.8)]">
+      <div className="rounded-[34px] bg-gradient-to-br from-brand/45 via-white to-lime p-px shadow-[0_30px_70px_-34px_rgb(43_134_69/0.55)]">
         <div ref={stage} className="hud relative h-[78dvh] min-h-[560px] scroll-mt-4 overflow-hidden rounded-[33px] lg:h-[calc(100dvh-7rem)] lg:min-h-[640px]">
           {showMap ? (
             <div ref={box} className={`eats-map absolute inset-0 isolate z-0 ${mode === "pick" ? "[&_*]:cursor-crosshair" : ""}`} />
@@ -347,7 +347,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                   role="tab"
                   aria-selected={mode === m}
                   onClick={() => switchMode(m)}
-                  className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition ${mode === m ? "bg-[#5ef2c0] text-[#04201a] shadow-[0_0_18px_-4px_#5ef2c0]" : "text-ink-soft hover:text-ink"}`}
+                  className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition ${mode === m ? "bg-brand text-white shadow-[0_6px_16px_-6px_#2b8645]" : "text-ink-soft hover:text-ink"}`}
                 >
                   <Icon name={icon} className="size-4" />
                   {label}
@@ -367,14 +367,14 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                 className="hud-range w-28 sm:w-36"
                 style={{ ["--p" as string]: `${pct}%` }}
               />
-              <span className="w-12 text-right font-mono text-sm font-bold tabular-nums text-[#5ef2c0]">{radiusKm}km</span>
+              <span className="w-12 text-right font-mono text-sm font-bold tabular-nums text-brand">{radiusKm}km</span>
             </label>
           </div>
 
           {/* 오른쪽 위: 좌표 판독 */}
           <div className="liquid absolute right-3 top-3 hidden rounded-2xl px-3.5 py-2 text-right font-mono text-[11px] leading-relaxed text-ink-soft lg:block" aria-live="polite">
-            <p className="flex items-center justify-end gap-1.5 text-[#5ef2c0]">
-              <span className={`size-1.5 rounded-full bg-[#5ef2c0] ${status === "loading" ? "animate-pulse" : ""}`} />
+            <p className="flex items-center justify-end gap-1.5 text-brand">
+              <span className={`size-1.5 rounded-full bg-brand ${status === "loading" ? "animate-pulse" : ""}`} />
               {status === "loading" ? "SCANNING" : status === "ok" ? `${places.length} TARGETS` : "STANDBY"}
             </p>
             <p>{anchor ? coord(anchor) : "— 위치를 고르세요 —"}</p>
@@ -391,7 +391,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
           {/* 안내 */}
           {mode === "pick" && !picked && ready && (
             <p className="liquid hud-up pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl px-5 py-3.5 text-center text-sm font-semibold">
-              <Icon name="pin" className="mx-auto mb-1 size-5 text-[#5ef2c0]" />
+              <Icon name="pin" className="mx-auto mb-1 size-5 text-brand" />
               대한민국 지도에서 찾고 싶은 곳을 눌러 주세요
             </p>
           )}
@@ -410,9 +410,9 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
               className="liquid hud-in absolute inset-x-2 bottom-2 z-10 flex max-h-[58%] flex-col overflow-hidden rounded-[28px] md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-none md:w-[380px]"
             >
               <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-                <span className="grid size-7 place-items-center rounded-full bg-[#5ef2c0] font-mono text-sm font-extrabold text-[#04201a] shadow-[0_0_14px_-2px_#5ef2c0]">{selIndex + 1}</span>
+                <span className="grid size-7 place-items-center rounded-full bg-lime font-mono text-sm font-extrabold text-on-lime shadow-[0_4px_12px_-4px_#b3df52]">{selIndex + 1}</span>
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px] tracking-wider text-muted">{coord(sel)}</span>
-                <button type="button" onClick={() => setSelected(null)} aria-label="닫기" className="grid size-8 place-items-center rounded-full text-ink-soft transition hover:bg-white/10 hover:text-ink">
+                <button type="button" onClick={() => setSelected(null)} aria-label="닫기" className="grid size-8 place-items-center rounded-full text-ink-soft transition hover:bg-black/5 hover:text-ink">
                   <Icon name="close" className="size-4" />
                 </button>
               </div>
@@ -428,7 +428,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
               <div className="flex flex-wrap items-center gap-2">
                 <span className="liquid flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-bold">
                   {food.flag} {food.name_ko}
-                  <span className="font-mono text-[#5ef2c0]">{status === "ok" ? `· ${places.length}곳` : status === "loading" ? "· 찾는 중" : ""}</span>
+                  <span className="font-mono text-brand">{status === "ok" ? `· ${places.length}곳` : status === "loading" ? "· 찾는 중" : ""}</span>
                 </span>
                 {status === "ok" && places.length > 1 && (
                   <div className="liquid flex rounded-full p-1" role="tablist" aria-label="정렬">
@@ -439,7 +439,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                         role="tab"
                         aria-selected={sort === k}
                         onClick={() => setSort(k)}
-                        className={`h-7 rounded-full px-3 text-xs font-semibold transition ${sort === k ? "bg-white/90 text-[#04201a]" : "text-ink-soft hover:text-ink"}`}
+                        className={`h-7 rounded-full px-3 text-xs font-semibold transition ${sort === k ? "bg-brand text-white" : "text-ink-soft hover:text-ink"}`}
                       >
                         {label}
                       </button>
@@ -464,10 +464,10 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                           type="button"
                           onClick={() => setSelected(p.id)}
                           aria-pressed={on}
-                          className={`liquid hud-up flex w-60 items-start gap-2.5 rounded-2xl p-3 text-left transition hover:-translate-y-0.5 ${on ? "shadow-[0_0_0_2px_#c8f06a,0_0_30px_-8px_#c8f06a]!" : ""}`}
+                          className={`liquid hud-up flex w-60 items-start gap-2.5 rounded-2xl p-3 text-left transition hover:-translate-y-0.5 ${on ? "shadow-[0_0_0_2px_#2b8645,0_12px_30px_-10px_#c8f06a]!" : ""}`}
                           style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
                         >
-                          <span className={`grid size-7 shrink-0 place-items-center rounded-full font-mono text-xs font-extrabold ${on ? "bg-[#c8f06a] text-[#0e2a22]" : "border border-[#5ef2c0] text-[#5ef2c0]"}`}>{i + 1}</span>
+                          <span className={`grid size-7 shrink-0 place-items-center rounded-full font-mono text-xs font-extrabold ${on ? "bg-lime text-on-lime" : "border border-brand text-brand"}`}>{i + 1}</span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-bold">{p.name}</span>
                             <span className="block truncate text-[11px] text-ink-soft">

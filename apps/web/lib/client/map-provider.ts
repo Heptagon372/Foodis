@@ -50,19 +50,19 @@ function loadScript(src: string): Promise<void> {
 }
 
 // 핀·내 위치 점은 HTML 오버레이로 — 두 지도에서 같은 모양.
-// 위치 로고(물방울) 모양 + 네온 글로우. 바닥 끝(핀 아래 중앙)이 좌표 지점이다. 고른 핀은 연두로 커지고 바닥에 빛 고리.
-const NEON = "#5ef2c0";
+// 위치 로고(물방울) 모양 — 흰 몸통 + 초록 테두리. 바닥 끝(핀 아래 중앙)이 좌표 지점이다. 고른 핀은 연두로 커지고 바닥에 빛 고리.
+const GREEN = "#2b8645";
 const LIME = "#c8f06a";
 const pinHtml = (p: MapPin) => {
-  const body = p.selected ? LIME : "#0e2a22";
-  const ink = p.selected ? "#0e2a22" : NEON;
-  const glow = p.selected ? "rgba(200,240,106,.95)" : "rgba(94,242,192,.65)";
+  const body = p.selected ? LIME : "#ffffff";
+  const ink = p.selected ? "#13301b" : GREEN;
+  const glow = p.selected ? "rgba(200,240,106,.95)" : "rgba(43,134,69,.35)";
   const scale = p.selected ? 1.25 : 1;
   const label = p.label.length > 2 ? "•" : p.label;
-  return `<button type="button" data-pin="${p.id}" aria-label="${p.label.replace(/"/g, "&quot;")}번 음식점" style="all:unset;cursor:pointer;position:relative;display:block;width:30px;height:40px;transform:scale(${scale});transform-origin:50% 100%;transition:transform .2s cubic-bezier(.2,.9,.25,1.2);filter:drop-shadow(0 0 6px ${glow}) drop-shadow(0 3px 4px rgba(0,0,0,.45));">
+  return `<button type="button" data-pin="${p.id}" aria-label="${p.label.replace(/"/g, "&quot;")}번 음식점" style="all:unset;cursor:pointer;position:relative;display:block;width:30px;height:40px;transform:scale(${scale});transform-origin:50% 100%;transition:transform .2s cubic-bezier(.2,.9,.25,1.2);filter:drop-shadow(0 0 6px ${glow}) drop-shadow(0 3px 4px rgba(18,38,26,.3));">
     ${p.selected ? `<span style="position:absolute;left:50%;bottom:-5px;width:26px;height:9px;margin-left:-13px;border-radius:50%;background:radial-gradient(closest-side,${glow},transparent);"></span>` : ""}
     <svg viewBox="0 0 30 40" width="30" height="40" aria-hidden="true" style="position:relative;display:block;overflow:visible">
-      <path d="M15 1 C7.3 1 1.5 6.7 1.5 14.3 C1.5 23.2 14 38 15 39 C16 38 28.5 23.2 28.5 14.3 C28.5 6.7 22.7 1 15 1 Z" fill="${body}" stroke="${p.selected ? "#fff" : NEON}" stroke-width="1.6"/>
+      <path d="M15 1 C7.3 1 1.5 6.7 1.5 14.3 C1.5 23.2 14 38 15 39 C16 38 28.5 23.2 28.5 14.3 C28.5 6.7 22.7 1 15 1 Z" fill="${body}" stroke="${GREEN}" stroke-width="${p.selected ? 2 : 1.8}"/>
       <text x="15" y="18.2" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11" font-weight="800" fill="${ink}">${label}</text>
     </svg>
   </button>`;
@@ -75,11 +75,11 @@ const meHtml = `<span aria-label="내 위치" style="position:relative;display:b
 </span>`;
 // 검색 기준점 — 십자 조준선
 const anchorHtml = `<span aria-label="검색 기준 위치" style="position:relative;display:block;width:22px;height:22px;pointer-events:none">
-  <span style="position:absolute;inset:0;border:1.5px solid ${NEON};border-radius:50%;box-shadow:0 0 8px ${NEON}"></span>
-  <span style="position:absolute;left:50%;top:-6px;bottom:-6px;width:1.5px;margin-left:-.75px;background:${NEON}"></span>
-  <span style="position:absolute;top:50%;left:-6px;right:-6px;height:1.5px;margin-top:-.75px;background:${NEON}"></span>
+  <span style="position:absolute;inset:0;border:1.5px solid ${GREEN};border-radius:50%;box-shadow:0 0 8px ${GREEN}"></span>
+  <span style="position:absolute;left:50%;top:-6px;bottom:-6px;width:1.5px;margin-left:-.75px;background:${GREEN}"></span>
+  <span style="position:absolute;top:50%;left:-6px;right:-6px;height:1.5px;margin-top:-.75px;background:${GREEN}"></span>
 </span>`;
-const CIRCLE = { strokeColor: NEON, strokeOpacity: 0.55, strokeWeight: 1.5, fillColor: NEON, fillOpacity: 0.05 };
+const CIRCLE = { strokeColor: GREEN, strokeOpacity: 0.5, strokeWeight: 1.5, fillColor: "#c8f06a", fillOpacity: 0.12 };
 const el = (html: string) => {
   const d = document.createElement("div");
   d.innerHTML = html;

@@ -19,8 +19,6 @@ import { Eyebrow, IconButton, ProgressBar, btn, chip } from "./ui";
 import { MicIcon } from "./VoiceButton";
 import { noteFeature, signal } from "@/lib/client/taste";
 import { COUNTRY_INFO } from "@/lib/map/country-info";
-import type { PlacesSetup } from "@/lib/places/server";
-import { TasteExplore, type ExploreFood } from "./taste/TasteExplore";
 
 /** 나라 패널의 대표 음식 (서버가 fame_rank 순으로 나라별 상위 몇 개만 넘긴다) */
 export type TopFood = { slug: string; name_ko: string; name_en: string; image_url: string | null; summary: string | null };
@@ -85,14 +83,12 @@ export function WorldMapView({
   counts,
   top,
   preview,
-  explore,
 }: {
   map: WorldMap;
   countries: Country[];
   counts: Record<string, number>;
   top: Record<string, TopFood[]>;
   preview: boolean;
-  explore: { foods: ExploreFood[]; setup: PlacesSetup; mapKey: string | null };
 }) {
   const { open } = useFoodi();
   const explored = useLocal(exploredCountries);
@@ -522,8 +518,6 @@ export function WorldMapView({
           끌어서 움직이고 나라를 눌러 보세요. 고른 나라로 확대되고 나라 정보·대표 음식이 떠요.
         </p>
       )}
-
-      <TasteExplore {...explore} lockedName={sel && sel.code !== "KR" ? sel.name_ko : null} />
 
       {/* 스크린리더용 목록: 지도를 못 보는 사용자도 같은 곳으로 */}
       <ul className="sr-only" aria-label="지도에 있는 나라">

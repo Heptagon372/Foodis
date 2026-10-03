@@ -7,7 +7,7 @@ import { cachedKakaoReviews } from "@/lib/places/kakao-crawl";
 const PLACE_ID = /^\d{1,20}$/;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const rl = rateLimit(clientKey(req, null) + ":kakao-reviews", 30, 60_000);
+  const rl = rateLimit(clientKey(req, null) + ":kakao-reviews", 60, 60_000);
   if (!rl.ok) return tooMany(rl.retryAfterSec);
 
   const id = (await params).id;

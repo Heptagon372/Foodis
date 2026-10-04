@@ -25,8 +25,17 @@ def credit(img: dict) -> str:
     return f"{img.get('artist') or '작자 미상'} / {img.get('license') or '라이선스 확인 필요'} / {img.get('page') or ''}"
 
 
-def build(targets: list[dict], countries: set[str], wd: dict, wp: dict) -> tuple[list[dict], list[dict], Counter]:
+def build(targets: list[dict], countries: set[str], wd: dict, wp: dict, inferred: dict) -> tuple[list[dict], list[dict], Counter]:
     foods, srcs, skipped = [], [], Counter()
+    # 적재 순서를 정해 QID 선점: dish_targets.csv 에서 직접 나라가 있는 행 → origin_codes 로 매칭된 행 → 추론된 행
+    def prio(t):
+        s = t["slug"]; d = wd.get(s)
+        if not d or d.get("needs_review"): return 9
+        if t["country_code"] in countries: return 0
+        if d and any(o in countries for o in d.get("origin_codes", [])): return 1
+        if s in inferred: return 2
+        return 9
+    targets = sorted(targets, key=prio)
     seen_qids: set[str] = set()
     for t in targets:
         s = t["slug"]
@@ -40,20 +49,25 @@ def build(targets: list[dict], countries: set[str], wd: dict, wp: dict) -> tuple
         if "Wikimedia disambiguation page" in d.get("instance_of", []):
             skipped["동음이의어 문서"] += 1
             continue
+        inferred_src = None
         cc = t["country_code"] if t["country_code"] in countries else next((o for o in d.get("origin_codes", []) if o in countries), None)
+        if not cc and s in inferred:
+            cc = inferred[s]["country_code"]
+            inferred_src = inferred[s]["source"]
         if not cc:
             skipped["나라 미정"] += 1
             continue
         qid = d.get("qid")
-        if qid in seen_qids:
-            skipped["같은 QID 중복"] += 1
+        if qid and qid in seen_qids:
+            skipped["같은 QID 다른 이름"] += 1
             continue
-        seen_qids.add(qid)
+        if qid:
+            seen_qids.add(qid)
         en, ko, img = w.get("en") or {}, w.get("ko") or {}, w.get("image") or {}
         name_ko = t.get("name_ko") or re.sub(r"\s*\([^)]*\)$", "", d.get("ko_title") or "") or d.get("label_ko") or t["name_en"]
         foods.append({
             "slug": s, "name_ko": name_ko, "name_en": t["name_en"], "country_code": cc,
-            "origin_note": None if (t.get("origin_note") or "").startswith("자동 후보") else (t.get("origin_note") or None),
+            "origin_note": f"나라 추론: {inferred_src}" if inferred_src else (None if (t.get("origin_note") or "").startswith("자동 후보") else (t.get("origin_note") or None)),
             "summary": ko.get("description") or en.get("description"),
             "image_url": img.get("url"), "image_credit": credit(img) if img else None,
             "wikidata_qid": qid, "wikipedia_en": en.get("url"), "wikipedia_ko": ko.get("url"),
@@ -86,7 +100,8 @@ def main() -> None:
 
     countries = read_csv(SEED / "countries.csv")
     foods, srcs, skipped = build(read_csv(SEED / "dish_targets.csv"), {c["code"] for c in countries},
-                                 read_json(RAW / "wikidata.json", {}), read_json(RAW / "wikipedia.json", {}))
+                                 read_json(RAW / "wikidata.json", {}), read_json(RAW / "wikipedia.json", {}),
+                                 read_json(RAW / "country_inferred.json", {}))
     print(f"적재 대상 {len(foods)}개 · 건너뜀 " + " · ".join(f"{k} {n}" for k, n in skipped.most_common()))
     print(f"  한국어 이름 {sum(1 for f in foods if f['name_ko'] != f['name_en'])} · 사진 {sum(1 for f in foods if f['image_url'])}"
           f" · 한 줄 설명 {sum(1 for f in foods if f['summary'])} · 나라 {len({f['country_code'] for f in foods})}개국")

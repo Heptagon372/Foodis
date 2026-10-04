@@ -10,6 +10,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/", label: "홈", icon: "home", also: ["/food", "/journey", "/taste", "/ingredient"] },
       { href: "/map", label: "세계 지도", icon: "map", also: ["/country"] },
+      { href: "/eats", label: "맛집탐방", icon: "map-pinned" },
       { href: "/radio", label: "라디오", icon: "headphones" },
     ],
   },

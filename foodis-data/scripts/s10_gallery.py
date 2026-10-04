@@ -194,16 +194,39 @@ def ddg_photos(http: Http, names: list[str], want: int, seen_urls: set[str]) -> 
     return out
 
 
-def collect(c: dict, http: Http, ov: Openverse | None, use_ddg: bool) -> list[dict]:
+def catalog_photo(c: dict) -> dict | None:
+    """catalog.json 이 이미 가지고 있는 Commons 썸네일 URL (c.img) 을 1 장짜리 사진으로.
+       이름 매칭·라이선스는 catalog 생성 때 이미 통과한 것 → Commons API 다시 호출 안 함."""
+    img = c.get("img")
+    if not img:
+        return None
+    credit = c.get("cr") or ""
+    # cr 형식: "<저자> / <라이선스> / <페이지 URL>"
+    parts = [p.strip() for p in credit.split(" / ")]
+    author = parts[0] if parts and parts[0] else None
+    license_text = parts[1] if len(parts) > 1 else "see source"
+    page = parts[2] if len(parts) > 2 else None
+    return {
+        "url": img,
+        "thumb": img,
+        "title": c.get("en") or c.get("s"),
+        "source": "wikimedia_commons",
+        "license": license_text,
+        "credit_url": page,
+        "author": author,
+        "fit": 1.0,
+    }
+
+
+def collect(c: dict, http: Http, ov: Openverse | None, use_ddg: bool, use_commons: bool) -> list[dict]:
+    """우선순위: (1) catalog 가 가진 Commons 썸네일 1 장 (API 재호출 없음) → (2) Openverse → (3) DDG → (4) use_commons 일 때만 추가 Commons 검색."""
     names = names_from_catalog(c)
     photos: list[dict] = []
     seen = set()
-    try:
-        photos.extend(commons_photos(http, names, MAX_PER_FOOD))
-        for p in photos:
-            seen.add(p["url"])
-    except Exception as e:
-        print(f"    ⚠ Commons 실패 ({e})", file=sys.stderr)
+    first = catalog_photo(c)
+    if first:
+        photos.append(first)
+        seen.add(first["url"])
     if ov and len(photos) < MAX_PER_FOOD:
         try:
             photos.extend(openverse_photos(ov, names, MAX_PER_FOOD - len(photos), seen))
@@ -214,6 +237,15 @@ def collect(c: dict, http: Http, ov: Openverse | None, use_ddg: bool) -> list[di
             photos.extend(ddg_photos(http, names, MAX_PER_FOOD - len(photos), seen))
         except Exception as e:
             print(f"    ⚠ DDG 실패 ({e})", file=sys.stderr)
+    if use_commons and len(photos) < MAX_PER_FOOD:
+        try:
+            cp = commons_photos(http, names, MAX_PER_FOOD - len(photos))
+            for p in cp:
+                if p["url"] not in seen:
+                    photos.append(p)
+                    seen.add(p["url"])
+        except Exception as e:
+            print(f"    ⚠ Commons 실패 ({e})", file=sys.stderr)
     return photos[:MAX_PER_FOOD]
 
 
@@ -224,6 +256,7 @@ def main() -> None:
     ap.add_argument("--refresh", action="store_true", help="이미 모은 것도 새로")
     ap.add_argument("--no-openverse", action="store_true")
     ap.add_argument("--no-ddg", action="store_true")
+    ap.add_argument("--commons-extra", action="store_true", help="Openverse·DDG 로도 5장이 안 차면 Commons 검색까지 (느림: 음식당 ~1분)")
     args = ap.parse_args()
 
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
@@ -239,14 +272,14 @@ def main() -> None:
     for i, c in enumerate(todo, 1):
         slug = c["s"]
         try:
-            photos = collect(c, http, ov, use_ddg=not args.no_ddg)
+            photos = collect(c, http, ov, use_ddg=not args.no_ddg, use_commons=args.commons_extra)
             existing[slug] = photos
             srcs = ", ".join(p["source"] for p in photos) or "없음"
             print(f"  [{i}/{len(todo)}] {slug} ({c['ko']}) → {len(photos)} 장 ({srcs})")
         except Exception as e:
             print(f"  [{i}/{len(todo)}] {slug} 실패: {e}", file=sys.stderr)
             existing[slug] = existing.get(slug, [])
-        if i % 25 == 0:
+        if i % 10 == 0:
             write_json(OUT, existing)
     write_json(OUT, existing)
     with_photos = sum(1 for v in existing.values() if v)

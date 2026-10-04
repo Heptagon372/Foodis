@@ -101,6 +101,25 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
           </span>
         )}
         <ImageCredit credit={food.image_credit} className="absolute bottom-10 right-4 lg:bottom-4" />
+        {/* 유튜브 아이콘 — 누르면 새 창에서 영상이 열린다. s11_youtube.py 가 음식 이름 매칭·조회수·길이 가드를 통과시킨 결과만 */}
+        {food.youtube && (
+          <a
+            href={food.youtube.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => track("youtube_open", { food_id: food.id, video_id: food.youtube!.video_id })}
+            className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-black/75 lg:top-4"
+            aria-label={`${food.name_ko} 유튜브 영상 보기 — ${food.youtube.title}`}
+            title={`${food.youtube.title} · ${food.youtube.channel} · 조회수 ${food.youtube.view_count.toLocaleString()}회`}
+          >
+            {/* 유튜브 브랜드 글리프 (lucide 가 브랜드 로고를 뺐어 인라인). 라이선스상 브랜드 로고는 실물 그대로 쓴다 */}
+            <svg width="20" height="14" viewBox="0 0 24 17" aria-hidden fill="#ff0000">
+              <path d="M23.5 2.6a3 3 0 0 0-2.1-2.1C19.5 0 12 0 12 0S4.5 0 2.6.5A3 3 0 0 0 .5 2.6C0 4.5 0 8.5 0 8.5s0 4 .5 5.9a3 3 0 0 0 2.1 2.1C4.5 17 12 17 12 17s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 12.5 24 8.5 24 8.5s0-4-.5-5.9z" />
+              <path d="M9.6 12.1V4.9L15.8 8.5z" fill="#fff" />
+            </svg>
+            영상
+          </a>
+        )}
       </header>
 
       <div className="relative -mt-7 space-y-6 rounded-t-[28px] bg-canvas px-5 pb-8 pt-6 lg:mt-0 lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0">
@@ -218,6 +237,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
                   </div>
                 </Facts>
               )}
+              <GallerySection photos={food.gallery} name={food.name_ko} />
             </>
           )}
 
@@ -312,6 +332,34 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
         <SourceFooter sources={food.sources} />
       </div>
     </main>
+  );
+}
+
+/** 갤러리: s10_gallery.py 가 모은 사진들. 썸네일 클릭 → 원 페이지로 (Commons · 플리커 · 블로그 등 출처별). */
+function GallerySection({ photos, name }: { photos: FoodDetail["gallery"]; name: string }) {
+  if (!photos.length) return null;
+  const SOURCE_LABEL: Record<string, string> = { wikimedia_commons: "위키미디어 공용", openverse: "Openverse (CC)", web: "웹" };
+  return (
+    <Facts label={`사진 ${photos.length}장 · 눌러서 원 출처로`}>
+      <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+        {photos.map((p, i) => (
+          <li key={p.url + i}>
+            <a
+              href={p.credit_url ?? p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block aspect-square overflow-hidden rounded-xl border border-line bg-sunken"
+              title={`${p.title} — ${p.author ?? "알 수 없음"} · ${p.license} · ${SOURCE_LABEL[p.source] ?? p.source}`}
+            >
+              {/* 원 이미지를 직접 임베드 — Commons/Openverse 는 라이선스상 가능, web 은 hotlink */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.thumb} alt={`${name} 사진 — ${p.title}`} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" referrerPolicy="no-referrer" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-caption text-muted">사진마다 라이선스와 출처가 달라요. 썸네일을 누르면 원 페이지로 이동합니다.</p>
+    </Facts>
   );
 }
 

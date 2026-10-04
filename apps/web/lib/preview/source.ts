@@ -1,6 +1,6 @@
 // Supabase 키가 없을 때 쓰는 미리보기 데이터 소스. 화면(ContentSource)과 푸디(FoodisRepo) 둘 다 제공한다.
 // FoodisRepo 를 같은 인터페이스로 구현하므로, 키 없이도 실제 Orchestrator 코드 경로(키워드 검색 → 템플릿 답)가 돈다.
-import type { ContentSource, Country, FoodDetail, FoodSummary } from "@/lib/content/types";
+import type { ContentSource, Country, FoodDetail, FoodSummary, GalleryPhoto, YouTubeVideo } from "@/lib/content/types";
 import { emptyDiet, fitsProfile, type FoodisRepo, type FoodRow } from "@/lib/foodi/repo";
 import { rankByKeywords } from "@/lib/foodi/keywords";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
@@ -8,6 +8,8 @@ import { PREVIEW_COUNTRIES } from "./countries";
 import { PREVIEW_FOODS, PREVIEW_RELATIONS, previewId, type PreviewFood } from "./foods";
 import { PREVIEW_IMAGES } from "./images";
 import CATALOG from "./catalog.json";
+// 미디어(갤러리·유튜브)는 tools/gen-preview-media.mjs 가 s10/s11 결과로 만든다. 없으면 빈 객체로 fallback.
+import MEDIA from "./media.json";
 
 /** 전체 음식 목록 (tools/gen-preview-catalog.mjs 가 foodis-data 시드·근거 수집 결과로 만든다).
  *  이름 · 나라 · 유명도 순위 · 사진만 확인된 상태 — 소개·식이 정보는 검수 전이라 비워 둔다 */
@@ -53,6 +55,30 @@ const byId = new Map(PREVIEW_FOODS.map((f) => [previewId(f.n), f]));
 const relationsOf = (slug: string) =>
   PREVIEW_RELATIONS.flatMap((r) => (r.from === slug ? [{ ...r, other: r.to }] : r.to === slug ? [{ ...r, other: r.from }] : []));
 
+type MediaMap = Record<string, { gallery: GalleryPhoto[]; youtube: YouTubeVideo | null }>;
+const media = MEDIA as MediaMap;
+const mediaOf = (slug: string, fallbackImageUrl: string | null, fallbackCredit: string | null): { gallery: GalleryPhoto[]; youtube: YouTubeVideo | null } => {
+  const m = media[slug];
+  if (m) return m;
+  // media.json 에 없으면 catalog 의 대표 이미지라도 1장짜리 갤러리로
+  if (fallbackImageUrl) {
+    return {
+      gallery: [{
+        url: fallbackImageUrl,
+        thumb: fallbackImageUrl,
+        title: slug,
+        source: "wikimedia_commons",
+        license: fallbackCredit?.split(" / ")?.[1] ?? "see source",
+        credit_url: fallbackCredit?.split(" / ")?.pop() ?? null,
+        author: fallbackCredit?.split(" / ")?.[0] ?? null,
+        fit: 1,
+      }],
+      youtube: null,
+    };
+  }
+  return { gallery: [], youtube: null };
+};
+
 export const previewContent: ContentSource = {
   mode: "preview",
   listCountries: async () => PREVIEW_COUNTRIES,
@@ -62,18 +88,24 @@ export const previewContent: ContentSource = {
     const x = f ? null : extraBySlug.get(slug);
     if (x) {
       const country = countryOf(x.c.cc);
+      const summary = catalogSummary(x);
+      const m = mediaOf(slug, summary.image_url, summary.image_credit);
       return {
-        ...catalogSummary(x),
+        ...summary,
         name_local: null, country, region_in_country: null, origin_note: null, history: null, culture_story: null, cooking_method: null, course_type: null, diet_note: null,
         ingredients: [],
         sources: [{ field: "name", url: x.c.w, title: `Wikipedia — ${x.c.en}`, license: "CC BY-SA 4.0" }],
         relations: [],
         sameCountry: allSummaries().filter((o) => o.country_code === x.c.cc && o.slug !== slug).sort(byFame).slice(0, 10),
+        gallery: m.gallery,
+        youtube: m.youtube,
       };
     }
     if (!f) return null;
+    const summary = summaryOf(f);
+    const m = mediaOf(slug, summary.image_url, summary.image_credit);
     const detail: FoodDetail = {
-      ...summaryOf(f),
+      ...summary,
       name_local: f.name_local ?? null,
       country: countryOf(f.cc),
       region_in_country: null,
@@ -87,6 +119,8 @@ export const previewContent: ContentSource = {
       sources: [{ field: "summary", url: wiki(f), title: `Wikipedia — ${f.name_en}`, license: "CC BY-SA 4.0" }],
       relations: relationsOf(slug).map((r) => ({ type: r.type, description: r.description, food: summaryOf(bySlug.get(r.other)!) })),
       sameCountry: allSummaries().filter((o) => o.country_code === f.cc && o.slug !== slug).sort(byFame).slice(0, 10),
+      gallery: m.gallery,
+      youtube: m.youtube,
     };
     return detail;
   },

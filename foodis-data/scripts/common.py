@@ -103,7 +103,15 @@ class Http:
             if wait > 0:
                 time.sleep(wait)
             self._last = time.time()
-            r = self.s.request(method, url, params=params, data=data, json=json_body, headers=headers, timeout=timeout)
+            try:
+                r = self.s.request(method, url, params=params, data=data, json=json_body, headers=headers, timeout=timeout)
+            except (requests.Timeout, requests.ConnectionError) as e:
+                if attempt == retries - 1:
+                    raise
+                delay = min(2 ** attempt * 5, 120)
+                print(f"  ↻ {type(e).__name__} {url[:60]}… {delay:.0f}s 후 재시도")
+                time.sleep(delay)
+                continue
             if r.status_code == 429 or r.status_code >= 500:
                 delay = _retry_delay(r, attempt)
                 print(f"  ↻ {r.status_code} {url[:60]}… {delay:.0f}s 후 재시도")

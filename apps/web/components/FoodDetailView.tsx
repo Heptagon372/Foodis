@@ -92,7 +92,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
   return (
     // 데스크톱: 왼쪽 사진 카드(고정) | 오른쪽 정보 — 모바일은 사진 위 + 시트처럼 겹친 본문
     <main className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8 lg:pt-8">
-      <header className="relative flex h-80 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:sticky lg:top-8 lg:h-[min(36rem,calc(100dvh-4rem))] lg:overflow-hidden lg:rounded-[32px] lg:pt-5 lg:shadow-lift" style={accentBg(food.accent, food.image_url)}>
+      <header className="relative flex h-80 flex-col justify-between p-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:sticky lg:top-(--desk-sticky) lg:h-[min(36rem,calc(100dvh_-_var(--desk-sticky)_-_2rem))] lg:overflow-hidden lg:rounded-[32px] lg:pt-5 lg:shadow-lift" style={accentBg(food.accent, food.image_url)}>
         <BackLink href="/" label="홈" onPhoto={!!food.image_url} />
         {/* 사진이 없을 때만 큰 국기가 히어로 — 사진이 있으면 사진이 주인공 */}
         {!food.image_url && (
@@ -190,7 +190,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
         </div>
 
         {/* 길게 스크롤해도 탭을 바로 바꿀 수 있게 위에 붙는다 (유리 트랙이라 아래 내용이 비친다) */}
-        <div className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-10">
+        <div className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-10 lg:top-[calc(var(--desk-nav)_+_0.5rem)]">
           <SegTabs tabs={TABS} value={tab} onChange={(t) => (setTab(t), t !== "기본" && (signal("tab", sf, { src: t }), noteFeature(`tab:${t}`)))} label="음식 정보" />
         </div>
 

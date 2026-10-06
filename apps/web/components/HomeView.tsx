@@ -5,10 +5,13 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { exploredCountries, update, useHydrated, useLocal } from "@/lib/client/passport";
 import { impress, useTaste } from "@/lib/client/taste";
+import { selectedGuards } from "@/lib/diet/guard";
 import { buildProfile, rankFoods } from "@/lib/taste/engine";
 import { FoodCard } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
+import { DesktopLanding } from "./landing/DesktopLanding";
+import type { SiteFacts } from "./landing/types";
 import { PreviewBanner, Section } from "./bits";
 import { startRadio } from "@/lib/client/radio";
 import { ImageCredit } from "./ImageCredit";
@@ -17,6 +20,8 @@ import { TopBar } from "./TopBar";
 import { Icon, type IconName } from "./icons";
 import { btn, Eyebrow } from "./ui";
 
+const NO_GUARDS: string[] = [];
+
 /** 날짜로 고정되는 '오늘의 탐험' — 같은 날엔 모두 같은 음식 (공유·대화 소재) */
 const todayIndex = (n: number) => {
   const d = new Date();
@@ -24,7 +29,8 @@ const todayIndex = (n: number) => {
   return n ? (seed * 2654435761) % n : 0;
 };
 
-export function HomeView({ foods, continents, preview }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean }) {
+// 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일 트리(lg:hidden)와 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다 (docs/design/18)
+export function HomeView({ foods, continents, preview, site }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
   const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
@@ -54,6 +60,7 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
   const recent = useLocal((s) => Object.entries(s.entries).sort((a, b) => b[1].at - a[1].at).slice(0, 8));
 
   const allergens = useLocal((s) => s.allergens ?? []);
+  const guards = useLocal((s) => s.guards ?? NO_GUARDS);
   const countries = useLocal(exploredCountries);
   const tried = useLocal((s) => Object.values(s.entries).filter((e) => e.statuses.includes("tried")).length);
   const recentFlags = useLocal((s) => [...new Set(Object.values(s.entries).sort((a, b) => b.at - a.at).map((e) => e.flag))].slice(0, 3));
@@ -63,6 +70,9 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
   const signature = pool.filter((f) => f.fame_rank === 1 && f.image_url);
   const todayPool = signature.length ? signature : pool;
   const today = todayPool[todayIndex(todayPool.length)] ?? foods[0];
+  // 데스크톱 '맛집탐방' 타일 사진: 오늘의 탐험과 겹치지 않는 사진 있는 대표 음식 (라이브는 fame_rank 가 비어 사진 있는 아무 음식)
+  const photoPool = (signature.length ? signature : pool.filter((f) => f.image_url)).filter((f) => f.id !== today?.id);
+  const eatsPhoto = photoPool.length ? photoPool[(todayIndex(photoPool.length) + 7) % photoPool.length] : null;
   // 나를 위한 추천: 취향 엔진 (lib/taste/engine.ts). 초반엔 나라별 대표 음식, 신호가 쌓이면 취향 순
   const continentOf = (cc: string) => continents[cc];
   const profile = useMemo(() => buildProfile(signals, features, (cc) => continents[cc], Date.now(), { tastes }), [signals, features, continents, tastes]);
@@ -83,10 +93,12 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
   };
 
   return (
-    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:space-y-6 lg:px-0 lg:pt-4">
+    // 문서의 main 은 하나 — 모바일·데스크톱 두 트리를 감싼다. Intro 는 fixed 대화상자라 어느 트리에도 넣지 않는다 (데스크톱에서도 보이고 introSeen 이 기록되게)
+    <main>
       {hydrated && !introSeen && <Intro onDone={finishIntro} />}
       {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
 
+      <div className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:hidden">
       <TopBar />
 
       {preview && <PreviewBanner />}
@@ -161,6 +173,20 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
           </p>
         )}
       </Section>
+      </div>
+
+      <DesktopLanding
+        today={today}
+        ranked={ranked}
+        learning={learning}
+        confidence={profile.confidence}
+        conditionCount={selectedGuards(diet, guards).length + allergens.length}
+        dietFiltered={diet.length + allergens.length > 0}
+        recent={recent.map(([id, e]) => ({ id, slug: e.slug, flag: e.flag, name_ko: e.name_ko }))}
+        eatsPhoto={eatsPhoto}
+        site={site}
+        preview={preview}
+      />
     </main>
   );
 }

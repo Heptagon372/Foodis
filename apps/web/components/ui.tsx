@@ -43,6 +43,7 @@ export function IconButton({
   variant = "glass",
   className = "",
   pressed,
+  disabled,
 }: {
   icon: IconName;
   label: string;
@@ -50,6 +51,8 @@ export function IconButton({
   variant?: "glass" | "outline" | "brand" | "lime" | "soft" | "ghost" | "on-dark";
   className?: string;
   pressed?: boolean;
+  /** aria-disabled 로 끈다 — 네이티브 disabled 는 누르고 있던 키보드 포커스를 body 로 날린다 */
+  disabled?: boolean;
 }) {
   const v = {
     glass: "glass text-ink",
@@ -61,7 +64,14 @@ export function IconButton({
     "on-dark": "border border-white/20 bg-white/12 text-white",
   }[variant];
   return (
-    <button type="button" onClick={onClick} aria-label={label} aria-pressed={pressed} className={`grid size-11 shrink-0 place-items-center rounded-full transition active:scale-95 ${v} ${className}`}>
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      aria-disabled={disabled || undefined}
+      className={`grid size-11 shrink-0 place-items-center rounded-full transition active:scale-95 aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:active:scale-100 ${v} ${className}`}
+    >
       <Icon name={icon} className="size-5" />
     </button>
   );

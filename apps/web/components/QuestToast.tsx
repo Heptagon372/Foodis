@@ -21,7 +21,7 @@ export function QuestToast() {
   }, [head]);
 
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] mx-auto flex max-w-md justify-center px-4 lg:left-64 lg:top-6">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] mx-auto flex max-w-md justify-center px-4 lg:top-[calc(var(--desk-nav)_+_0.5rem)]">
       {head && (
         // 숲 패널 알약: 두 테마 모두 진한 초록 + 흰 글자라 어느 바탕 위에서도 떠 보인다
         <div key={head.id} className="forest-panel relative flex animate-rise items-center gap-2.5 rounded-full py-2 pl-2 pr-4 text-sm shadow-lift">

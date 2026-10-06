@@ -108,7 +108,7 @@ export function BuddyChat({ id }: { id: string }) {
   const ended = Boolean(chat?.ended_at);
 
   return (
-    <main className="flex min-h-[calc(100dvh-5rem)] flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 lg:mx-auto lg:min-h-[calc(100dvh-2rem)] lg:max-w-2xl lg:pt-8">
+    <main className="flex min-h-[calc(100dvh-5rem)] flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 lg:mx-auto lg:min-h-[calc(100dvh_-_var(--desk-nav)_-_2rem)] lg:max-w-2xl lg:pt-8">
       <TopBar back={{ href: "/community?tab=buddy", label: "푸랜드" }}>
         {chat && !ended && (
           <button type="button" className={btn("outline", "sm")} onClick={() => setConfirmEnd(true)}>

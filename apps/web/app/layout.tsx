@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { AccountSync } from "@/components/AccountSync";
-import { AppHeader } from "@/components/AppHeader";
 import { AppFrame } from "@/components/AppFrame";
 import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
 import { QuestToast } from "@/components/QuestToast";
 import { RadioMini } from "@/components/RadioMini";
-import { SideNav } from "@/components/SideNav";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
 import { Tracker } from "@/components/Tracker";
@@ -49,8 +47,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <RadioMini />
           <QuestToast />
           <TabBar />
-          <AppHeader />
-          <SideNav />
         </FoodiProvider>
       </body>
     </html>

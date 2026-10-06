@@ -127,7 +127,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
 
       {/* 급상승: 어느 탭에서든 맨 위에 크게 */}
       <TrendingFoodsLive />
-      {/* 모바일엔 사이드바가 없어 음식 뉴스로 가는 길을 여기 둔다 */}
+      {/* 모바일엔 상단 메뉴가 없어 음식 뉴스로 가는 길을 여기 둔다 */}
       <Link href="/news" className="card flex items-center gap-3 rounded-2xl px-4 py-3 transition hover:border-leaf/40 lg:hidden">
         <Icon name="newspaper" className="size-5 text-leaf" />
         <span className="flex-1 text-sm font-semibold text-ink">음식 뉴스 · 문화 뉴스</span>
@@ -231,7 +231,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
             )}
           </div>
 
-          <aside className="mt-6 space-y-4 lg:sticky lg:top-8 lg:mt-0">
+          <aside className="mt-6 space-y-4 lg:sticky lg:top-(--desk-sticky) lg:mt-0">
             <Briefing data={brief} onPick={(k: CategoryKey) => pick(k)} />
             {top.length > 0 && (
               // 모바일은 정렬 안내 문장이 같은 정보를 보여 줘서 숨긴다 (피드가 너무 밀리지 않게)

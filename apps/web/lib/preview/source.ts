@@ -83,6 +83,7 @@ export const previewContent: ContentSource = {
   mode: "preview",
   listCountries: async () => PREVIEW_COUNTRIES,
   listFoods: async () => allSummaries(),
+  countFoods: async () => allSummaries().length,
   async getFood(slug) {
     const f = bySlug.get(slug);
     const x = f ? null : extraBySlug.get(slug);

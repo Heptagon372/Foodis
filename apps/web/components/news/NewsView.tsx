@@ -72,7 +72,7 @@ export function NewsView() {
       <SegTabs tabs={TABS} value={tab} onChange={(t) => go(t, null)} label="뉴스 카테고리" labels={labels} />
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
-        <aside className="mb-5 space-y-3 lg:sticky lg:top-8 lg:order-last lg:mb-0">
+        <aside className="mb-5 space-y-3 lg:sticky lg:top-(--desk-sticky) lg:order-last lg:mb-0">
           <TrendingFoods
             items={data ? data.rising : null}
             title={tab === "culture" ? "문화 뉴스에서 뜨는 음식" : tab === "food" ? "음식 뉴스에서 뜨는 음식" : "뉴스에서 뜨는 음식"}

@@ -39,7 +39,7 @@ export function SettingsView() {
 
       <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         {/* 묶음 바로 가기 — 모바일은 가로 칩, 데스크톱은 고정된 세로 목록 */}
-        <nav aria-label="설정 묶음" className="-mx-5 mb-6 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] lg:sticky lg:top-8 lg:mx-0 lg:mb-0 lg:flex-col lg:px-0">
+        <nav aria-label="설정 묶음" className="-mx-5 mb-6 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] lg:sticky lg:top-(--desk-sticky) lg:mx-0 lg:mb-0 lg:flex-col lg:px-0">
           {groups.map((g) => (
             <a key={g.id} href={`#${g.id}`} className={`${chip(false)} shrink-0 lg:h-11 lg:rounded-2xl lg:border-transparent lg:bg-transparent lg:hover:bg-ink/5`}>
               <Icon name={g.icon} className="size-4 text-leaf" />
@@ -87,7 +87,7 @@ function DisplaySettings() {
   ];
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <SettingCard icon="sun" title="테마" desc="이 기기에 기억돼요. 데스크톱에서는 사이드바의 새싹 버튼으로도 바꿀 수 있어요.">
+      <SettingCard icon="sun" title="테마" desc="이 기기에 기억돼요. 데스크톱에서는 상단 메뉴의 새싹 버튼으로도 바꿀 수 있어요.">
         <div role="radiogroup" aria-label="테마" className="space-y-2">
           {opts.map((o) => (
             <button key={o.v} type="button" role="radio" aria-checked={theme === o.v} onClick={() => theme !== o.v && setTheme(o.v)} className={optionRow(theme === o.v)}>

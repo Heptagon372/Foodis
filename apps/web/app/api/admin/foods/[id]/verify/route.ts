@@ -3,6 +3,7 @@
 import { requireApi } from "@/lib/admin/auth";
 import { apiError, db } from "@/lib/admin/data";
 import { approvalProblem } from "@/lib/admin/rules";
+import { invalidateContent } from "@/lib/content";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await requireApi("reviewer");
@@ -17,6 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const now = new Date().toISOString();
   const up = await db().from("foods").update({ verified: true, verified_by: s.userId, verified_at: now }).eq("id", id);
   if (up.error) return apiError(500, up.error.message);
+  invalidateContent();
   if (override) console.warn(`[admin] ${s.email} 가 본인 작성 음식 ${id} 를 예외 승인`);
   return Response.json({ ok: true, verified: true, override });
 }
@@ -25,5 +27,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const s = await requireApi("reviewer");
   if (s instanceof Response) return s;
   const { error } = await db().from("foods").update({ verified: false, verified_by: null, verified_at: null }).eq("id", (await params).id);
-  return error ? apiError(500, error.message) : Response.json({ ok: true, verified: false });
+  if (error) return apiError(500, error.message);
+  invalidateContent();
+  return Response.json({ ok: true, verified: false });
 }

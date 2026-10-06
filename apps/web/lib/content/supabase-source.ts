@@ -33,14 +33,17 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       return data as Country[];
     },
     async listFoods() {
-      // PostgREST 는 한 번에 최대 1,000행 → 페이지로 나눠 전부 받는다
-      const rows: Row[] = [];
-      for (let from = 0; ; from += 1000) {
-        const { data, error } = await db.from("foods").select(SUMMARY_COLS).order("id").range(from, from + 999);
-        if (error) throw error;
-        rows.push(...(data as unknown as Row[]));
-        if (data.length < 1000) break;
-      }
+      // PostgREST 는 한 번에 최대 1,000행 → 첫 페이지에서 전체 개수를 받고 나머지 페이지는 한꺼번에 받는다 (10,000행 = 11회 왕복 → 2회)
+      const PAGE = 1000;
+      const page = (from: number, count?: "exact") => db.from("foods").select(SUMMARY_COLS, count ? { count } : undefined).order("id").range(from, from + PAGE - 1);
+      const first = await page(0, "exact");
+      if (first.error) throw first.error;
+      const total = first.count ?? first.data.length;
+      const rest = await Promise.all(Array.from({ length: Math.max(0, Math.ceil(total / PAGE) - 1) }, (_, i) => page((i + 1) * PAGE)));
+      const rows = [first, ...rest].flatMap((r) => {
+        if (r.error) throw r.error;
+        return r.data as unknown as Row[];
+      });
       return rows.map(toSummary);
     },
     async countFoods() {

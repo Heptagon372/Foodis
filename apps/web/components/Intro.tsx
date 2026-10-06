@@ -1,141 +1,135 @@
 "use client";
-// S0 인트로 (05 문서 §2): 국기들이 바람에 흔들리며 들어와 → "FOOD" 글자 위 점들로 수렴 → 워드마크로 녹아듦 → 태그라인 + CTA.
-// 총 3.2초, 건너뛰기 가능. 목표 좌표는 캔버스에 워드마크를 그려 채워진 픽셀에서 샘플링한다.
+// S0 인트로 (05 문서 §2): 인트로 영상 (세계 국기 → 소용돌이 → FOODIS 워드마크, 4.5초) → 태그라인 + CTA.
+// 첫 방문은 영상 + CTA, 재방문(세션당 1회)은 영상만 보고 저절로 닫힌다. 언제든 건너뛸 수 있다.
+// 자동 재생은 브라우저 정책상 음소거로만 가능 → 소리 켜기 버튼을 따로 둔다.
+// 영상을 못 틀면(자동 재생 차단·로드 실패·동작 줄이기 설정) 바로 다음 단계로 넘어간다.
 import { useEffect, useRef, useState } from "react";
 import { btn } from "./ui";
 
-const FLAGS = ["🇰🇷", "🇯🇵", "🇨🇳", "🇹🇭", "🇻🇳", "🇮🇳", "🇳🇵", "🇺🇿", "🇹🇷", "🇱🇧", "🇮🇷", "🇪🇬", "🇲🇦", "🇪🇹", "🇿🇦", "🇮🇹", "🇫🇷", "🇪🇸", "🇬🇷", "🇦🇹", "🇵🇱", "🇬🇪", "🇲🇽", "🇺🇸", "🇵🇪", "🇧🇷", "🇦🇷", "🇧🇴"];
-const T = { gather: 1200, converge: 2200, reveal: 2800, end: 3200 };
-// 재방문 1초 단축판 (05 문서 §2): 가장자리 등장 생략, 바로 모여 FOOD → 사라짐
-const T_SHORT = { gather: 150, converge: 550, reveal: 750, end: 1000 };
-
-const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-
-function sampleTargets(w: number, h: number, n: number, font: string): { x: number; y: number }[] {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const g = c.getContext("2d");
-  if (!g) return [];
-  g.font = font;
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText("FOOD", w / 2, h / 2);
-  const data = g.getImageData(0, 0, w, h).data;
-  const pts: { x: number; y: number }[] = [];
-  for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) if (data[(y * w + x) * 4 + 3] > 128) pts.push({ x, y });
-  // 왼쪽→오른쪽으로 고르게 뽑아 네 글자 모두에 국기가 앉도록
-  pts.sort((a, b) => a.x - b.x);
-  return Array.from({ length: n }, (_, i) => pts[Math.floor(((i + 0.5) / n) * pts.length)] ?? { x: w / 2, y: h / 2 });
-}
+const SRC = "/intro/foodis-intro.mp4";
+const POSTER = "/intro/foodis-intro-poster.jpg";
+// 영상 마지막 장면(워드마크) 바탕색 — 세로 화면의 남는 공간과 CTA 배경이 영상과 이어지게
+const BG = "rgb(2 19 13)";
+// 이 시간 안에 재생이 시작되지 않으면 영상을 포기한다
+const START_TIMEOUT = 3500;
 
 export function Intro({ onDone, short = false }: { onDone: () => void; short?: boolean }) {
-  const stage = useRef<HTMLDivElement>(null);
   const done = useRef(onDone);
   useEffect(() => {
     done.current = onDone;
   });
+  const front = useRef<HTMLVideoElement>(null);
+  const back = useRef<HTMLVideoElement>(null);
+  const [phase, setPhase] = useState<"video" | "cta">("video");
   const [leaving, setLeaving] = useState(false);
-  const flagEls = useRef<(HTMLSpanElement | null)[]>([]);
-  const [phase, setPhase] = useState<"flags" | "mark" | "cta">("flags");
+  const [muted, setMuted] = useState(true);
+
+  const close = () => {
+    setLeaving(true);
+    setTimeout(() => done.current(), 220);
+  };
+  // 영상이 끝났거나 못 틀 때: 첫 방문은 CTA, 재방문은 닫기
+  const finish = () => {
+    if (short) close();
+    else setPhase("cta");
+  };
+  const finishRef = useRef(finish);
+  useEffect(() => {
+    finishRef.current = finish;
+  });
 
   useEffect(() => {
-    const box = stage.current;
-    if (!box) return;
-    const W = box.clientWidth;
-    const H = box.clientHeight;
-    const markW = Math.min(W * 0.8, 340);
-    const markH = markW * 0.38;
-    const fontPx = Math.round(markW * 0.3);
-    const ox = (W - markW) / 2;
-    const oy = H * 0.42 - markH / 2;
-    // next/font 는 글꼴 이름을 바꿔 등록한다 → CSS 변수에서 실제 family 를 읽어야 캔버스 글자 모양이 워드마크와 같다
-    const family = getComputedStyle(document.documentElement).getPropertyValue("--font-fraunces").trim() || "Georgia, serif";
-    const targets = sampleTargets(Math.round(markW), Math.round(markH), FLAGS.length, `700 ${fontPx}px ${family}`);
-
-    // 시작점: 화면 가장자리 (위·아래·좌·우 고르게)
-    const starts = FLAGS.map((_, i) => {
-      const side = i % 4;
-      const r = ((i * 37) % 100) / 100;
-      return side === 0 ? { x: r * W, y: -30 } : side === 1 ? { x: W + 30, y: r * H } : side === 2 ? { x: r * W, y: H + 30 } : { x: -30, y: r * H };
-    });
-    // 바람에 흔들리는 대기 위치: 가장자리에서 조금 들어온 곳
-    const hover = starts.map((s, i) => ({ x: s.x * 0.82 + W * 0.09 + Math.sin(i) * 12, y: s.y * 0.82 + H * 0.09 + Math.cos(i * 1.3) * 12 }));
-
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const TT = short ? T_SHORT : T;
-    const t0 = performance.now() - (reduce ? TT.reveal : 0);
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = now - t0;
-      flagEls.current.forEach((el, i) => {
-        if (!el) return;
-        const a = short ? 1 : clamp01(t / TT.gather);
-        const sway = Math.sin(t / 260 + i) * 6 * (1 - clamp01((t - TT.gather) / 600));
-        let x = starts[i].x + (hover[i].x - starts[i].x) * ease(a);
-        let y = starts[i].y + (hover[i].y - starts[i].y) * ease(a) + sway;
-        const b = ease(clamp01((t - TT.gather) / (TT.converge - TT.gather)));
-        const tg = targets[i] ?? { x: markW / 2, y: markH / 2 };
-        x += (ox + tg.x - x) * b;
-        y += (oy + tg.y - y) * b;
-        const fade = 1 - clamp01((t - TT.converge) / (TT.reveal - TT.converge));
-        el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${1 - 0.55 * b}) rotate(${sway * 2}deg)`;
-        el.style.filter = `blur(${b * 1.6}px)`;
-        el.style.opacity = String(Math.min(a * 2, 1) * fade);
-      });
-      if (t >= TT.converge) setPhase((p) => (p === "flags" ? "mark" : p));
-      if (t >= TT.reveal && !short) setPhase("cta");
-      if (t < TT.end) raf = requestAnimationFrame(tick);
-      else if (short) {
-        setLeaving(true);
-        setTimeout(() => done.current(), 220);
-      }
+    const v = front.current;
+    if (!v) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finishRef.current();
+      return;
+    }
+    let started = false;
+    const timer = setTimeout(() => !started && finishRef.current(), START_TIMEOUT);
+    const onPlaying = () => {
+      started = true;
+      back.current?.play().catch(() => {});
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [short]);
+    v.addEventListener("playing", onPlaying);
+    v.play().catch(() => finishRef.current());
+    return () => {
+      clearTimeout(timer);
+      v.removeEventListener("playing", onPlaying);
+    };
+  }, []);
+
+  const toggleSound = () => {
+    const v = front.current;
+    if (!v) return;
+    v.muted = !muted;
+    setMuted(!muted);
+  };
 
   return (
     <div
-      ref={stage}
-      className={`fixed inset-0 z-[60] overflow-hidden bg-canvas transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
-      // 바탕 안개 — 토큰(--mist-*)이라 다크에서는 밤의 숲 안개가 된다
-      style={{ backgroundImage: "radial-gradient(90% 55% at 85% 0%, var(--mist-lime), transparent 65%), radial-gradient(80% 50% at 0% 100%, var(--mist-leaf), transparent 62%)" }}
+      className={`fixed inset-0 z-[60] overflow-hidden transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
+      style={{ background: BG }}
+      onClick={short ? close : undefined}
     >
+      {/* 뒤: 같은 영상을 흐리게 꽉 채워 세로 화면의 위아래 빈 곳을 메운다 / 앞: 잘리지 않게 전체를 보여준다 */}
+      <video ref={back} src={SRC} muted playsInline preload="auto" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-2xl" />
+      <video
+        ref={front}
+        src={SRC}
+        poster={POSTER}
+        muted
+        playsInline
+        preload="auto"
+        onEnded={() => finishRef.current()}
+        onError={() => finishRef.current()}
+        aria-label="FOODIS 인트로 영상"
+        className="absolute inset-0 h-full w-full object-contain"
+      />
+
+      <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex gap-2">
+        {phase === "video" && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSound();
+            }}
+            aria-label={muted ? "소리 켜기" : "소리 끄기"}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition active:scale-95"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+        )}
+        {(!short || phase === "video") && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (short) close();
+              else done.current();
+            }}
+            className="inline-flex h-10 items-center rounded-full bg-white/15 px-4 text-sm font-medium text-white backdrop-blur transition active:scale-95"
+          >
+            건너뛰기
+          </button>
+        )}
+      </div>
+
       {!short && (
-        <button
-          type="button"
-          onClick={onDone}
-          className="glass absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 inline-flex h-10 items-center rounded-full px-4 text-sm font-medium text-ink-soft transition active:scale-95"
+        <div
+          className={`absolute inset-x-0 bottom-0 space-y-6 px-8 pb-[max(3rem,calc(env(safe-area-inset-bottom)+2rem))] pt-24 text-center transition-all duration-500 ${phase === "cta" ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"}`}
+          style={{ background: `linear-gradient(to top, ${BG} 55%, transparent)` }}
         >
-          건너뛰기
-        </button>
+          {/* 세리프 이탤릭은 영문 한 단어 강조에만 (디자인 v2 글꼴 원칙) — 영상 위라 다크 고정색 */}
+          <p className="text-xl font-medium tracking-tight text-white/85">
+            Different Cultures, One <span className="font-serif font-semibold italic text-lime-300">Table.</span>
+          </p>
+          <button type="button" onClick={() => done.current()} className={`${btn("primary", "lg")} w-full max-w-xs`}>
+            세계 음식 탐험하기
+          </button>
+        </div>
       )}
-      {FLAGS.map((f, i) => (
-        <span key={f} ref={(el) => void (flagEls.current[i] = el)} className="absolute left-0 top-0 text-3xl opacity-0 will-change-transform" aria-hidden>
-          {f}
-        </span>
-      ))}
-      <div className="absolute inset-x-0 top-[42%] -translate-y-1/2 text-center">
-        {/* 캔버스 샘플링과 같은 Fraunces 로 그려야 국기가 앉은 자리와 글자가 겹친다 */}
-        <p
-          className="font-serif font-bold tracking-tight text-ink transition-opacity duration-500"
-          style={{ fontSize: "min(24vw, 102px)", lineHeight: 1, opacity: phase === "flags" ? 0 : 1 }}
-          aria-label="FOOD"
-        >
-          FOOD
-        </p>
-      </div>
-      <div hidden={short} className={`absolute inset-x-0 top-[58%] space-y-8 px-8 text-center transition-all duration-300 ${phase === "cta" ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
-        {/* 세리프 이탤릭은 영문 한 단어 강조에만 (디자인 v2 글꼴 원칙) */}
-        <p className="text-xl font-medium tracking-tight text-ink-soft">
-          Different Cultures, One <span className="font-serif font-semibold italic text-leaf">Table.</span>
-        </p>
-        <button type="button" onClick={onDone} className={`${btn("primary", "lg")} w-full max-w-xs`}>
-          세계 음식 탐험하기
-        </button>
-      </div>
     </div>
   );
 }

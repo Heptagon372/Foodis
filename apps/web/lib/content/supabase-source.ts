@@ -50,9 +50,11 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       if (error) throw error;
       if (!data) return null;
       const r = data as unknown as Row;
-      const [rels, same] = await Promise.all([
+      const [rels, same, photos, yt] = await Promise.all([
         db.from("food_relations").select(`relation_type, description, to:foods!food_relations_to_food_id_fkey(${SUMMARY_COLS})`).eq("from_food_id", r.id as string).order("strength", { ascending: false }),
         db.from("foods").select(SUMMARY_COLS).eq("country_code", r.country_code as string).neq("id", r.id as string).limit(6),
+        db.from("food_photos").select("url, thumb, title, source, license, credit_url, author, fit").eq("food_id", r.id as string).order("rank"),
+        db.from("food_youtube").select("video_id, url, title, channel, duration_sec, view_count, fit").eq("food_id", r.id as string).maybeSingle(),
       ]);
       const detail: FoodDetail = {
         ...toSummary(r),
@@ -71,9 +73,8 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
           .filter((x) => x.to)
           .map((x) => ({ type: x.relation_type as RelationType, description: x.description as string, food: toSummary(x.to as Row) })),
         sameCountry: ((same.data as unknown as Row[]) ?? []).map(toSummary),
-        // DB 스키마에 아직 미디어 테이블이 없어 빈 값으로. (migrations/0001_init.sql 에 food_media 추가 전까지)
-        gallery: [],
-        youtube: null,
+        gallery: (photos.data as FoodDetail["gallery"]) ?? [],
+        youtube: (yt.data as FoodDetail["youtube"]) ?? null,
       };
       return detail;
     },

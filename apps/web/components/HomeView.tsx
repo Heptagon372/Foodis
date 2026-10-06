@@ -10,6 +10,8 @@ import { speak } from "@/lib/client/voice";
 import { FoodCard } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
+import { DesktopLanding } from "./landing/DesktopLanding";
+import type { SiteFacts } from "./landing/types";
 import { PreviewBanner, Section } from "./bits";
 import { startRadio } from "@/lib/client/radio";
 import { VoiceButton } from "./VoiceButton";
@@ -18,7 +20,7 @@ import { TopBar } from "./TopBar";
 import { Icon, type IconName } from "./icons";
 import { btn, Eyebrow, IconTile } from "./ui";
 
-// 지도·라디오는 탭 바·사이드바에 있으니, 홈 바로 가기는 '내 기록'과 설정 쪽 (nav.ts 와 같은 이름)
+// 지도·라디오는 탭 바·상단 내비에 있으니, 홈 바로 가기는 '내 기록'과 설정 쪽 (nav.ts 와 같은 이름)
 const SHORTCUTS: [string, IconName, string][] = [
   ["/passport/table", "table", "My Table"],
   ["/quests", "quest", "퀘스트"],
@@ -33,7 +35,8 @@ const todayIndex = (n: number) => {
   return n ? (seed * 2654435761) % n : 0;
 };
 
-export function HomeView({ foods, continents, preview }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean }) {
+// 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일(<main lg:hidden>)과 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다
+export function HomeView({ foods, continents, preview, site }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
   const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
@@ -69,6 +72,9 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
   const signature = pool.filter((f) => f.fame_rank === 1 && f.image_url);
   const todayPool = signature.length ? signature : pool;
   const today = todayPool[todayIndex(todayPool.length)] ?? foods[0];
+  // 데스크톱 '맛집탐방' 타일 사진: 오늘의 탐험과 겹치지 않는 사진 있는 대표 음식 (라이브는 fame_rank 가 비어 사진 있는 아무 음식)
+  const photoPool = (signature.length ? signature : pool.filter((f) => f.image_url)).filter((f) => f.id !== today?.id);
+  const eatsPhoto = photoPool.length ? photoPool[(todayIndex(photoPool.length) + 7) % photoPool.length] : null;
   // 나를 위한 추천: 취향 엔진 (lib/taste/engine.ts). 초반엔 나라별 대표 음식, 신호가 쌓이면 취향 순
   const continentOf = (cc: string) => continents[cc];
   const profile = useMemo(() => buildProfile(signals, features, (cc) => continents[cc], Date.now(), { tastes }), [signals, features, continents, tastes]);
@@ -89,10 +95,12 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
   };
 
   return (
-    <main className="space-y-8 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
+    <>
+      {/* Intro 는 fixed 오버레이 — lg:hidden 트리 밖에 둬야 데스크톱에서도 보이고 introSeen 이 기록된다 */}
       {hydrated && !introSeen && <Intro onDone={finishIntro} />}
       {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
 
+    <main className="space-y-8 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:hidden">
       <TopBar />
 
       {preview && <PreviewBanner />}
@@ -219,5 +227,18 @@ export function HomeView({ foods, continents, preview }: { foods: FoodSummary[];
         )}
       </Section>
     </main>
+
+      <DesktopLanding
+        today={today}
+        ranked={ranked}
+        learning={learning}
+        confidence={profile.confidence}
+        dietCount={diet.length + allergens.length}
+        recent={recent.map(([id, e]) => ({ id, slug: e.slug, flag: e.flag, name_ko: e.name_ko }))}
+        eatsPhoto={eatsPhoto}
+        site={site}
+        preview={preview}
+      />
+    </>
   );
 }

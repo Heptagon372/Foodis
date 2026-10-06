@@ -72,6 +72,13 @@
   --text-caption: 0.8125rem;
   --text-subtitle: 1.125rem;
   --text-subtitle--line-height: 1.55;
+  /* 데스크톱 랜딩 (docs/design/17): 히어로 68 / 섹션 제목 40 */
+  --text-hero: 4.25rem;
+  --text-hero--line-height: 0.98;
+  --text-hero--letter-spacing: -0.045em;
+  --text-section: 2.5rem;
+  --text-section--line-height: 1.12;
+  --text-section--letter-spacing: -0.035em;
 
   --shadow-soft: 0 1px 2px rgb(18 38 26 / 0.05), 0 8px 24px -14px rgb(18 38 26 / 0.18);
   --shadow-lift: 0 2px 6px rgb(18 38 26 / 0.06), 0 20px 44px -20px rgb(18 38 26 / 0.34);
@@ -379,6 +386,123 @@ body {
 .hud-range { appearance: none; height: 4px; border-radius: 999px; background: linear-gradient(90deg, #2b8645 var(--p, 0%), rgb(43 134 69 / 0.15) var(--p, 0%)); }
 .hud-range::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #2b8645; box-shadow: 0 2px 8px rgb(43 134 69 / 0.4); cursor: pointer; }
 .hud-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #2b8645; box-shadow: 0 2px 8px rgb(43 134 69 / 0.4); cursor: pointer; }
+}
+
+/* ───────── 데스크톱 웹사이트 (lg ≥ 64rem) — docs/design/17 ─────────
+   아래 클래스는 hidden lg:block 트리(DesktopNav · SiteFooter · DesktopLanding)와 lg: 접두사에서만 쓴다 → 모바일 렌더 영향 없음 */
+:root {
+  --desk-nav: 5rem; /* 상단 알약 내비: 위 12px + 알약 60px + 아래 8px */
+  --desk-sticky: calc(var(--desk-nav) + 1rem); /* 화면 안 sticky 패널·앵커 기준 */
+  --desk-shadow: rgb(18 38 26 / 0.22);
+}
+:root[data-theme="dark"] {
+  --desk-shadow: rgb(0 0 0 / 0.55);
+}
+
+/* 슬랩: 레퍼런스의 진한 청록 판 → 숲 초록. forest-panel 과 달리 글로우 없는 평면 (탭 조각과 색이 이어져야 해서) */
+@utility slab {
+  background-color: var(--color-forest);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* 노치(파낸 모서리): CSS mask 로 실제로 뚫는다 → 뚫린 자리로 바탕 안개·다른 면이 그대로 보여 라이트/다크 자동.
+   - 홈에 앉는 버튼·알약·사진은 마스크 요소의 '형제' (마스크는 자식·box-shadow·outline 도 자른다)
+   - 클릭할 수 있는 마스크 면은 '마스크 없는 래퍼(링크/버튼) > 마스크 div' 로 → 포커스 링이 잘리지 않는다
+   - 한 요소에 홈 2개: 1번 칸 = 모서리(notch-tl / notch-tr / notch-br), 2번 칸 = 아래 가장자리(notch-b)
+   - 크기 변수(상속됨): 모서리 --nw × --nh, 아래 홈 --bx(왼쪽에서) · --bw · --bh. 길이로만 (% 금지: mask-position 계산)
+   - 내부 변수는 상속되지 않게 등록 → 노치 안에 노치를 둬도 부모 구멍이 새지 않는다 */
+@property --n1 { syntax: "*"; inherits: false; }
+@property --n1-size { syntax: "*"; inherits: false; }
+@property --n1-pos { syntax: "*"; inherits: false; }
+@property --n2 { syntax: "*"; inherits: false; }
+@property --n2-size { syntax: "*"; inherits: false; }
+@property --n2-pos { syntax: "*"; inherits: false; }
+@property --nr { syntax: "*"; inherits: false; }
+@property --notch-rect { syntax: "*"; inherits: false; }
+
+@utility notch {
+  --_r: var(--nr, 22px);
+  --_rect: var(--notch-rect, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='22'/%3E%3C/svg%3E"));
+  --_off: linear-gradient(transparent 0 0), linear-gradient(transparent 0 0), linear-gradient(transparent 0 0);
+  -webkit-mask-image: linear-gradient(#000 0 0), var(--n1, var(--_off)), var(--n2, var(--_off));
+  mask-image: linear-gradient(#000 0 0), var(--n1, var(--_off)), var(--n2, var(--_off));
+  -webkit-mask-size: 100% 100%, var(--n1-size, 0 0, 0 0, 0 0), var(--n2-size, 0 0, 0 0, 0 0);
+  mask-size: 100% 100%, var(--n1-size, 0 0, 0 0, 0 0), var(--n2-size, 0 0, 0 0, 0 0);
+  -webkit-mask-position: 0 0, var(--n1-pos, 0 0, 0 0, 0 0), var(--n2-pos, 0 0, 0 0, 0 0);
+  mask-position: 0 0, var(--n1-pos, 0 0, 0 0, 0 0), var(--n2-pos, 0 0, 0 0, 0 0);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  /* 맨 위(전체 면)에서 아래 6장(홈 모양의 합집합)을 뺀다 */
+  -webkit-mask-composite: source-out, source-over, source-over, source-over, source-over, source-over, source-over;
+  mask-composite: subtract, add, add, add, add, add, add;
+}
+/* 큰 홈(히어로·CTA): 안쪽 반지름 36px */
+@utility notch-lg {
+  --nr: 36px;
+  --notch-rect: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='36'/%3E%3C/svg%3E");
+}
+/* 도킹 화살표 홈: 48px 버튼(rounded-[14px]) + 8px 틈 */
+@utility dock-sm {
+  --nw: 3.5rem;
+  --nh: 3.5rem;
+}
+@utility notch-br {
+  --n1: var(--_rect), radial-gradient(circle at 0 0, transparent var(--_r), #000 calc(var(--_r) + 0.5px)), radial-gradient(circle at 0 0, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  --n1-size: calc(var(--nw) + var(--_r)) calc(var(--nh) + var(--_r)), var(--_r) var(--_r), var(--_r) var(--_r);
+  --n1-pos: right calc(-1 * var(--_r)) bottom calc(-1 * var(--_r)), right var(--nw) bottom 0, right 0 bottom var(--nh);
+}
+@utility notch-tl {
+  --n1: var(--_rect), radial-gradient(circle at 100% 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px)), radial-gradient(circle at 100% 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  --n1-size: calc(var(--nw) + var(--_r)) calc(var(--nh) + var(--_r)), var(--_r) var(--_r), var(--_r) var(--_r);
+  --n1-pos: left calc(-1 * var(--_r)) top calc(-1 * var(--_r)), left var(--nw) top 0, left 0 top var(--nh);
+}
+@utility notch-tr {
+  --n1: var(--_rect), radial-gradient(circle at 0 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px)), radial-gradient(circle at 0 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  --n1-size: calc(var(--nw) + var(--_r)) calc(var(--nh) + var(--_r)), var(--_r) var(--_r), var(--_r) var(--_r);
+  --n1-pos: right calc(-1 * var(--_r)) top calc(-1 * var(--_r)), right var(--nw) top 0, right 0 top var(--nh);
+}
+/* 아래 가장자리 홈: --bx 는 (판 모서리 반지름 + --nr) 이상 — 말림이 판의 둥근 모서리와 겹치지 않게 */
+@utility notch-b {
+  --n2: var(--_rect), radial-gradient(circle at 0 0, transparent var(--_r), #000 calc(var(--_r) + 0.5px)), radial-gradient(circle at 100% 0, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  --n2-size: var(--bw) calc(var(--bh) + var(--_r)), var(--_r) var(--_r), var(--_r) var(--_r);
+  --n2-pos: left var(--bx) bottom calc(-1 * var(--_r)), left calc(var(--bx) - var(--_r)) bottom 0, left calc(var(--bx) + var(--bw)) bottom 0;
+}
+
+/* 탭: 판 아래로 튀어나온 손잡이 (레퍼런스 'NEXT'/'SKROLL'). 판(slab, 평면)의 자식, 판은 relative·overflow 보임.
+   가로 위치는 마크업(left-*, right-*)으로. 양옆 오목 모서리가 판 아래 가장자리와 이어진다 */
+@utility tab-bottom {
+  --_r: var(--tab-r, 1.25rem);
+  position: absolute;
+  top: calc(100% - 1px);
+  background-color: var(--color-forest);
+  color: #fff;
+  border-radius: 0 0 var(--_r) var(--_r);
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: var(--_r);
+    height: var(--_r);
+    background-color: inherit;
+    pointer-events: none;
+  }
+  &::before {
+    right: 100%;
+    -webkit-mask: radial-gradient(circle at 0 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+    mask: radial-gradient(circle at 0 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  }
+  &::after {
+    left: 100%;
+    -webkit-mask: radial-gradient(circle at 100% 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+    mask: radial-gradient(circle at 100% 100%, transparent var(--_r), #000 calc(var(--_r) + 0.5px));
+  }
+}
+
+/* 파낸 모양·탭을 따라 떨어지는 그림자 — 마스크 판의 '부모'에. 상시 애니메이션(음성 구슬)·영상이 든 래퍼에는 쓰지 않는다 */
+@utility desk-shadow {
+  filter: drop-shadow(0 22px 32px var(--desk-shadow));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -114,12 +114,12 @@ export function QuestHomeCard() {
 }
 
 /** 진행 링 (레퍼런스 GreenBite 의 75% 링). 숫자는 옆 글자에 있으니 그림만 */
-function ProgressRing({ value, max }: { value: number; max: number }) {
+export function ProgressRing({ value, max, className = "size-9" }: { value: number; max: number; className?: string }) {
   const r = 14;
   const len = 2 * Math.PI * r;
   const pct = max > 0 ? Math.min(1, value / max) : 0;
   return (
-    <svg viewBox="0 0 36 36" className="size-9 shrink-0 -rotate-90" aria-hidden>
+    <svg viewBox="0 0 36 36" className={`${className} shrink-0 -rotate-90`} aria-hidden>
       <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-sunken)" strokeWidth="4" />
       {/* 0 일 때 둥근 끝이 점으로 남지 않게 그리지 않는다 */}
       {pct > 0 && <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-brand)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${len * pct} ${len}`} className="transition-[stroke-dasharray] duration-300" />}

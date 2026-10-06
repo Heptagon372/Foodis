@@ -57,10 +57,12 @@ export function RelationRow({ label, note, foods }: { label: string; note?: stri
 
 export function SourceFooter({ sources }: { sources: { url: string; title: string | null; license?: string | null }[] }) {
   if (!sources.length) return null;
+  // 출처는 필드별로 저장돼 같은 URL 이 여러 번 온다 → 한 줄씩만
+  const unique = [...new Map(sources.map((s) => [s.url, s])).values()];
   return (
     <footer className="border-t border-line pt-4 text-caption text-muted">
       <p className="pb-0.5 font-semibold text-ink-soft">출처</p>
-      {sources.map((s) => (
+      {unique.map((s) => (
         <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="block truncate py-2.5 leading-5 underline decoration-line underline-offset-2 hover:text-ink">
           {s.title ?? s.url}
           {s.license ? ` · ${s.license}` : ""}

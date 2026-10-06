@@ -102,4 +102,6 @@ export const TASTE_LABEL: Record<string, string> = {
   smoky: "훈연", herbal: "허브", creamy: "크리미", crispy: "바삭", rich: "진한", fresh: "산뜻", nutty: "고소",
   grilled: "구이", fried: "튀김", rice: "쌀", noodle: "면", bread: "빵", dumpling: "만두", meat: "고기",
   seafood: "해산물", vegetable: "채소", legume: "콩", dairy: "유제품", street_food: "길거리",
+  bitter: "쌉쌀", floral: "꽃향", light: "담백", crunchy: "아삭", chewy: "쫄깃", soft: "부드러운",
+  hot: "뜨거운", cold: "차가운", soup: "국물", egg: "달걀", fruit: "과일",
 };

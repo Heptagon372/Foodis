@@ -65,7 +65,7 @@ const slugs = new Set(rows.map((r) => r.slug));
 const overlap = dbFoods.filter((f) => slugs.has(f.slug));
 const qidOwner = new Map(dbFoods.filter((f) => f.wikidata_qid && !slugs.has(f.slug)).map((f) => [f.wikidata_qid, f.slug]));
 console.log(`[foods] DB ${dbFoods.length}개 · 덮어쓰기 ${overlap.length} · 신규 ${rows.length - overlap.length}`);
-const backupDir = `foodis-data/data/raw/_backup_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+const backupDir = `foodis-data/data/raw/_backup_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_${file.split(/[\\/]/).pop().replace(/\.jsonl$/, "")}`;
 if (existsSync(`${backupDir}/foods_before_import.json`)) console.log(`[backup] ${backupDir} 에 이미 있음 — 처음 백업을 보존하고 건너뜀`);
 else if (!DRY) {
   const dir = backupDir;

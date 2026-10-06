@@ -289,10 +289,14 @@ body {
     outline: 2px solid var(--color-leaf);
     outline-offset: 2px;
   }
-  /* 진한 초록 면(슬랩·숲 패널·탭) 위에서는 초록 링이 묻힌다 → 연두로 (색만 바꿔 outline-none 은 그대로 이긴다) */
-  :where(.slab, .forest-panel, .tab-bottom) :where(a, button, input, textarea, select, [tabindex]):focus-visible,
-  :where(.slab, .tab-bottom):focus-visible {
-    outline-color: var(--color-lime);
+  /* 데스크톱의 진한 초록 면(슬랩·숲 패널·탭) 안에서는 초록 링이 묻힌다 → 연두로. 색만 바꿔 outline-none·유틸리티는 그대로 이긴다.
+     - 판 자신(계정 알약·국기 알약)과 판 밖으로 튀어나온 탭은 링이 밝은 바탕에 그려지니 제외
+     - 판 안의 밝은 면(card·glass·bg-surface) 속 컨트롤도 링이 밝은 면 위라 제외
+     - 모바일(v3)의 포커스 모양은 건드리지 않는다 */
+  @media (width >= 64rem) {
+    :where(.slab, .forest-panel, .tab-bottom) :where(a, button, input, textarea, select, [tabindex]):not(.tab-bottom, :where(.card, .glass, .bg-surface) *):focus-visible {
+      outline-color: var(--color-lime);
+    }
   }
 }
 

@@ -18,6 +18,7 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
   useEffect(() => {
     done.current = onDone;
   });
+  const root = useRef<HTMLDivElement>(null);
   const front = useRef<HTMLVideoElement>(null);
   const back = useRef<HTMLVideoElement>(null);
   const [phase, setPhase] = useState<"video" | "cta">("video");
@@ -37,6 +38,13 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
   useEffect(() => {
     finishRef.current = finish;
   });
+
+  // 키보드·스크린리더가 인트로에서 시작하게 포커스를 옮기고, 닫히면 원래 자리로 되돌린다
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    root.current?.focus({ preventScroll: true });
+    return () => prev?.focus?.({ preventScroll: true });
+  }, []);
 
   useEffect(() => {
     const v = front.current;
@@ -68,10 +76,11 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
 
   return (
     <div
+      ref={root}
       role="dialog"
-      aria-modal="true"
       aria-label="FOODIS 인트로"
-      className={`fixed inset-0 z-[60] overflow-hidden transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
+      tabIndex={-1}
+      className={`fixed inset-0 z-[60] overflow-hidden outline-none transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
       style={{ background: BG }}
       onClick={short ? close : undefined}
     >

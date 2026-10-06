@@ -12,7 +12,7 @@ import { Eyebrow } from "./ui";
 
 // ring-canvas 로 판에 '구멍'을 낸 것처럼 — 페이지 아래쪽은 안개가 없어 바탕과 이어진다
 const HOME_BTN =
-  "absolute left-1/2 top-0 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-surface text-leaf shadow-lift ring-[6px] ring-canvas transition hover:bg-lime hover:text-on-lime";
+  "absolute left-1/2 top-0 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-surface text-leaf shadow-lift ring-[6px] ring-canvas transition hover:bg-lime hover:text-on-lime focus-visible:outline-leaf";
 
 export function SiteFooter() {
   const path = usePathname();

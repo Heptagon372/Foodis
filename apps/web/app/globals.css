@@ -51,10 +51,11 @@
   --color-diet-no: #c8443d;
   --color-diet-unknown: #8a918b;
 
-  /* 글꼴: 본문·제목 = Pretendard(한글) → Inter(영문). font-serif = Fraunces (워드마크·영문 이탤릭 강조에만) */
-  --font-sans: "Twemoji Country Flags", "Pretendard Variable", Pretendard, var(--font-inter), system-ui, sans-serif;
-  --font-display: "Twemoji Country Flags", "Pretendard Variable", Pretendard, var(--font-inter), system-ui, sans-serif;
-  --font-serif: "Twemoji Country Flags", var(--font-fraunces), Georgia, serif;
+  /* 글꼴: 본문·제목 = Pretendard(한글) → Inter(영문). font-serif = Fraunces (워드마크·영문 이탤릭 강조에만)
+     next/font 변수에는 꼭 대체값을 둔다 — 변수가 비면(dev 캐시 어긋남 등) 목록 전체가 무효가 되어 국기 글꼴까지 빠지고 🇰🇷 가 "KR" 글자로 보인다 */
+  --font-sans: "Twemoji Country Flags", "Pretendard Variable", Pretendard, var(--font-inter, Inter), system-ui, sans-serif;
+  --font-display: "Twemoji Country Flags", "Pretendard Variable", Pretendard, var(--font-inter, Inter), system-ui, sans-serif;
+  --font-serif: "Twemoji Country Flags", var(--font-fraunces, Fraunces), Georgia, serif;
 
   /* 타입 스케일: Display 36 / H1 28 / H2 22 / Title 17 / Body 16 / Caption 13 / 음성 자막 18 */
   --text-display: 2.25rem;

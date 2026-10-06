@@ -1,5 +1,5 @@
 "use client";
-// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 데스크톱(lg)은 왼쪽 사이드바(16rem) + 넓은 본문(최대 72rem).
+// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 데스크톱(lg)은 상단 상태 바(AppHeader 80px) + 왼쪽 사이드바(16rem) + 넓은 본문(최대 72rem).
 // 어드민·첫 진입 흐름(온보딩·로그인)은 셸 없이 — 경로로 나눈다
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -14,7 +14,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   if (path.startsWith("/admin")) return <div className="min-h-dvh bg-canvas">{children}</div>;
   if (isBareRoute(path)) return <div className="mx-auto min-h-dvh max-w-md lg:max-w-lg">{children}</div>;
   return (
-    <div className="lg:pl-64">
+    <div className="lg:pl-60 lg:pt-16">
       <div className={`mx-auto min-h-dvh max-w-md lg:max-w-6xl lg:px-6 ${mini ? "pb-56 lg:pb-32" : "pb-32 lg:pb-16"}`}>{children}</div>
     </div>
   );

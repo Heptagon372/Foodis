@@ -4,8 +4,8 @@
 import { useState, useSyncExternalStore } from "react";
 import { readTheme, setTheme, subscribeTheme, type Theme } from "@/lib/client/theme";
 
-/** 지금 테마 — 서버 그림은 light, 하이드레이션 뒤 실제 값 */
-export const useTheme = (): Theme => useSyncExternalStore(subscribeTheme, readTheme, () => "light");
+/** 지금 테마 — 서버 그림은 dark(기본), 하이드레이션 뒤 실제 값 */
+export const useTheme = (): Theme => useSyncExternalStore(subscribeTheme, readTheme, () => "dark");
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const dark = useTheme() === "dark";

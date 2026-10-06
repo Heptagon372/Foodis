@@ -1,8 +1,9 @@
 // Supabase 키가 없을 때 쓰는 미리보기 데이터 소스. 화면(ContentSource)과 푸디(FoodisRepo) 둘 다 제공한다.
 // FoodisRepo 를 같은 인터페이스로 구현하므로, 키 없이도 실제 Orchestrator 코드 경로(키워드 검색 → 템플릿 답)가 돈다.
 import type { ContentSource, Country, FoodDetail, FoodSummary, GalleryPhoto, YouTubeVideo } from "@/lib/content/types";
-import { emptyDiet, fitsProfile, type FoodisRepo, type FoodRow } from "@/lib/foodi/repo";
-import { rankByKeywords } from "@/lib/foodi/keywords";
+import { canonAllergens } from "@/lib/diet/allergens";
+import type { IndexedFood } from "@/lib/foodi/food-index";
+import { emptyDiet, type FoodisRepo, type FoodRow } from "@/lib/foodi/repo";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import { PREVIEW_COUNTRIES } from "./countries";
 import { PREVIEW_FOODS, PREVIEW_RELATIONS, previewId, type PreviewFood } from "./foods";
@@ -141,33 +142,43 @@ function rowOf(f: PreviewFood): FoodRow {
   return {
     id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc,
     origin_note: f.origin_note ?? null, summary: f.summary, history: f.history ?? null, culture_story: f.culture ?? null,
-    taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? null, allergens: f.allergens ?? [], diet: fullDiet(f.diet), diet_note: f.diet_note ?? null, country: { name_ko: c.name_ko, flag_emoji: c.flag_emoji, accent_color: c.accent_color },
+    cooking_method: f.method ?? null, course_type: f.course ?? null, ingredients: f.ingredients,
+    taste_tags: f.tags, image_url: PREVIEW_IMAGES[f.slug]?.url ?? null, image_credit: PREVIEW_IMAGES[f.slug]?.credit ?? null, allergens: canonAllergens(f.allergens), diet: fullDiet(f.diet), diet_note: f.diet_note ?? null, country: { name_ko: c.name_ko, flag_emoji: c.flag_emoji, accent_color: c.accent_color },
     sources: [{ title: `Wikipedia — ${f.name_en}`, url: wiki(f) }],
   };
 }
 
-const okFor = (f: PreviewFood, need: DietKey[], avoid: string[]) => fitsProfile({ diet: fullDiet(f.diet), allergens: f.allergens ?? [] }, need, avoid);
+/** 검색 색인 (한 번만 만든다 — food-index.ts 가 배열이 같으면 색인을 다시 만들지 않는다).
+ *  미리보기 음식은 재료 앞 2개를 주재료로 본다 (상세 화면 getFood 와 같은 규칙) */
+let previewIndex: IndexedFood[] | undefined;
+const indexRows = () =>
+  (previewIndex ??= PREVIEW_FOODS.map((f) => ({
+    id: previewId(f.n), slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, name_local: f.name_local ?? null, country_code: f.cc,
+    tags: f.tags, method: f.method ?? null, course: f.course ?? null, diet: fullDiet(f.diet), allergens: canonAllergens(f.allergens),
+    ingredients: f.ingredients.map((name, i) => ({ name, role: i < 2 ? ("main" as const) : ("seasoning" as const) })),
+    fame_rank: catalogBySlug.get(f.slug)?.r ?? null,
+    has_image: Boolean(PREVIEW_IMAGES[f.slug]?.url ?? catalogBySlug.get(f.slug)?.img), has_story: Boolean(f.culture), has_history: Boolean(f.history),
+  })));
 
 /** 메모리 FoodisRepo. 기록·캐시는 프로세스 메모리에만 (서버 재시작 시 사라짐). */
 export function previewRepo(): FoodisRepo {
   const cache = new Map<string, { payload: unknown; exp: number }>();
-  const pick = (text: string, p: { needDiet: DietKey[]; ctx: { allergens: string[]; exploredCountries: string[]; tagWeights: Record<string, number> }; excludeFoodIds: string[]; countryCode: string | null; count: number }) => {
-    const all = PREVIEW_FOODS.filter((f) => okFor(f, p.needDiet, p.ctx.allergens) && !p.excludeFoodIds.includes(previewId(f.n)) && (!p.countryCode || f.cc === p.countryCode));
-    // 미리보기는 임베딩이 없어 실서비스의 키워드 대체 검색과 같은 순위 규칙을 쓴다. 동점은 질문마다 조금씩 섞이도록 고정 셔플
-    const shuffled = [...all].sort((a, b) => ((a.n * 7919 + text.length) % 13) - ((b.n * 7919 + text.length) % 13));
-    const rows = shuffled.map((f) => ({ f, name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc, taste_tags: f.tags }));
-    return rankByKeywords(rows, text, p.ctx.exploredCountries, p.ctx.tagWeights).slice(0, p.count).map((x) => previewId(x.f.n));
-  };
   return {
-    matchFoods: async (p) => pick("", p),
-    keywordFoods: async (text, p) => pick(text, p),
+    foodIndex: async () => indexRows(),
+    // 미리보기에는 임베딩이 없다 → 의미 신호 없이 조건·대표성·새로움으로 고른다 (실서비스 임베딩 장애 때와 같은 경로)
+    vectorSearch: async () => [],
+    neighbors: async () => [],
+    relationsOf: async (id) => {
+      const f = byId.get(id);
+      return f ? relationsOf(f.slug).map((r) => ({ id: previewId(bySlug.get(r.other)!.n), type: r.type })) : [];
+    },
     getFoods: async (ids) => ids.flatMap((id) => (byId.has(id) ? [rowOf(byId.get(id)!)] : [])),
     getRelatedFoodIds: async (id, limit, type) => {
       const f = byId.get(id);
       return f ? relationsOf(f.slug).filter((r) => !type || r.type === type).slice(0, limit).map((r) => previewId(bySlug.get(r.other)!.n)) : [];
     },
     countries: async () => PREVIEW_COUNTRIES.map(({ code, name_ko, name_en, continent_group }) => ({ code, name_ko, name_en, continent_group })),
-    allFoodNames: async () => PREVIEW_FOODS.map((f) => ({ id: previewId(f.n), name_ko: f.name_ko, name_en: f.name_en, country_code: f.cc })),
+    allFoodNames: async () => indexRows().map((f) => ({ id: f.id, name_ko: f.name_ko, name_en: f.name_en, name_local: f.name_local, country_code: f.country_code, fame_rank: f.fame_rank })),
     getUserContext: async (userId) => ({ userId, diet: emptyDiet(), allergens: [], tagWeights: {}, exploredCountries: [], exploredFoodIds: [] }),
     recordConversation: async () => null,
     recordUsage: async () => {},

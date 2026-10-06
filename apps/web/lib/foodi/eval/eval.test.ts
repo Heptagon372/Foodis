@@ -21,7 +21,13 @@ const offlineEmbedder: Embedder = { embed: async () => Promise.reject(new Error(
 /** 앱과 같은 registry 기본 체인 (LLM_PROVIDERS 순서 중 키 있는 제공자). 특정 제공자만 재려면 LLM_PROVIDERS=openai pnpm … eval:live */
 async function liveLLM(): Promise<LLMProvider> {
   const { loadEnvConfig } = await import("@next/env");
-  loadEnvConfig(process.cwd());
+  // vitest 는 NODE_ENV=test 라 그냥 부르면 .env.local 을 건너뛰고(이미 읽은 test 설정을 캐시로 돌려준다) → 개발 모드로 다시 읽는다
+  // (@next/env 는 NODE_ENV=test 면 dev 인자와 무관하게 .env.local 을 뺀다 — 읽는 동안만 development 로)
+  const env = process.env as Record<string, string | undefined>;
+  const prev = env.NODE_ENV;
+  env.NODE_ENV = "development";
+  loadEnvConfig(process.cwd(), true, { info: () => {}, error: console.error }, true);
+  env.NODE_ENV = prev;
   // lib/env 는 import 시점에 환경변수를 읽는다 → .env.local 을 읽은 뒤에 불러온다
   const { getLLM, llmModels, llmReady } = await import("@/lib/providers/registry/llm");
   if (!llmReady()) throw new Error("eval:live 에는 LLM 키가 필요합니다 — GEMINI_API_KEY · OPENAI_API_KEY 중 하나 (apps/web/.env.local)");

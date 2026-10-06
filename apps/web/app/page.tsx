@@ -8,13 +8,15 @@ import { CHANNELS } from "@/lib/radio/queue";
 
 export const dynamic = "force-dynamic";
 
+const HOME_PER_COUNTRY = 8;
+
 // S2 홈 (05 문서 §3): 음성 버튼 중앙 + 오늘의 탐험 + 나를 위한 추천 + 최근 탐험. 데스크톱은 같은 데이터로 랜딩 페이지 (docs/design/18)
 export default async function Home() {
   const content = await getContent();
   const [all, countries, foodCount] = await Promise.all([content.listFoods(), content.listCountries(), content.countFoods()]);
-  // 추천 후보: 소개가 있는 음식 + 나라마다 유명도 상위 6개 (2,000개를 다 보내면 홈이 무거워진다).
-  // 취향 엔진의 '대표 음식 먼저' 규칙 때문에 처음 보는 나라는 어차피 상위 3개까지만 추천된다
-  const foods = all.filter((f) => f.summary || (f.fame_rank ?? 99) <= 6);
+  // 추천 후보: 나라마다 유명도 상위 8개 (≈1,300개). 1만 개를 다 보내면 홈 HTML 이 8MB 가 된다 (docs/design/20).
+  // 취향 엔진의 '대표 음식 먼저' 규칙 때문에 처음 보는 나라는 어차피 상위 3개까지만 추천된다. 유명도 순위가 없는 음식(미리보기 직접 작성분)은 소개가 있으면 넣는다
+  const foods = all.filter((f) => (f.fame_rank != null ? f.fame_rank <= HOME_PER_COUNTRY : Boolean(f.summary)));
   const continents = Object.fromEntries(countries.map((c) => [c.code, c.continent_group]));
   // 데스크톱 랜딩 숫자: 이미 받은 데이터와 코드 상수로만 (서버에서 개수만 — 평가 문항 등은 클라이언트 번들에 넣지 않는다)
   const step = Math.max(1, Math.floor(countries.length / 24));

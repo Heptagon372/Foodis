@@ -47,15 +47,17 @@ describe("geminiLLM 요청 모양", () => {
     expect(p.config?.responseSchema).toBeUndefined();
     expect(p.config?.thinkingConfig).toEqual({ thinkingLevel: "MINIMAL" });
     expect(p.config?.maxOutputTokens).toBe(300 + 256);
-    expect(p.config?.httpOptions?.timeout).toBe(4_000);
+    // 서버 기한은 API 최소 10초, 지연 예산 4초는 클라이언트 abort 로
+    expect(p.config?.httpOptions?.timeout).toBe(10_000);
+    expect(p.config?.abortSignal).toBeInstanceOf(AbortSignal);
     expect(p.contents).toEqual([{ role: "user", parts: [{ text: req.user }] }]);
   });
 
-  it("smart 는 smart 모델·6초, 사진은 inlineData 를 텍스트 앞에 + 12초", async () => {
+  it("smart 는 smart 모델(서버 기한 10초·예산 6초), 사진은 inlineData 를 텍스트 앞에 + 12초", async () => {
     const { llm, calls } = fake(ok(INTENT));
     await llm.structured({ ...req, model: "smart" });
     expect(calls[0].model).toBe("gemini-3.6-flash");
-    expect(calls[0].config?.httpOptions?.timeout).toBe(6_000);
+    expect(calls[0].config?.httpOptions?.timeout).toBe(10_000);
 
     const { llm: v, calls: vc } = fake(ok(INTENT));
     await v.structured({ ...req, model: "fast", image: { mediaType: "image/png", data: "iVBORw0KGgo=" } });
@@ -77,7 +79,7 @@ describe("geminiLLM 응답 해석", () => {
   it("생각 파트는 빼고 답 JSON 을 zod 로 검증, 생각 토큰은 출력 단가로 비용 계산", async () => {
     const { llm } = fake(ok(INTENT));
     const { data, usage } = await llm.structured({ ...req, model: "fast" });
-    expect(data).toEqual(INTENT);
+    expect(data).toEqual({ ...INTENT, tastes: [], avoid_tastes: [], methods: [], courses: [], ingredients: [], avoid_ingredients: [] }); // 조건 슬롯은 빠지면 [] 로 채운다
     // 3.5 Flash-Lite $0.30 / $2.50: 1000 입력 + (100+20) 출력
     expect(usage).toMatchObject({ provider: "gemini", operation: "intent", units: 1_120, unitType: "tokens", model: "gemini-3.5-flash-lite" });
     expect(usage.costUsd).toBeCloseTo((1_000 * 0.3 + 120 * 2.5) / 1e6, 10);

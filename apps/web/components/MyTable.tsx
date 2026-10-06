@@ -3,18 +3,37 @@
 // 위에서 내려다본 원목 식탁 + 리넨 러너 위에 접시를 한상차림처럼 엇갈려 놓는다. 배치는 lib/table/my-table.ts (테스트로 겹침 검사).
 // 식탁 일러스트는 콘텐츠라 고유 색을 쓰고, 둘레(머리·범례·버튼·카드)는 v2 토큰만 — 다크에서는 식탁만 살짝 어둡게.
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Country } from "@/lib/content/types";
 import { exploredCountries, useHydrated, useLocal, type PassportStatus } from "@/lib/client/passport";
 import { drawTableCard } from "@/lib/client/table-card";
 import { shareOrDownload } from "@/lib/client/share-card";
-import { CONTINENT_COLOR, CONTINENT_LABEL, setTable, tableLayout, toTableCountry, type TableCountry, type TableFood, type TablePlate } from "@/lib/table/my-table";
+import { CONTINENT_COLOR, CONTINENT_LABEL, MAX_PLATES, setTable, tableLayout, toTableCountry, type TableCountry, type TableFood, type TablePlate } from "@/lib/table/my-table";
 import { useFoodi } from "./FoodiSheet";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner } from "./bits";
 import { Icon, type IconName } from "./icons";
 import { TopBar } from "./TopBar";
 import { Eyebrow, IconButton, btn } from "./ui";
+
+/** 기록에 있는 음식의 사진·국가색만 서버에 묻는다 (최근 MAX_PLATES 개). 못 받아도 접시는 국가 조회표로 그린다 */
+function useTableFoods(entries: Record<string, { at: number; slug: string }>): TableFood[] {
+  const [foods, setFoods] = useState<TableFood[]>([]);
+  // 한 번 물어본 기록은 다시 묻지 않는다 (조회표에 없는 지난 미리보기 기록이 있어도 요청이 되풀이되지 않게)
+  const asked = useRef(new Set<string>());
+  const want = useMemo(() => Object.entries(entries).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_PLATES), [entries]);
+  useEffect(() => {
+    const missing = want.filter(([id]) => !asked.current.has(id));
+    if (!missing.length) return;
+    for (const [id] of missing) asked.current.add(id);
+    const qs = new URLSearchParams({ ids: missing.map(([id]) => id).join(","), slugs: missing.map(([, e]) => e.slug).join(",") });
+    fetch(`/api/foods/table?${qs}`)
+      .then((r) => (r.ok ? (r.json() as Promise<TableFood[]>) : []))
+      .then((got) => got.length && setFoods((cur) => [...cur, ...got.filter((g) => !cur.some((c) => c.id === g.id))]))
+      .catch(() => missing.forEach(([id]) => asked.current.delete(id)));
+  }, [want]);
+  return foods;
+}
 
 // 접시 위 상태 표시 (흰 원 + 라인 아이콘). 탐험은 모든 접시의 기본 상태라 표시하지 않는다
 const MARK: Partial<Record<PassportStatus, { icon: IconName; tone: string }>> = {
@@ -50,10 +69,11 @@ const TW = 100;
 const TH = 130;
 const PAD = 6;
 
-export function MyTableView({ foods, countries, preview }: { foods: TableFood[]; countries: TableCountry[]; preview: boolean }) {
+export function MyTableView({ countries, preview }: { countries: TableCountry[]; preview: boolean }) {
   const { open } = useFoodi();
   const hydrated = useHydrated();
   const entries = useLocal((s) => s.entries);
+  const foods = useTableFoods(entries);
   const nCountries = useLocal(exploredCountries).length;
   const { plates, hidden } = useMemo(() => setTable(entries, foods, countries), [entries, foods, countries]);
   const total = plates.length + hidden;

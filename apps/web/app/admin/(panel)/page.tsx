@@ -75,10 +75,10 @@ export default async function Dashboard() {
           <h2 className="text-title font-bold">운영 작업</h2>
           <div className="flex flex-wrap items-start gap-3">
             <ActionButton url="/api/admin/countries/sync" done={(d) => `국가 ${(d as { countries: number }).countries}개 동기화`}>국가 30개 동기화</ActionButton>
-            <ActionButton url="/api/admin/embeddings/rebuild" body={{ onlyMissing: true }} confirm="검수된 음식 중 임베딩이 없는(또는 다른 모델로 만든) 것을 만들어요 (EMBED_PROVIDER, 1센트 미만)" done={(d) => `임베딩 ${(d as { embedded: number }).embedded}건 · $${(d as { costUsd: number }).costUsd}`}>
+            <ActionButton url="/api/admin/embeddings/rebuild" body={{ onlyMissing: true }} confirm="검수된 음식 중 임베딩이 없는(또는 다른 모델로 만든) 것을 한 번에 1,500개까지 만들어요 (1만 개 전체 약 $0.7 — 터미널에서는 pnpm embed:foods)" done={(d) => `임베딩 ${(d as { embedded: number }).embedded}건 · 남은 ${(d as { remaining: number }).remaining}건 · $${(d as { costUsd: number }).costUsd}`}>
               임베딩 만들기 (없는 것만)
             </ActionButton>
-            <ActionButton url="/api/admin/embeddings/rebuild" body={{ onlyMissing: false }} confirm="검수된 음식 임베딩을 전부 다시 만들어요. 임베딩 제공자(EMBED_PROVIDER)를 바꾼 뒤에 필요해요 (수 센트)" done={(d) => `임베딩 ${(d as { embedded: number }).embedded}건 재생성 · $${(d as { costUsd: number }).costUsd}`}>
+            <ActionButton url="/api/admin/embeddings/rebuild" body={{ onlyMissing: false }} confirm="내용(이름·소개·재료)이 바뀌었거나 다른 모델로 만든 임베딩을 다시 만들어요. 한 번에 1,500개까지 — 남은 게 있으면 다시 누르세요" done={(d) => `임베딩 ${(d as { embedded: number }).embedded}건 갱신 · 남은 ${(d as { remaining: number }).remaining}건 · $${(d as { costUsd: number }).costUsd}`}>
               임베딩 전체 다시 만들기
             </ActionButton>
           </div>

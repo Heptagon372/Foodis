@@ -1,7 +1,8 @@
 // 나라 안 유명도 순위(fame_rank) 생성: 지도·홈·취향 엔진의 "대표 음식"이 이 순위를 쓴다.
 //   NEXT_PUBLIC_SUPABASE_URL=.. NEXT_PUBLIC_SUPABASE_ANON_KEY=.. node tools/gen-fame-rank.mjs
 // 순위: ① dish_targets.csv 에서 사람이 고른 음식(시드 순서 = 대표성 순) → ② 나머지는 Wikidata 언어판 수 많은 순
-// 출력: apps/web/lib/content/fame.json { slug: rank }. Wikidata 응답은 foodis-data/data/raw/sitelinks.json 에 캐시.
+// 출력: apps/web/lib/content/fame.json { slug: rank } + popularity.json { slug: 위키 언어판 수 } (세계적 유명도 — 푸디 점수식 s_fame, docs/design/19 §6).
+// Wikidata 응답은 foodis-data/data/raw/sitelinks.json 에 캐시.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -49,5 +50,8 @@ for (const list of byCountry.values()) {
   list.forEach((f, i) => (fame[f.slug] = i + 1));
 }
 writeFileSync("apps/web/lib/content/fame.json", JSON.stringify(fame));
+const popularity = Object.fromEntries(foods.filter((f) => sitelinks[f.wikidata_qid] != null).map((f) => [f.slug, sitelinks[f.wikidata_qid]]));
+writeFileSync("apps/web/lib/content/popularity.json", JSON.stringify(popularity));
+console.log(`[fame] 세계 유명도 ${Object.keys(popularity).length}개 → apps/web/lib/content/popularity.json`);
 console.log(`[fame] ${Object.keys(fame).length}개 순위 → apps/web/lib/content/fame.json`);
 for (const cc of ["KR", "JP", "IT", "TH", "MX", "IN"]) console.log(cc, (byCountry.get(cc) ?? []).slice(0, 5).map((f) => f.slug).join(" "));

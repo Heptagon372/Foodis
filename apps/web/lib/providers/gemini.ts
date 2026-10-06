@@ -32,6 +32,11 @@ const NO_MINIMAL = /^gemini-(3\.[78]-flash|3(\.\d+)?-pro|2\.5-)/;
 export const geminiThinking = (model: string, want: GeminiThinking): GeminiThinking => (want === "minimal" && NO_MINIMAL.test(model) ? "low" : want);
 // 생각 토큰도 출력 한도를 쓴다 → 답이 잘리지 않게 단계만큼 여유를 더한다 (쓰지 않은 한도는 청구되지 않는다)
 const HEADROOM: Record<GeminiThinking, number> = { minimal: 256, low: 1_024, medium: 4_096, high: 8_192 };
+// SDK 는 httpOptions.timeout 을 서버 기한(X-Server-Timeout)으로도 보내는데, API 가 10초 미만을 거절한다
+// ("Manually set deadline 4s is too short. Minimum allowed deadline is 10s.", 2026-10-07 실측 — 모든 LLM·임베딩 호출이 400 이 되어 템플릿 답으로 떨어졌다).
+// → 서버 기한은 10초 이상으로 보내고, 우리 지연 예산(의도 4초 · 답 6초 · 질의 임베딩 3초)은 클라이언트 쪽 abortSignal 로 지킨다
+export const GEMINI_MIN_DEADLINE_MS = 10_000;
+export const deadline = (budgetMs: number) => ({ httpOptions: { timeout: Math.max(GEMINI_MIN_DEADLINE_MS, budgetMs) }, abortSignal: AbortSignal.timeout(budgetMs) });
 
 export function geminiLLM(opts: { models: GeminiModels; client?: () => GeminiClient }): LLMProvider {
   const { models } = opts;
@@ -53,7 +58,7 @@ export function geminiLLM(opts: { models: GeminiModels; client?: () => GeminiCli
             responseJsonSchema: toJsonSchema(schema),
             maxOutputTokens: maxTokens + HEADROOM[level],
             thinkingConfig: { thinkingLevel: LEVEL[level] },
-            httpOptions: { timeout: image ? LLM_TIMEOUT_MS.image : LLM_TIMEOUT_MS[model] },
+            ...deadline(image ? LLM_TIMEOUT_MS.image : LLM_TIMEOUT_MS[model]),
           },
         });
         if (res.promptFeedback?.blockReason) throw new LLMOutputError("gemini", `입력 차단: ${res.promptFeedback.blockReason}`);
@@ -84,7 +89,11 @@ export function geminiLLM(opts: { models: GeminiModels; client?: () => GeminiCli
 
 function geminiError(e: unknown): unknown {
   if (e instanceof ProviderError) return e;
-  if (e instanceof ApiError) return new ProviderError("gemini", `${e.status} ${e.message}`.slice(0, 300), isTransientStatus(e.status));
+  if (e instanceof ApiError) {
+    // 429 는 메시지가 길어 잘리면 어느 한도인지 사라진다 → 하루 한도(무료 등급 임베딩 1,000건/일 등)면 앞에 붙여 둔다 (기다려도 소용없음)
+    const daily = e.status === 429 && /PerDay/.test(e.message) ? " [PerDay 하루 한도]" : "";
+    return new ProviderError("gemini", `${e.status}${daily} ${e.message}`.slice(0, 300), isTransientStatus(e.status) && !daily);
+  }
   if (isNetworkError(e)) return new ProviderError("gemini", (e as Error).message, true);
   return e;
 }
@@ -127,7 +136,7 @@ export function geminiEmbedder(opts: { model: string; client?: () => GeminiClien
               outputDimensionality: EMBED_DIMENSIONS,
               ...(legacy ? { taskType: kind === "query" ? "RETRIEVAL_QUERY" : "RETRIEVAL_DOCUMENT" } : {}),
               // 질의는 답변 경로라 짧게, 문서 일괄 생성(어드민)은 넉넉하게
-              httpOptions: { timeout: kind === "query" ? 3_000 : 30_000 },
+              ...deadline(kind === "query" ? 3_000 : 30_000),
             },
           });
           const got = (res.embeddings ?? []).map((e) => e.values ?? []);

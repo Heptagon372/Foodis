@@ -2,6 +2,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import type { ContentSource, Country, FoodDetail, FoodSummary, RelationType } from "./types";
+// 나라 안 유명도 순위 — tools/gen-fame-rank.mjs 가 만든다 (DB 에 컬럼이 없어 앱 번들로)
+import FAME from "./fame.json";
+
+const fame = FAME as Record<string, number>;
 
 const SUMMARY_COLS =
   "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, countries(name_ko, flag_emoji, accent_color)";
@@ -15,6 +19,7 @@ const toSummary = (r: Row): FoodSummary => {
     summary: r.summary as string | null, taste_tags: r.taste_tags as string[], image_url: r.image_url as string | null, image_credit: r.image_credit as string | null,
     diet: Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`]])) as Record<DietKey, DietLevel>,
     allergens: (r.allergens as string[]) ?? [],
+    fame_rank: fame[r.slug as string] ?? null,
   };
 };
 
@@ -28,9 +33,15 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       return data as Country[];
     },
     async listFoods() {
-      const { data, error } = await db.from("foods").select(SUMMARY_COLS);
-      if (error) throw error;
-      return (data as unknown as Row[]).map(toSummary);
+      // PostgREST 는 한 번에 최대 1,000행 → 페이지로 나눠 전부 받는다
+      const rows: Row[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await db.from("foods").select(SUMMARY_COLS).order("id").range(from, from + 999);
+        if (error) throw error;
+        rows.push(...(data as unknown as Row[]));
+        if (data.length < 1000) break;
+      }
+      return rows.map(toSummary);
     },
     async countFoods() {
       const { count, error } = await db.from("foods").select("id", { count: "exact", head: true });

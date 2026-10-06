@@ -23,7 +23,7 @@ export function VoiceButton({ state, onPress, size = "lg" }: { state: VoiceState
       type="button"
       onClick={onPress}
       aria-label={LABEL[state]}
-      className={`${lg ? "size-28 ring-[6px]" : "size-16 ring-4"} relative grid place-items-center rounded-full ring-white/70 shadow-[inset_0_2px_0_rgb(255_255_255/0.28),0_18px_40px_-14px_rgb(43_134_69/0.65)] transition active:scale-95 dark:ring-white/8 ${
+      className={`${lg ? "size-28 ring-[6px]" : "size-16 ring-4"} relative grid place-items-center rounded-full ring-white/70 shadow-[inset_0_2px_0_rgb(255_255_255/0.28),0_18px_40px_-14px_rgb(43_134_69/0.65)] transition active:scale-95 dark:shadow-[inset_0_2px_0_rgb(255_255_255/0.25),0_0_0_1px_rgb(110_255_160/0.5),0_0_40px_-6px_rgb(61_245_122/0.75)] dark:ring-white/8 ${
         listening ? "bg-lime text-on-lime" : "bg-brand text-on-brand"
       } ${state === "idle" ? "animate-pulse-ring" : ""}`}
     >

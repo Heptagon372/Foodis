@@ -25,7 +25,7 @@ export function RadioMini() {
   const playing = r.status === "playing";
   return (
     // 떠 있는 탭 바(68px + 아래 max(12px, 안전 영역)) 위. 가운데 푸디 구슬이 바 위로 ~18px 솟아 있어 그만큼 더 띄운다
-    <div className="fixed inset-x-0 bottom-[calc(92px+max(0.75rem,env(safe-area-inset-bottom)))] z-40 mx-auto max-w-md px-3 lg:bottom-6 lg:left-64 lg:right-0 lg:max-w-lg">
+    <div className="fixed inset-x-0 bottom-[calc(92px+max(0.75rem,env(safe-area-inset-bottom)))] z-40 mx-auto max-w-md px-3 lg:bottom-6 lg:left-60 lg:right-0 lg:max-w-lg">
       <div className="forest-panel flex animate-rise items-center gap-2 rounded-[22px] p-2 shadow-lift">
         <Link href="/radio" className="flex min-w-0 flex-1 items-center gap-3" aria-label={`라디오 열기 — ${e.food.name_ko}`}>
           <span className="grid size-11 shrink-0 place-items-center rounded-[14px] border border-white/15 text-2xl" style={{ background: `${e.food.accent}66` }} aria-hidden>

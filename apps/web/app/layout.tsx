@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { AccountSync } from "@/components/AccountSync";
+import { AppHeader } from "@/components/AppHeader";
 import { AppFrame } from "@/components/AppFrame";
 import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
@@ -22,12 +23,9 @@ export const metadata: Metadata = {
   description: "푸디에게 물어보세요. 세계 음식 문화를 음성으로 탐험하는 플랫폼.",
 };
 
-// 상단 바 색: 첫 방문은 시스템 설정 기준, 새싹 토글로 고르면 THEME_SCRIPT·setTheme 가 덮어쓴다
+// 상단 바 색: 기본은 다크, 새싹 토글로 고르면 THEME_SCRIPT·setTheme 가 덮어쓴다
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
-    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
-  ],
+  themeColor: THEME_COLOR.dark,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -51,6 +49,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <RadioMini />
           <QuestToast />
           <TabBar />
+          <AppHeader />
           <SideNav />
         </FoodiProvider>
       </body>

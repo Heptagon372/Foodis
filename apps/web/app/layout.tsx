@@ -23,9 +23,9 @@ export const metadata: Metadata = {
   description: "푸디에게 물어보세요. 세계 음식 문화를 음성으로 탐험하는 플랫폼.",
 };
 
-// 상단 바 색: 기본은 다크, 새싹 토글로 고르면 THEME_SCRIPT·setTheme 가 덮어쓴다
+// 상단 바 색: 기본은 라이트, 새싹 토글로 고르면 THEME_SCRIPT·setTheme 가 덮어쓴다
 export const viewport: Viewport = {
-  themeColor: THEME_COLOR.dark,
+  themeColor: THEME_COLOR.light,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

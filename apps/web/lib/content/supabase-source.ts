@@ -32,6 +32,11 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       if (error) throw error;
       return (data as unknown as Row[]).map(toSummary);
     },
+    async countFoods() {
+      const { count, error } = await db.from("foods").select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
     async getFood(slug) {
       const { data, error } = await db
         .from("foods")

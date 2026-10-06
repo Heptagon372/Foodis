@@ -1,5 +1,5 @@
 "use client";
-// 데스크톱 랜딩·푸터 공용 부품 (docs/design/17): 묻기 알약 · 도킹 화살표 · 섹션 머리 · 캐러셀 · 인트로 영상 칸 · 음식 사진 타일
+// 데스크톱 랜딩·푸터 공용 부품 (docs/design/18): 묻기 알약 · 도킹 화살표 · 섹션 머리 · 캐러셀 · 인트로 영상 칸 · 음식 사진 타일
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { accentBg } from "../FoodCard";
@@ -23,14 +23,14 @@ export const dockBtn = (tone: "page" | "panel" | "dark") =>
   }`;
 
 /** 푸디에게 묻기 입력. light = 푸터(유리), dark = 히어로 왼쪽 위 노치(진한 알약 + 말로 묻기) */
-export function AskForm({ tone, className = "" }: { tone: "light" | "dark"; className?: string }) {
+export function AskForm({ tone, label = "푸디에게 묻기", className = "" }: { tone: "light" | "dark"; label?: string; className?: string }) {
   const { open } = useFoodi();
   const [text, setText] = useState("");
   const dark = tone === "dark";
   return (
     <form
       role="search"
-      aria-label="푸디에게 묻기"
+      aria-label={label}
       onSubmit={(e) => {
         e.preventDefault();
         const v = text.trim();
@@ -38,7 +38,8 @@ export function AskForm({ tone, className = "" }: { tone: "light" | "dark"; clas
         else open();
         setText("");
       }}
-      className={`flex items-center gap-2 rounded-full ${dark ? "slab pl-6 pr-1.5 shadow-lift" : "glass h-12 pl-5 pr-1.5"} ${className}`}
+      // 입력칸은 outline 을 끄고 알약 전체에 링을 그린다 (키보드로 들어왔을 때만)
+      className={`flex items-center gap-2 rounded-full ${dark ? "slab pl-6 pr-1.5 shadow-lift has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-lime" : "glass h-12 pl-5 pr-1.5 has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-leaf"} ${className}`}
     >
       {dark && <Icon name="search" className="size-5 shrink-0 text-white/60" />}
       <label className="min-w-0 flex-1">
@@ -46,6 +47,7 @@ export function AskForm({ tone, className = "" }: { tone: "light" | "dark"; clas
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
+          maxLength={300}
           placeholder={dark ? "푸디야, 무엇이든 물어보세요" : "푸디에게 물어보세요"}
           className={`w-full bg-transparent text-[15px] outline-none ${dark ? "text-white placeholder:text-white/60" : "text-ink placeholder:text-muted"}`}
         />

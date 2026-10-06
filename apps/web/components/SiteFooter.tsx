@@ -1,5 +1,5 @@
 "use client";
-// 데스크톱(lg 이상) 사이트 푸터 (docs/design/17): 워드마크 + 묻기 입력 + 링크 열(nav.ts) → 숲 알약 바 + 가운데 둥근 홈 버튼 (레퍼런스의 바닥 바).
+// 데스크톱(lg 이상) 사이트 푸터 (docs/design/18): 워드마크 + 묻기 입력 + 링크 열(nav.ts) → 숲 알약 바 + 가운데 둥근 홈 버튼 (레퍼런스의 바닥 바).
 // 뉴스레터·SNS·약관처럼 없는 것은 넣지 않는다
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,7 +20,11 @@ export function SiteFooter() {
   const introSeen = useLocal((s) => s.introSeen);
   // 첫 방문 인트로 중에는 숨긴다 (DesktopNav 와 같은 조건)
   if (path === "/" && hydrated && !introSeen) return null;
-  const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  // 맨 위로: 스크롤 + 키보드 포커스도 히어로 제목으로 (포커스가 바닥에 남지 않게)
+  const toTop = () => {
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    document.getElementById("desk-hero-title")?.focus({ preventScroll: true });
+  };
 
   return (
     <footer className="mx-auto hidden max-w-6xl px-6 pb-8 pt-16 lg:block">
@@ -28,7 +32,7 @@ export function SiteFooter() {
         <div className="col-span-4 space-y-4">
           <Wordmark className="text-2xl" />
           <p className="text-[15px] leading-relaxed text-ink-soft">세계 음식 문화를 말로 탐험하는 곳. 검색 대신 푸디에게 물어보세요.</p>
-          <AskForm tone="light" />
+          <AskForm tone="light" label="푸디에게 묻기 (푸터)" />
         </div>
         {FOOTER_COLUMNS.map((c) => (
           <nav key={c.title} aria-label={c.title} className="col-span-2 space-y-3">
@@ -60,7 +64,7 @@ export function SiteFooter() {
           </Link>
         )}
       </div>
-      <p className="mt-5 text-center text-caption text-muted">© 2026 FOODIS · 성공회대 제17회 IT 경진대회 출품작 · 음식 사진은 사진마다 작가·라이선스를 표시해요 · 국기 Twemoji (CC-BY 4.0)</p>
+      <p className="mt-5 text-center text-caption text-muted">© 2026 FOODIS · 성공회대 제17회 IT 경진대회 출품작 · 음식 사진의 작가·라이선스는 음식 상세 화면에서 볼 수 있어요 · 국기 Twemoji (CC-BY 4.0)</p>
     </footer>
   );
 }

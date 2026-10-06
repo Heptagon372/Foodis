@@ -1,5 +1,5 @@
 "use client";
-// 데스크톱(lg 이상) 홈 = 랜딩 페이지 (docs/design/17). 레퍼런스 구조: 히어로 → 출처 띠(Partners) → 기능 벤토(Features) → 추천(인기 띠)
+// 데스크톱(lg 이상) 홈 = 랜딩 페이지 (docs/design/18). 레퍼런스 구조: 히어로 → 출처 띠(Partners) → 기능 벤토(Features) → 추천(인기 띠)
 // → 왜 FOODIS(Why us) → 이렇게 물어보세요(Review 자리) → FAQ → CTA. 모양은 레퍼런스의 진한 판 + 파낸 모서리(노치) + 도킹 화살표.
 // 화면만 그린다 — 인트로·노출 기록·sessionStorage 같은 부수효과는 HomeView 한 곳에서. 숨은 트리(모바일)에서는 사진·영상을 내려받지 않는다
 import Link from "next/link";
@@ -31,7 +31,10 @@ type Props = {
   ranked: Ranked<FoodSummary>[];
   learning: boolean;
   confidence: number;
-  dietCount: number;
+  /** 지금 켜진 식단 조건 수 (식이·식단 기준·알레르기) — 히어로 '식단 설정' 바로 가기 */
+  conditionCount: number;
+  /** 추천 후보를 식이·알레르기로 걸렀는지 — 추천 띠의 '식이 조건 반영' 칩 */
+  dietFiltered: boolean;
   recent: Recent[];
   eatsPhoto: FoodSummary | null;
   site: SiteFacts;
@@ -40,27 +43,27 @@ type Props = {
 
 const ko = (n: number) => n.toLocaleString("ko-KR");
 
-export function DesktopLanding({ today, ranked, learning, confidence, dietCount, recent, eatsPhoto, site, preview }: Props) {
+export function DesktopLanding({ today, ranked, learning, confidence, conditionCount, dietFiltered, recent, eatsPhoto, site, preview }: Props) {
   return (
-    <main data-landing className="hidden space-y-20 pb-6 pt-2 lg:block xl:space-y-24">
+    <div data-landing className="hidden space-y-20 pb-6 pt-2 lg:block xl:space-y-24">
       {preview && <PreviewBanner />}
       <div className="space-y-8">
-        <Hero today={today} learning={learning} confidence={confidence} dietCount={dietCount} site={site} />
+        <Hero today={today} learning={learning} confidence={confidence} conditionCount={conditionCount} site={site} />
         <SourcesBand site={site} />
       </div>
       <Features recent={recent} eatsPhoto={eatsPhoto} site={site} />
-      {ranked.length > 0 && <ForYou ranked={ranked} learning={learning} confidence={confidence} dietCount={dietCount} />}
+      {ranked.length > 0 && <ForYou ranked={ranked} learning={learning} confidence={confidence} dietFiltered={dietFiltered} />}
       <WhyUs site={site} />
       <Asks />
       <Faq site={site} />
       <Cta site={site} />
-    </main>
+    </div>
   );
 }
 
 /* ───────── 히어로: 진한 판 + 왼쪽 위 노치(묻기 알약) + 아래 노치(바로가기 4칸) ───────── */
 
-function Hero({ today, learning, confidence, dietCount, site }: { today: FoodSummary | undefined; learning: boolean; confidence: number; dietCount: number; site: SiteFacts }) {
+function Hero({ today, learning, confidence, conditionCount, site }: { today: FoodSummary | undefined; learning: boolean; confidence: number; conditionCount: number; site: SiteFacts }) {
   const { open } = useFoodi();
   const hydrated = useHydrated();
   const q = useQuest();
@@ -68,10 +71,12 @@ function Hero({ today, learning, confidence, dietCount, site }: { today: FoodSum
     { href: "/passport/table", icon: "table", label: "My Table", sub: "탐험한 음식이 접시로" },
     { href: "/quests", icon: "quest", label: "퀘스트", sub: hydrated && q.ready && q.quests.length ? `${q.doneCount}/${q.quests.length} 완료` : "이번 주 퀘스트" },
     { href: "/passport#taste", icon: "sparkle", label: "내 취향", sub: learning ? "볼수록 배워요" : `취향 반영 ${Math.round(confidence * 100)}%` },
-    { href: "/settings#diet", icon: "salad", label: "식단 설정", sub: dietCount ? `조건 ${dietCount}개 적용 중` : "비건·할랄·알레르기" },
+    { href: "/settings#diet", icon: "salad", label: "식단 설정", sub: conditionCount ? `조건 ${conditionCount}개 적용 중` : "비건·할랄·알레르기" },
   ];
   return (
     <section aria-labelledby="desk-hero-title" className="relative [--bh:5.75rem] [--bw:38rem] [--bx:5rem] [--nh:5rem] [--nw:34rem] xl:[--bw:46rem] xl:[--nw:38rem]">
+      {/* 형제 ① 왼쪽 위 노치에 앉은 묻기 알약 — 화면에서 맨 위·왼쪽이라 탭 순서도 처음 (판보다 먼저, z-10 으로 위에) */}
+      <AskForm tone="dark" className="absolute left-0 top-0 z-10 h-[calc(var(--nh)_-_0.75rem)] w-[calc(var(--nw)_-_0.75rem)]" />
       {/* 판: 음성 구슬이 맥박치므로 desk-shadow(필터)를 걸지 않는다 */}
       <div className="slab notch notch-lg notch-tl notch-b relative grid min-h-[40rem] grid-cols-12 gap-8 rounded-[40px] px-10 pb-[7.5rem] pt-10 xl:px-12">
         <div className="col-span-7 flex flex-col pt-[calc(var(--nh)_-_0.5rem)]">
@@ -86,7 +91,8 @@ function Hero({ today, learning, confidence, dietCount, site }: { today: FoodSum
             {site.countries}개국 · 음식 {ko(site.foods)}개를 한 지도에
           </p>
           <div className="relative mt-6">
-            <h1 id="desk-hero-title" className="font-bold text-white">
+            {/* tabIndex -1: 푸터 '맨 위로'가 포커스를 여기로 옮긴다 */}
+            <h1 id="desk-hero-title" tabIndex={-1} className="font-bold text-white outline-none">
               <span className="block text-[1.75rem] font-medium text-white/75">오늘은 어디로</span>
               <span className="block text-hero xl:text-[5.25rem]">떠나볼까요?</span>
             </h1>
@@ -135,8 +141,6 @@ function Hero({ today, learning, confidence, dietCount, site }: { today: FoodSum
         </div>
       </div>
 
-      {/* 형제 ① 왼쪽 위 노치에 앉은 묻기 알약 */}
-      <AskForm tone="dark" className="absolute left-0 top-0 h-[calc(var(--nh)_-_0.75rem)] w-[calc(var(--nw)_-_0.75rem)]" />
       {/* 형제 ② 아래 노치에 앉은 바로가기 4칸 (모바일 홈 바로 가기와 같은 기능) */}
       <nav aria-label="내 기록 바로 가기" className="absolute bottom-0 left-[calc(var(--bx)_+_0.75rem)] grid h-[calc(var(--bh)_-_0.75rem)] w-[calc(var(--bw)_-_1.5rem)] grid-cols-4 gap-3">
         {shortcuts.map((s) => (
@@ -164,7 +168,7 @@ function TodayCard({ today }: { today: FoodSummary }) {
   return (
     <>
       <article className="notch notch-br dock-sm card flex h-full flex-col rounded-[28px] p-2.5">
-        <TrackLink food={today} src="home_today" href={href} className="relative block h-52 shrink-0 overflow-hidden rounded-[20px] focus-visible:outline-offset-[-3px]" style={accentBg(today.accent, today.image_url)}>
+        <TrackLink food={today} src="home_today" href={href} aria-label={`${today.name_ko} 사진 — 자세히 보기`} className="relative block h-52 shrink-0 overflow-hidden rounded-[20px] focus-visible:outline-offset-[-3px]" style={accentBg(today.accent, today.image_url)}>
           <span className="glass absolute left-3 top-3 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-semibold text-ink">
             <span aria-hidden>{today.flag}</span>
             {today.country_name}
@@ -178,7 +182,7 @@ function TodayCard({ today }: { today: FoodSummary }) {
         </TrackLink>
         <div className="flex flex-1 flex-col gap-2 px-3 pb-2 pr-16 pt-4">
           <Eyebrow>오늘의 탐험{today.fame_rank === 1 ? ` · ${today.country_name}의 대표 음식` : ""}</Eyebrow>
-          <h3 className="text-h2 font-bold text-ink">{today.name_ko}</h3>
+          <h2 className="text-h2 font-bold text-ink">{today.name_ko}</h2>
           <p className="line-clamp-2 text-[15px] text-ink-soft">{blurb}</p>
           {guard.hits[0] && (
             <span className="flex">
@@ -271,7 +275,7 @@ function Features({ recent, eatsPhoto, site }: { recent: Recent[]; eatsPhoto: Fo
   const next = q.quests.find((x) => !x.done);
   const earned = q.badges.filter((b) => b.earnedAt != null).length;
   return (
-    <section id="features" aria-labelledby="desk-features" className="scroll-mt-(--desk-sticky) space-y-8">
+    <section id="features" aria-labelledby="desk-features" className="space-y-8">
       <LandingHead
         id="desk-features"
         eyebrow="What you can do"
@@ -373,7 +377,7 @@ function Features({ recent, eatsPhoto, site }: { recent: Recent[]; eatsPhoto: Fo
           <div className={`absolute inset-x-0 bottom-0 p-8 pr-24 ${eatsPhoto?.image_url ? "text-white" : "text-ink"}`}>
             <Eyebrow className={eatsPhoto?.image_url ? "text-lime" : "text-leaf"}>Eat nearby</Eyebrow>
             <h3 className="mt-2 text-[1.75rem] font-bold leading-tight">탐험한 음식, 근처에서 맛보기</h3>
-            <p className={`mt-2 ${eatsPhoto?.image_url ? "text-white/80" : "text-ink-soft"}`}>반경 3~10km 안에서 실제로 먹어 볼 수 있는 음식점을 찾아요. 위치는 &apos;내 근처&apos;를 누를 때만 쓰고 저장하지 않아요.</p>
+            <p className={`mt-2 ${eatsPhoto?.image_url ? "text-white/80" : "text-ink-soft"}`}>반경 3~10km 안에서 실제로 먹어 볼 수 있는 음식점을 찾아요. 위치는 열 때 한 번 묻고, 주변 검색에만 쓴 뒤 저장하지 않아요.</p>
           </div>
         </Tile>
       </div>
@@ -406,7 +410,7 @@ function Features({ recent, eatsPhoto, site }: { recent: Recent[]; eatsPhoto: Fo
 
 /* ───────── 나를 위한 추천 (레퍼런스 3의 인기 띠) ───────── */
 
-function ForYou({ ranked, learning, confidence, dietCount }: { ranked: Ranked<FoodSummary>[]; learning: boolean; confidence: number; dietCount: number }) {
+function ForYou({ ranked, learning, confidence, dietFiltered }: { ranked: Ranked<FoodSummary>[]; learning: boolean; confidence: number; dietFiltered: boolean }) {
   return (
     <section aria-labelledby="desk-foryou" className="space-y-8 rounded-[40px] bg-sunken p-8 xl:p-10">
       <LandingHead
@@ -420,7 +424,7 @@ function ForYou({ ranked, learning, confidence, dietCount }: { ranked: Ranked<Fo
               <Icon name={learning ? "sparkle" : "check"} className="size-4" />
               {learning ? "볼수록 취향을 배워요" : `취향 반영 ${Math.round(confidence * 100)}%`}
             </Link>
-            {dietCount > 0 && <span className="inline-flex h-9 items-center rounded-full border border-line bg-surface px-4 text-[13px] text-ink-soft">식이 조건 반영</span>}
+            {dietFiltered && <span className="inline-flex h-9 items-center rounded-full border border-line bg-surface px-4 text-[13px] text-ink-soft">식이 조건 반영</span>}
           </>
         }
       />
@@ -438,7 +442,7 @@ function ForYou({ ranked, learning, confidence, dietCount }: { ranked: Ranked<Fo
 function WhyUs({ site }: { site: SiteFacts }) {
   const chips = [`식이 ${site.diets}종 · 4단계`, `알레르기 ${site.allergens}종`, `식단 기준 ${site.guards}개`, `점검 질문 ${site.evalCases}개`];
   return (
-    <section id="why" aria-labelledby="desk-why" className="desk-shadow scroll-mt-(--desk-sticky)">
+    <section id="why" aria-labelledby="desk-why" className="desk-shadow">
       <div className="slab relative rounded-[40px] p-10 pb-12">
         <span className="inline-flex h-9 items-center rounded-full bg-lime px-4 text-[12px] font-bold uppercase tracking-[0.14em] text-on-lime">Why FOODIS</span>
         <h2 id="desk-why" className="mt-4 text-section font-bold text-white">
@@ -487,8 +491,8 @@ function Asks() {
         desc="푸디가 제대로 답하는지 점검할 때 쓰는 실제 질문이에요. 누르면 바로 물어봐요."
         aside={
           <>
-            <IconButton icon="arrow-left" label="이전 질문" variant="outline" onClick={c.prev} className={c.atStart ? "pointer-events-none opacity-40" : ""} />
-            <IconButton icon="arrow-right" label="다음 질문" variant="outline" onClick={c.next} className={c.atEnd ? "pointer-events-none opacity-40" : ""} />
+            <IconButton icon="arrow-left" label="이전 질문" variant="outline" onClick={c.prev} disabled={c.atStart} />
+            <IconButton icon="arrow-right" label="다음 질문" variant="outline" onClick={c.next} disabled={c.atEnd} />
           </>
         }
       />
@@ -520,7 +524,7 @@ function Asks() {
 function Faq({ site }: { site: SiteFacts }) {
   const { open } = useFoodi();
   return (
-    <section id="faq" aria-labelledby="desk-faq" className="grid scroll-mt-(--desk-sticky) grid-cols-12 gap-10">
+    <section id="faq" aria-labelledby="desk-faq" className="grid grid-cols-12 gap-10">
       <div className="col-span-4 space-y-4 self-start lg:sticky lg:top-(--desk-sticky)">
         <Eyebrow>FAQ</Eyebrow>
         <h2 id="desk-faq" className="text-section font-bold text-ink">
@@ -580,7 +584,7 @@ function Cta({ site }: { site: SiteFacts }) {
               ))}
             </p>
             <p className="mt-3 text-caption font-semibold text-white">{site.countries}개국이 지도에서 기다려요</p>
-            <p className="text-caption text-white/65">
+            <p className="text-caption text-white/85">
               음식 {ko(site.foods)}개 · 대륙 {site.continents}곳 · 라디오 채널 {site.channels}개
             </p>
           </div>

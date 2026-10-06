@@ -1,11 +1,12 @@
 "use client";
-// 데스크톱(lg 이상) 상단 알약 내비 (docs/design/17): [워드마크 유리 알약] [진한 메뉴 알약 + 푸디] [새싹] [따로 떨어진 계정 알약 ▾].
+// 데스크톱(lg 이상) 상단 알약 내비 (docs/design/18): [워드마크 유리 알약] [진한 메뉴 알약 + 푸디] [새싹] [따로 떨어진 계정 알약 ▾].
 // 문서 흐름 안의 sticky (높이 --desk-nav) — AppFrame 이 children 앞에 둔다. 모바일에서는 숨고 하단 탭 바(TabBar)가 같은 메뉴 표(nav.ts)를 쓴다
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { exploredCountries, useHydrated, useLocal } from "@/lib/client/passport";
 import { useQuest } from "@/lib/client/quest";
+import { useAccount } from "@/lib/client/account";
 import { Wordmark } from "./bits";
 import { useFoodi } from "./FoodiSheet";
 import { Icon } from "./icons";
@@ -73,21 +74,26 @@ export function DesktopNav() {
   );
 }
 
-/** 계정 알약 + 내 기록 드롭다운 (disclosure). 화면을 옮기면 저절로 닫힌다 — 열린 경로를 기억해 비교 */
+/** 계정 알약 + 내 기록 드롭다운 (disclosure). 화면을 옮기면 닫힌다 — 렌더 중에 경로 변화를 보고 맞춘다 (effect 없이) */
 function AccountMenu({ path, on, active, badge, summary }: { path: string; on: boolean; active: string | null; badge: Record<string, ReactNode>; summary: string }) {
   const id = useId();
-  const [openAt, setOpenAt] = useState<string | null>(null);
-  const isOpen = openAt === path;
+  const acct = useAccount();
+  const [isOpen, setIsOpen] = useState(false);
+  const [openedOn, setOpenedOn] = useState(path);
+  if (openedOn !== path) {
+    setOpenedOn(path);
+    setIsOpen(false);
+  }
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!isOpen) return;
     const onDown = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpenAt(null);
+      if (!wrap.current?.contains(e.target as Node)) setIsOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      setOpenAt(null);
+      setIsOpen(false);
       button.current?.focus();
     };
     document.addEventListener("pointerdown", onDown);
@@ -97,7 +103,8 @@ function AccountMenu({ path, on, active, badge, summary }: { path: string; on: b
       document.removeEventListener("keydown", onKey);
     };
   }, [isOpen]);
-  const close = () => setOpenAt(null);
+  const close = () => setIsOpen(false);
+  const user = acct.status === "user" ? acct.user : null;
 
   return (
     <div ref={wrap} className="pointer-events-auto relative h-full">
@@ -106,20 +113,41 @@ function AccountMenu({ path, on, active, badge, summary }: { path: string; on: b
         type="button"
         aria-expanded={isOpen}
         aria-controls={id}
-        onClick={() => setOpenAt(isOpen ? null : path)}
+        onClick={() => setIsOpen((v) => !v)}
         className={`slab flex h-full items-center gap-2.5 rounded-full pl-2 pr-3 shadow-lift transition xl:pr-4 ${on ? "ring-2 ring-lime ring-offset-2 ring-offset-canvas" : ""}`}
       >
-        <span className="grid size-11 place-items-center rounded-full bg-lime text-on-lime" aria-hidden>
-          <Icon name="passport" className="size-5" />
-        </span>
+        {user?.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 제공자 프로필 이미지(외부 도메인)
+          <img src={user.avatar} alt="" className="size-11 rounded-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <span className="grid size-11 place-items-center rounded-full bg-lime text-on-lime" aria-hidden>
+            <Icon name="passport" className="size-5" />
+          </span>
+        )}
         <span className="sr-only xl:not-sr-only xl:flex xl:flex-col xl:text-left xl:leading-tight">
-          <b className="text-sm font-semibold">내 기록</b>
-          <span className="text-[11px] text-white/65">{summary}</span>
+          <b className="max-w-36 truncate text-sm font-semibold">{user ? (user.name ?? user.email ?? "내 계정") : "내 기록"}</b>
+          <span className="text-[11px] text-white/80">{summary}</span>
         </span>
-        <Icon name="chevron-down" className={`size-4 text-white/70 transition ${isOpen ? "rotate-180" : ""}`} />
+        <Icon name="chevron-down" className={`size-4 text-white/80 transition ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
-        <nav id={id} aria-label="내 기록" className="card absolute right-0 top-[calc(100%_+_0.5rem)] w-64 animate-rise space-y-1 rounded-[24px] p-2 shadow-lift">
+        <nav id={id} aria-label="계정 메뉴" className="card absolute right-0 top-[calc(100%_+_0.5rem)] w-64 animate-rise space-y-1 rounded-[24px] p-2 shadow-lift">
+          {acct.status !== "off" && (
+            <>
+              <Link
+                href={user ? "/settings#account" : `/login?next=${encodeURIComponent(path)}`}
+                onClick={close}
+                className="flex h-12 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold text-ink transition hover:bg-ink/5"
+              >
+                <span className="grid size-8 place-items-center rounded-full bg-lime-soft text-leaf" aria-hidden>
+                  <Icon name="user" className="size-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1 truncate">{user ? (user.name ?? user.email ?? "내 계정") : "로그인"}</span>
+                <span className="text-[11px] font-medium text-muted">{user ? "계정" : "기록 이어 보기"}</span>
+              </Link>
+              <div className="my-1 border-t border-line" />
+            </>
+          )}
           {ACCOUNT_ITEMS.map((it) => (
             <MenuItem key={it.href} item={it} on={active === it.href} badge={badge[it.href]} onPick={close} />
           ))}

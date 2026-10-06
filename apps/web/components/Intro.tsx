@@ -68,6 +68,9 @@ export function Intro({ onDone, short = false }: { onDone: () => void; short?: b
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="FOODIS 인트로"
       className={`fixed inset-0 z-[60] overflow-hidden transition-opacity duration-200 ${leaving ? "opacity-0" : "opacity-100"}`}
       style={{ background: BG }}
       onClick={short ? close : undefined}

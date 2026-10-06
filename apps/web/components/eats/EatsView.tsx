@@ -321,7 +321,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
 
       {/* 지도 무대 */}
       <div className="rounded-[34px] bg-gradient-to-br from-brand/45 via-white to-lime p-px shadow-[0_30px_70px_-34px_rgb(43_134_69/0.55)]">
-        <div ref={stage} className="hud relative h-[78dvh] min-h-[560px] scroll-mt-4 overflow-hidden rounded-[33px] lg:h-[calc(100dvh_-_var(--desk-nav)_-_7rem)] lg:min-h-[640px] lg:scroll-mt-(--desk-sticky)">
+        <div ref={stage} className="hud relative h-[78dvh] min-h-[560px] scroll-mt-4 overflow-hidden rounded-[33px] lg:h-[calc(100dvh_-_var(--desk-nav)_-_7rem)] lg:min-h-[640px]">
           {showMap ? (
             <div ref={box} className={`eats-map absolute inset-0 isolate z-0 ${mode === "pick" ? "[&_*]:cursor-crosshair" : ""}`} />
           ) : (

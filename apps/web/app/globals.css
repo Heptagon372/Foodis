@@ -72,7 +72,7 @@
   --text-caption: 0.8125rem;
   --text-subtitle: 1.125rem;
   --text-subtitle--line-height: 1.55;
-  /* 데스크톱 랜딩 (docs/design/17): 히어로 68 / 섹션 제목 40 */
+  /* 데스크톱 랜딩 (docs/design/18): 히어로 68 / 섹션 제목 40 */
   --text-hero: 4.25rem;
   --text-hero--line-height: 0.98;
   --text-hero--letter-spacing: -0.045em;
@@ -125,42 +125,72 @@
   --mist-lime: rgb(200 240 106 / 0.32);
   --mist-leaf: rgb(43 134 69 / 0.12);
   --pulse-lime: rgb(200 240 106 / 0.75);
+  --panel-bg: linear-gradient(165deg, rgb(255 255 255 / 0.86) 0%, rgb(255 255 255 / 0.66) 100%);
+  --panel-border: rgb(255 255 255 / 0.9);
+  --neon-edge: rgb(43 134 69 / 0.45);
+  --neon-fill: rgb(200 240 106 / 0.55);
+  --neon-glow: 0 0 0 1px rgb(43 134 69 / 0.25), 0 10px 24px -12px rgb(43 134 69 / 0.55);
+  --cta-bg: linear-gradient(180deg, #34a356 0%, #23793b 100%);
+  --cta-ink: #ffffff;
+  --forest-glow: rgb(200 240 106 / 0.28);
+  --forest-border: rgb(255 255 255 / 0.08);
+  --meadow-glow: rgb(200 240 106 / 0.45);
+  --card-sheen: none;
+  --cta-glow: 0 0 0 1px rgb(43 134 69 / 0.35), 0 14px 30px -12px rgb(43 134 69 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.3);
 }
 
-/* 다크 테마: 밤의 숲 — 진한 초록 바탕, 연두가 빛난다. 같은 토큰 이름, 값만 교체 */
+/* 다크 테마 v3 "Neon Night" (docs/design/17): 거의 검정에 가까운 숲 바탕 + 네온 초록 글로우.
+   같은 토큰 이름, 값만 교체 — brand 는 흰 글자가 읽히는 깊은 초록, lime 은 빛나는 네온(글로우·활성·진행), leaf 는 밝은 초록 글자 */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-canvas: #0c140f;
-  --color-surface: #142019;
-  --color-sunken: #1b2920;
-  --color-line: #26362c;
-  --color-ink: #eaf3e7;
-  --color-ink-soft: #b8c8bc;
-  --color-muted: #8fa394;
-  --color-brand: #5ccb78;
-  --color-brand-strong: #79d991;
-  --color-on-brand: #0b1a10;
-  --color-lime: #c8f06a;
-  --color-lime-strong: #d6f58a;
-  --color-lime-soft: #223321;
-  --color-on-lime: #0f2414;
-  --color-leaf: #74d68e;
-  --color-leaf-bright: #8ee6a4;
-  --color-forest: #1a3a24;
-  --color-forest-deep: #12291a;
-  --color-diet-ok: #74d68e;
+  --color-canvas: #050806;
+  --color-surface: #0c110e;
+  --color-sunken: #141b16;
+  --color-line: #1d2820;
+  --color-ink: #f1f6f2;
+  --color-ink-soft: #b3c1b7;
+  --color-muted: #7f9085;
+  --color-brand: #138a3d;
+  --color-brand-strong: #1aa64a;
+  --color-on-brand: #ffffff;
+  --color-lime: #3df57a;
+  --color-lime-strong: #74ff9f;
+  --color-lime-soft: #0f2416;
+  --color-on-lime: #03150a;
+  --color-leaf: #4ee283;
+  --color-leaf-bright: #6bff9c;
+  --color-forest: #0b1a10;
+  --color-forest-deep: #050c07;
+  --color-diet-ok: #4ee283;
   --color-diet-warn: #e6b04a;
   --color-diet-warn-ink: #f0c46a;
   --color-diet-no: #f07b73;
   --color-diet-unknown: #9aa59d;
-  --glass-bg: rgb(22 36 27 / 0.66);
-  --glass-border: rgb(255 255 255 / 0.08);
+  --shadow-soft: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 32px -18px rgb(0 0 0 / 0.9);
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -20px rgb(0 0 0 / 0.95);
+  --shadow-glow: 0 0 0 1px rgb(61 245 122 / 0.45), 0 0 22px -2px rgb(61 245 122 / 0.55);
+  --shadow-brand: 0 0 0 1px rgb(61 245 122 / 0.35), 0 0 20px -4px rgb(61 245 122 / 0.5);
+  --glass-bg: rgb(16 22 18 / 0.62);
+  --glass-border: rgb(170 255 200 / 0.08);
   --glass-highlight: rgb(255 255 255 / 0.05);
-  --glass-shadow: rgb(0 0 0 / 0.45);
-  --mist-lime: rgb(200 240 106 / 0.1);
-  --mist-leaf: rgb(92 203 120 / 0.12);
-  /* 어두운 바탕에서는 연두 맥박이 너무 굵게 번져 보여 옅게 */
-  --pulse-lime: rgb(200 240 106 / 0.38);
+  --glass-shadow: rgb(0 0 0 / 0.7);
+  --mist-lime: rgb(61 245 122 / 0.07);
+  --mist-leaf: rgb(19 138 61 / 0.1);
+  --pulse-lime: rgb(61 245 122 / 0.45);
+  /* 큰 패널(사이드바·히어로·타일 카드): 위가 살짝 밝은 유리 + 아주 옅은 초록 테두리 */
+  --panel-bg: linear-gradient(165deg, rgb(24 32 27 / 0.86) 0%, rgb(9 13 11 / 0.9) 100%);
+  --panel-border: rgb(170 255 200 / 0.09);
+  /* 네온 강조(활성 메뉴·핵심 CTA) */
+  --neon-edge: rgb(61 245 122 / 0.7);
+  --neon-fill: rgb(61 245 122 / 0.09);
+  --neon-glow: 0 0 0 1px rgb(61 245 122 / 0.5), 0 0 18px -2px rgb(61 245 122 / 0.45), inset 0 0 18px -6px rgb(61 245 122 / 0.45);
+  --cta-bg: linear-gradient(180deg, #1fb24f 0%, #0f7a35 100%);
+  --cta-ink: #ffffff;
+  --forest-glow: rgb(61 245 122 / 0.16);
+  --forest-border: rgb(61 245 122 / 0.22);
+  --meadow-glow: rgb(61 245 122 / 0.12);
+  --card-sheen: linear-gradient(165deg, rgb(255 255 255 / 0.035) 0%, transparent 55%);
+  --cta-glow: 0 0 0 1px rgb(110 255 160 / 0.55), 0 0 26px -4px rgb(61 245 122 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.28);
 }
 
 /* 유리 — 떠 있는 컨트롤·사진 위 칩·바탕 위 가벼운 카드. 모서리는 rounded-* 로 따로 준다 */
@@ -184,26 +214,50 @@
 /* 불투명 카드 — 읽을 내용이 많은 면 */
 @utility card {
   background-color: var(--color-surface);
+  background-image: var(--card-sheen);
   border: 1px solid var(--color-line);
   box-shadow: var(--shadow-soft);
+}
+
+/* 큰 패널 — 사이드바·히어로·홈 타일처럼 화면의 뼈대가 되는 면 (레퍼런스: 어두운 유리 + 옅은 초록 테두리) */
+@utility panel {
+  background: var(--panel-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--panel-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-soft);
+}
+
+/* 네온 — 지금 켜진 메뉴·선택된 칸. 초록 테두리 + 바깥·안쪽 글로우 (글자는 ink, 아이콘은 leaf 를 권장) */
+@utility neon {
+  background-color: var(--neon-fill);
+  border: 1px solid var(--neon-edge);
+  box-shadow: var(--neon-glow);
+}
+
+/* 핵심 CTA — 초록 그라데이션 + 네온 글로우, 흰 글자 (화면마다 한두 개) */
+@utility cta {
+  background: var(--cta-bg);
+  color: var(--cta-ink);
+  box-shadow: var(--cta-glow);
 }
 
 /* 숲 패널 (레퍼런스 Verdant 를 초록으로): 진한 초록 + 연두 글로우, 글자는 흰색 */
 @utility forest-panel {
   background-color: var(--color-forest);
   background-image:
-    radial-gradient(90% 70% at 100% 0%, rgb(200 240 106 / 0.28), transparent 60%),
+    radial-gradient(90% 70% at 100% 0%, var(--forest-glow), transparent 60%),
     radial-gradient(70% 70% at 0% 100%, rgb(61 208 95 / 0.18), transparent 60%),
     linear-gradient(160deg, var(--color-forest) 0%, var(--color-forest-deep) 100%);
   color: #fff;
-  border: 1px solid rgb(255 255 255 / 0.08);
+  border: 1px solid var(--forest-border);
 }
 
 /* 연두 패널 — 밝고 가벼운 강조 면 (Passport 요약 등). 글자는 ink */
 @utility meadow-panel {
   background-color: var(--color-surface);
   background-image:
-    radial-gradient(100% 80% at 100% 0%, rgb(200 240 106 / 0.45), transparent 62%),
+    radial-gradient(100% 80% at 100% 0%, var(--meadow-glow), transparent 62%),
     radial-gradient(80% 70% at 0% 100%, rgb(61 208 95 / 0.14), transparent 60%);
   border: 1px solid var(--color-line);
   color: var(--color-ink);
@@ -234,6 +288,11 @@ body {
   :where(a, button, input, textarea, select, [tabindex]):focus-visible {
     outline: 2px solid var(--color-leaf);
     outline-offset: 2px;
+  }
+  /* 진한 초록 면(슬랩·숲 패널·탭) 위에서는 초록 링이 묻힌다 → 연두로 (색만 바꿔 outline-none 은 그대로 이긴다) */
+  :where(.slab, .forest-panel, .tab-bottom) :where(a, button, input, textarea, select, [tabindex]):focus-visible,
+  :where(.slab, .tab-bottom):focus-visible {
+    outline-color: var(--color-lime);
   }
 }
 
@@ -388,20 +447,29 @@ body {
 .hud-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #2b8645; box-shadow: 0 2px 8px rgb(43 134 69 / 0.4); cursor: pointer; }
 }
 
-/* ───────── 데스크톱 웹사이트 (lg ≥ 64rem) — docs/design/17 ─────────
+/* ───────── 데스크톱 웹사이트 (lg ≥ 64rem) — docs/design/18 ─────────
    아래 클래스는 hidden lg:block 트리(DesktopNav · SiteFooter · DesktopLanding)와 lg: 접두사에서만 쓴다 → 모바일 렌더 영향 없음 */
 :root {
   --desk-nav: 5rem; /* 상단 알약 내비: 위 12px + 알약 60px + 아래 8px */
   --desk-sticky: calc(var(--desk-nav) + 1rem); /* 화면 안 sticky 패널·앵커 기준 */
   --desk-shadow: rgb(18 38 26 / 0.22);
+  --slab-bg: var(--color-forest);
 }
+/* 다크(v3 Neon Night)의 forest 는 바탕과 거의 같은 검정 초록 → 슬랩만 한 단계 밝은 숲색으로 (판과 바탕이 구분돼야 노치가 보인다) */
 :root[data-theme="dark"] {
-  --desk-shadow: rgb(0 0 0 / 0.55);
+  --desk-shadow: rgb(0 0 0 / 0.6);
+  --slab-bg: #10301c;
+}
+/* sticky 상단 내비 아래로 앵커·키보드 포커스가 숨지 않게 (데스크톱만 — 모바일엔 상단 내비가 없다) */
+@media (width >= 64rem) {
+  html {
+    scroll-padding-top: var(--desk-sticky);
+  }
 }
 
 /* 슬랩: 레퍼런스의 진한 청록 판 → 숲 초록. forest-panel 과 달리 글로우 없는 평면 (탭 조각과 색이 이어져야 해서) */
 @utility slab {
-  background-color: var(--color-forest);
+  background-color: var(--slab-bg);
   color: #fff;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
 }
@@ -475,7 +543,7 @@ body {
   --_r: var(--tab-r, 1.25rem);
   position: absolute;
   top: calc(100% - 1px);
-  background-color: var(--color-forest);
+  background-color: var(--slab-bg);
   color: #fff;
   border-radius: 0 0 var(--_r) var(--_r);
   &::before,

@@ -8,10 +8,10 @@ import { CHANNELS } from "@/lib/radio/queue";
 
 export const dynamic = "force-dynamic";
 
-// S2 홈 (05 문서 §3): 음성 버튼 중앙 + 오늘의 탐험 + 나를 위한 추천 + 최근 탐험. 데스크톱은 같은 데이터로 랜딩 페이지 (docs/design/17)
+// S2 홈 (05 문서 §3): 음성 버튼 중앙 + 오늘의 탐험 + 나를 위한 추천 + 최근 탐험. 데스크톱은 같은 데이터로 랜딩 페이지 (docs/design/18)
 export default async function Home() {
   const content = await getContent();
-  const [all, countries] = await Promise.all([content.listFoods(), content.listCountries()]);
+  const [all, countries, foodCount] = await Promise.all([content.listFoods(), content.listCountries(), content.countFoods()]);
   // 추천 후보: 소개가 있는 음식 + 나라마다 유명도 상위 6개 (2,000개를 다 보내면 홈이 무거워진다).
   // 취향 엔진의 '대표 음식 먼저' 규칙 때문에 처음 보는 나라는 어차피 상위 3개까지만 추천된다
   const foods = all.filter((f) => f.summary || (f.fame_rank ?? 99) <= 6);
@@ -20,7 +20,7 @@ export default async function Home() {
   const step = Math.max(1, Math.floor(countries.length / 24));
   const site: SiteFacts = {
     countries: countries.length,
-    foods: all.length,
+    foods: foodCount,
     continents: new Set(countries.map((c) => c.continent_group)).size,
     channels: Object.keys(CHANNELS).length,
     diets: DIET_KEYS.length,

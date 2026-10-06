@@ -41,7 +41,7 @@ export function TasteCard({ countries }: { countries: Country[] }) {
   const dwellMin = Math.round(signals.filter((s) => s.k === "dwell").reduce((a, s) => a + (s.ms ?? 0), 0) / 60_000);
 
   return (
-    <div id="taste" className="card scroll-mt-4 space-y-4 rounded-3xl p-4 lg:scroll-mt-(--desk-sticky)">
+    <div id="taste" className="card scroll-mt-4 space-y-4 rounded-3xl p-4">
       <div>
         <div className="flex items-baseline justify-between">
           <p className="font-semibold text-ink">{pct < 30 ? "취향을 배우는 중" : pct < 70 ? "취향이 보이기 시작했어요" : "취향을 잘 알고 있어요"}</p>

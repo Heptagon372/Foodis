@@ -71,7 +71,7 @@ export function SettingsView() {
 
 function Group({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-6 space-y-3 lg:scroll-mt-(--desk-sticky)" aria-label={title}>
+    <section id={id} className="scroll-mt-6 space-y-3" aria-label={title}>
       <h2 className="text-title font-bold text-ink">{title}</h2>
       {children}
     </section>

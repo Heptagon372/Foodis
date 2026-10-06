@@ -83,6 +83,8 @@ export interface ContentSource {
   readonly mode: "live" | "preview";
   listCountries(): Promise<Country[]>;
   listFoods(): Promise<FoodSummary[]>;
+  /** 음식 수 — listFoods 는 한 번에 최대 1,000행(PostgREST 상한)이라 화면에 보일 개수는 이걸로 센다 */
+  countFoods(): Promise<number>;
   getFood(slug: string): Promise<FoodDetail | null>;
   getCountry(code: string): Promise<{ country: Country; foods: FoodSummary[] } | null>;
   /** 재료 탐색 (F-EXP-04): 이 재료를 쓰는 검수된 음식 */

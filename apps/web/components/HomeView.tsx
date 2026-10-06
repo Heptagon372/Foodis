@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
-import { update, useHydrated, useLocal } from "@/lib/client/passport";
+import { exploredCountries, update, useHydrated, useLocal } from "@/lib/client/passport";
 import { impress, useTaste } from "@/lib/client/taste";
+import { selectedGuards } from "@/lib/diet/guard";
 import { buildProfile, rankFoods } from "@/lib/taste/engine";
-import { speak } from "@/lib/client/voice";
 import { FoodCard } from "./FoodCard";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
@@ -14,19 +14,13 @@ import { DesktopLanding } from "./landing/DesktopLanding";
 import type { SiteFacts } from "./landing/types";
 import { PreviewBanner, Section } from "./bits";
 import { startRadio } from "@/lib/client/radio";
-import { VoiceButton } from "./VoiceButton";
-import { QuestHomeCard } from "./QuestBoard";
+import { ImageCredit } from "./ImageCredit";
+import { QuestChallengeCard } from "./QuestBoard";
 import { TopBar } from "./TopBar";
 import { Icon, type IconName } from "./icons";
-import { btn, Eyebrow, IconTile } from "./ui";
+import { btn, Eyebrow } from "./ui";
 
-// 지도·라디오는 탭 바·상단 내비에 있으니, 홈 바로 가기는 '내 기록'과 설정 쪽 (nav.ts 와 같은 이름)
-const SHORTCUTS: [string, IconName, string][] = [
-  ["/passport/table", "table", "My Table"],
-  ["/quests", "quest", "퀘스트"],
-  ["/passport#taste", "sparkle", "내 취향"],
-  ["/settings#diet", "salad", "식단 설정"],
-];
+const NO_GUARDS: string[] = [];
 
 /** 날짜로 고정되는 '오늘의 탐험' — 같은 날엔 모두 같은 음식 (공유·대화 소재) */
 const todayIndex = (n: number) => {
@@ -35,7 +29,7 @@ const todayIndex = (n: number) => {
   return n ? (seed * 2654435761) % n : 0;
 };
 
-// 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일(<main lg:hidden>)과 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다
+// 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일 트리(lg:hidden)와 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다 (docs/design/18)
 export function HomeView({ foods, continents, preview, site }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
   const router = useRouter();
   const { open } = useFoodi();
@@ -66,6 +60,10 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
   const recent = useLocal((s) => Object.entries(s.entries).sort((a, b) => b[1].at - a[1].at).slice(0, 8));
 
   const allergens = useLocal((s) => s.allergens ?? []);
+  const guards = useLocal((s) => s.guards ?? NO_GUARDS);
+  const countries = useLocal(exploredCountries);
+  const tried = useLocal((s) => Object.values(s.entries).filter((e) => e.statuses.includes("tried")).length);
+  const recentFlags = useLocal((s) => [...new Set(Object.values(s.entries).sort((a, b) => b.at - a.at).map((e) => e.flag))].slice(0, 3));
   const fits = (f: FoodSummary) => diet.every((k) => f.diet[k] === "yes" || f.diet[k] === "depends") && !f.allergens.some((a) => (allergens as string[]).includes(a));
   const pool = foods.filter(fits);
   // 오늘의 탐험: 각 나라의 1위 대표 음식 중에서 날짜로 고른다 (사진 있는 것 우선)
@@ -95,100 +93,49 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
   };
 
   return (
-    <>
-      {/* Intro 는 fixed 오버레이 — lg:hidden 트리 밖에 둬야 데스크톱에서도 보이고 introSeen 이 기록된다 */}
+    // 문서의 main 은 하나 — 모바일·데스크톱 두 트리를 감싼다. Intro 는 fixed 대화상자라 어느 트리에도 넣지 않는다 (데스크톱에서도 보이고 introSeen 이 기록되게)
+    <main>
       {hydrated && !introSeen && <Intro onDone={finishIntro} />}
       {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
 
-    <main className="space-y-8 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:hidden">
+      <div className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:hidden">
       <TopBar />
 
       {preview && <PreviewBanner />}
 
-      {/* 2단 인사 (레퍼런스 'Good Morning, / Plant Parent') → 음성 구슬 → 글로 묻기 알약 → 바로 가기.
-          데스크톱: 왼쪽 인사 패널 | 오른쪽 오늘의 탐험 */}
-      <div className="space-y-8 lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-6 lg:space-y-0">
-        <section className="flex flex-col items-center gap-6 pt-2 text-center lg:meadow-panel lg:justify-center lg:rounded-[32px] lg:p-8 lg:shadow-soft">
-          <h1 className="text-h1 lg:text-[2.25rem]">
-            <span className="block font-medium text-ink-soft">오늘은 어디로</span>
-            <span className="block text-[2rem] font-bold text-ink lg:text-[2.75rem]">떠나볼까요?</span>
-          </h1>
-          <VoiceButton state="idle" onPress={() => open({ listen: true })} />
-          <button
-            type="button"
-            onClick={() => open()}
-            aria-label="푸디야, 무엇이든 물어보세요 — 글로 입력"
-            className="glass flex h-12 w-full max-w-sm items-center gap-3 rounded-full pl-4 pr-1.5 text-left transition active:scale-[0.98]"
-          >
-            <Icon name="search" className="size-5 shrink-0 text-muted" />
-            <span className="min-w-0 flex-1 truncate text-[15px] text-ink-soft">푸디야, 무엇이든 물어보세요</span>
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand text-on-brand" aria-hidden>
-              <Icon name="arrow-right" className="size-[18px]" />
-            </span>
-          </button>
-          <nav className="grid w-full grid-cols-4 gap-2.5 lg:max-w-md" aria-label="바로 가기">
-            {SHORTCUTS.map(([href, icon, label]) => (
-              <Link key={href} href={href} className="glass flex flex-col items-center gap-2 rounded-3xl px-1 pb-3 pt-3.5 text-caption font-semibold text-ink-soft transition hover:text-ink active:scale-95">
-                <IconTile icon={icon} tone="soft" />
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </section>
-
-        {today && (
-          <Section title="오늘의 탐험">
-            <FoodCard
-              size="L"
-              food={{ ...today, country_name: today.country_name }}
-              src="home_today"
-              reason={today.fame_rank === 1 ? `${today.country_name}의 대표 음식` : undefined}
-              action={
-                <>
-                  <button type="button" onClick={() => today.summary && speak(`${today.country_name}의 ${today.name_ko}. ${today.summary}`, () => {})} className={btn("soft", "sm")}>
-                    <Icon name="play" className="size-4" />
-                    듣기
-                  </button>
-                  <button type="button" onClick={() => open({ contextFoodId: today.id, contextName: today.name_ko, question: "문화 이야기 들려줘" })} className={btn("ghost", "sm")}>
-                    푸디에게 더 묻기
-                  </button>
-                </>
-              }
-            />
-          </Section>
-        )}
+      {/* 1행: 히어로(오늘의 탐험 사진 위 큰 인사 + 핵심 CTA) | 이번 주 챌린지 — 레퍼런스 docs/design/17 */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
+        <Hero today={today} onTalk={() => open({ listen: true })} onAsk={() => open()} />
+        <QuestChallengeCard />
       </div>
 
-      {/* 라디오 · 퀘스트 — 데스크톱은 나란히 */}
-      <div className="space-y-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-        {/* 라디오 — 홈의 유일한 숲 패널 + 유일한 연두 CTA */}
-        <section className="forest-panel relative overflow-hidden rounded-[28px] p-5 text-white">
-          <div className="pointer-events-none absolute -right-3 -top-3 flex h-28 items-end gap-1.5 opacity-25" aria-hidden>
-            {[0.5, 0.9, 0.65, 1, 0.75, 0.45].map((h, i) => (
-              <span key={i} className="w-2.5 rounded-full bg-lime" style={{ height: `${h * 100}%` }} />
-            ))}
-          </div>
-          <div className="flex items-baseline gap-2">
-            <Eyebrow className="text-lime">Food Culture</Eyebrow>
-            <span className="font-serif text-lg italic leading-none text-lime">Radio</span>
-          </div>
-          <p className="relative mt-2 text-h2 font-bold text-white">
-            1분 음식 이야기,
-            <br />
-            연결을 따라 다음 나라로
-          </p>
-          <div className="relative mt-5 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void startRadio({ channel: "today" })} className={btn("lime", "sm")}>
-              <Icon name="play" className="size-4" />
-              오늘의 라디오
-            </button>
-            <Link href="/radio" className={btn("on-dark", "sm")}>
-              채널 보기
-            </Link>
-          </div>
-        </section>
-        <QuestHomeCard />
-      </div>
+      {/* 2행: 기능 타일 4칸 (레퍼런스 Aircraft · Scenarios · Training · Achievements) */}
+      <nav className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5" aria-label="탐험 메뉴">
+        <Tile href="/map" title="세계 지도" sub={hydrated ? `${countries.length}개국 탐험` : "나라를 골라 떠나기"}>
+          <GlobeArt />
+        </Tile>
+        <Tile href="/radio" title="음식 라디오" sub="1분 음식 이야기" action={{ icon: "play", label: "오늘의 라디오 재생", onClick: () => void startRadio({ channel: "today" }) }}>
+          <WaveArt />
+        </Tile>
+        <Tile href="/community" title="World Table" sub="함께 먹는 이야기">
+          <CenterIcon icon="users" />
+        </Tile>
+        <Tile href="/passport" title="Passport" sub={hydrated ? `${tried}개 음식 기록` : "나의 음식 여권"}>
+          <FlagBadges flags={hydrated ? recentFlags : []} />
+        </Tile>
+      </nav>
+
+      {/* 3행: 상태 스트립 (레퍼런스 Flight Zone · Wind · Altitude · GPS + Fly Now) — 홈 바로 가기도 겸한다 */}
+      <section className="panel grid grid-cols-2 gap-1 rounded-[24px] p-2 lg:flex lg:items-center lg:gap-0 lg:p-2.5" aria-label="나의 탐험 현황">
+        <Stat href={today ? `/country/${today.country_code}` : "/map"} icon="pin" label="오늘의 나라" value={today ? `${today.flag} ${today.country_name}` : "—"} />
+        <Stat href="/passport/table" icon="table" label="먹어본 음식" value={hydrated ? `${tried}개` : "—"} />
+        <Stat href="/passport#taste" icon="sparkle" label="취향 반영" value={hydrated ? `${Math.round(profile.confidence * 100)}%` : "—"} />
+        <Stat href="/settings#diet" icon="salad" label="식단 조건" value={hydrated ? (diet.length + allergens.length ? `${diet.length + allergens.length}개 반영` : "없음") : "—"} />
+        <button type="button" onClick={() => open()} className={`${btn("lime", "lg")} col-span-2 mt-1 lg:mt-0 lg:ml-2 lg:w-56 lg:shrink-0`}>
+          <Icon name="search" className="size-5" />
+          푸디에게 묻기
+        </button>
+      </section>
 
       {picks.length > 0 && (
         <Section
@@ -222,23 +169,150 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
         ) : (
           <p className="flex items-start gap-2 text-sm text-muted">
             <Icon name="mic" className="mt-px size-4 shrink-0 text-leaf" />
-            아직 탐험 기록이 없어요. 위의 마이크 버튼으로 첫 여행을 시작해 보세요.
+            아직 탐험 기록이 없어요. 위의 &lsquo;푸디에게 말하기&rsquo;로 첫 여행을 시작해 보세요.
           </p>
         )}
       </Section>
-    </main>
+      </div>
 
       <DesktopLanding
         today={today}
         ranked={ranked}
         learning={learning}
         confidence={profile.confidence}
-        dietCount={diet.length + allergens.length}
+        conditionCount={selectedGuards(diet, guards).length + allergens.length}
+        dietFiltered={diet.length + allergens.length > 0}
         recent={recent.map(([id, e]) => ({ id, slug: e.slug, flag: e.flag, name_ko: e.name_ko }))}
         eatsPhoto={eatsPhoto}
         site={site}
         preview={preview}
       />
-    </>
+    </main>
+  );
+}
+
+/** 히어로 — 오늘의 탐험 사진을 바탕으로 큰 2단 인사 + 핵심 CTA. 사진 위라 글자는 흰색, 컨트롤은 glass-dark */
+function Hero({ today, onTalk, onAsk }: { today: FoodSummary | undefined; onTalk: () => void; onAsk: () => void }) {
+  const photo = today?.image_url;
+  return (
+    <section className="forest-panel relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden rounded-[28px] p-6 lg:min-h-[25rem] lg:p-9">
+      {photo && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- 외부 음식 사진 (FoodCard 와 같은 소스) */}
+          <img src={photo} alt="" className="absolute inset-0 -z-10 size-full object-cover" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(5_8_6/0.92)_0%,rgb(5_8_6/0.7)_45%,rgb(5_8_6/0.15)_100%),linear-gradient(0deg,rgb(5_8_6/0.75)_0%,transparent_55%)]" />
+        </>
+      )}
+      <Eyebrow className="text-lime">Let&apos;s explore</Eyebrow>
+      <h1 className="mt-3 text-[2.25rem] font-bold leading-[1.08] tracking-[-0.03em] text-white lg:text-[3.25rem]">
+        <span className="block">오늘은 어디로</span>
+        <span className="block">떠나볼까요?</span>
+      </h1>
+      <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-white/75">세계 음식 문화를 목소리로 탐험하는 가장 쉬운 방법.</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={onTalk} className={btn("lime", "lg")} aria-label="푸디에게 말하기">
+          <Icon name="mic" className="size-5" />
+          푸디에게 말하기
+        </button>
+        {today && (
+          <Link href={`/food/${today.slug}`} className="glass-dark inline-flex h-14 items-center gap-2.5 rounded-full pl-2 pr-4 text-sm transition hover:bg-white/10">
+            <span className="grid size-10 place-items-center rounded-full bg-white/10 text-xl" aria-hidden>
+              {today.flag}
+            </span>
+            <span className="leading-tight">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">오늘의 탐험</span>
+              <span className="block font-semibold">{today.name_ko}</span>
+            </span>
+          </Link>
+        )}
+        <button type="button" onClick={onAsk} aria-label="푸디야, 무엇이든 물어보세요 — 글로 입력" className="glass-dark grid size-14 place-items-center rounded-full transition hover:bg-white/10">
+          <Icon name="search" className="size-5" />
+        </button>
+      </div>
+      {today?.image_credit && <ImageCredit credit={today.image_credit} link={false} className="absolute right-3 top-3" />}
+    </section>
+  );
+}
+
+/** 기능 타일 — 제목 + 초록 부제 + 그림 칸 + 오른쪽 아래 원형 화살표(또는 동작 버튼). 카드 전체가 링크 */
+function Tile({ href, title, sub, children, action }: { href: string; title: string; sub: string; children: ReactNode; action?: { icon: IconName; label: string; onClick: () => void } }) {
+  return (
+    <div className="panel group relative flex flex-col gap-3 rounded-[24px] p-3.5 transition hover:border-leaf/40 lg:p-4">
+      <div>
+        <Link href={href} className="text-[15px] font-semibold text-ink after:absolute after:inset-0 after:rounded-[24px] lg:text-base">
+          {title}
+        </Link>
+        <p className="text-caption font-medium text-leaf">{sub}</p>
+      </div>
+      <div className="relative h-24 overflow-hidden rounded-[18px] border border-line bg-[radial-gradient(80%_90%_at_50%_100%,var(--neon-fill),transparent_70%)] lg:h-32" aria-hidden>
+        {children}
+      </div>
+      {action ? (
+        <button type="button" onClick={action.onClick} aria-label={action.label} className="cta absolute bottom-5 right-5 z-10 grid size-9 place-items-center rounded-full transition active:scale-95 lg:bottom-6 lg:right-6">
+          <Icon name={action.icon} className="size-4 translate-x-px fill-current" />
+        </button>
+      ) : (
+        <span className="glass absolute bottom-5 right-5 grid size-9 place-items-center rounded-full text-ink transition group-hover:text-leaf lg:bottom-6 lg:right-6" aria-hidden>
+          <Icon name="next" className="size-4" />
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** 타일 그림: 격자 바닥 위 네온 지구 */
+function GlobeArt() {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(var(--color-line)_1px,transparent_1px),linear-gradient(90deg,var(--color-line)_1px,transparent_1px)] bg-[size:22px_22px]">
+      <Icon name="earth" className="size-14 text-leaf drop-shadow-[0_0_12px_rgb(61_245_122/0.6)] lg:size-16" strokeWidth={1.25} />
+    </div>
+  );
+}
+
+/** 타일 그림: 라디오 이퀄라이저 막대 */
+function WaveArt() {
+  return (
+    <div className="absolute inset-x-4 bottom-0 top-4 flex items-end justify-center gap-1.5">
+      {[0.35, 0.6, 0.9, 0.55, 1, 0.7, 0.45, 0.8, 0.5, 0.3].map((h, i) => (
+        <span key={i} className="w-2 rounded-t-full bg-lime/80 shadow-[0_0_10px_rgb(61_245_122/0.5)]" style={{ height: `${h * 100}%` }} />
+      ))}
+    </div>
+  );
+}
+
+function CenterIcon({ icon }: { icon: IconName }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center">
+      <span className="grid size-16 place-items-center rounded-full border border-lime/40 bg-lime-soft text-leaf shadow-[0_0_24px_-4px_rgb(61_245_122/0.6)] lg:size-20">
+        <Icon name={icon} className="size-7 lg:size-8" />
+      </span>
+    </div>
+  );
+}
+
+/** 타일 그림: 최근 탐험한 나라 국기 3개 = 배지 (없으면 빈 배지 자리) */
+function FlagBadges({ flags }: { flags: string[] }) {
+  const slots = [0, 1, 2].map((i) => flags[i]);
+  return (
+    <div className="absolute inset-0 flex items-center justify-center gap-1.5 pb-6 lg:gap-2.5 lg:pb-0">
+      {slots.map((f, i) => (
+        <span key={i} className={`grid size-10 place-items-center rounded-xl border text-xl lg:size-14 lg:rounded-2xl lg:text-2xl ${f ? "border-lime/50 bg-lime-soft shadow-[0_0_16px_-4px_rgb(61_245_122/0.6)]" : "border-dashed border-line"}`}>
+          {f ?? <Icon name="stamp" className="size-5 text-muted" />}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** 상태 스트립 한 칸 — 아이콘 + 작은 라벨 + 값 (데스크톱은 칸 사이 세로 구분선) */
+function Stat({ href, icon, label, value }: { href: string; icon: IconName; label: string; value: string }) {
+  return (
+    <Link href={href} className="flex min-h-14 min-w-0 items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-ink/5 lg:flex-1 lg:rounded-none lg:border-r lg:border-line">
+      <Icon name={icon} className="size-5 shrink-0 text-leaf" />
+      <span className="min-w-0 leading-tight">
+        <span className="block text-[12px] text-ink-soft">{label}</span>
+        <span className="block truncate text-sm font-semibold text-ink">{value}</span>
+      </span>
+    </Link>
   );
 }

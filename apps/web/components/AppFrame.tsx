@@ -1,5 +1,5 @@
 "use client";
-// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 데스크톱(lg)은 sticky 상단 알약 내비(--desk-nav) + 넓은 본문(최대 72rem) + 사이트 푸터 (docs/design/17).
+// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 데스크톱(lg)은 sticky 상단 알약 내비(--desk-nav) + 넓은 본문(최대 72rem) + 사이트 푸터 (docs/design/18).
 // 어드민·첫 진입 흐름(온보딩·로그인)은 셸 없이 — 경로로 나눈다
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";

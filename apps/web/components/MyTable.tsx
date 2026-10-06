@@ -8,7 +8,7 @@ import type { Country } from "@/lib/content/types";
 import { exploredCountries, useHydrated, useLocal, type PassportStatus } from "@/lib/client/passport";
 import { drawTableCard } from "@/lib/client/table-card";
 import { shareOrDownload } from "@/lib/client/share-card";
-import { CONTINENT_COLOR, CONTINENT_LABEL, setTable, tableLayout, toTableCountry, type TableCountry, type TableFood, type TablePlate } from "@/lib/table/my-table";
+import { CONTINENT_COLOR, CONTINENT_LABEL, MAX_PLATES, setTable, tableLayout, toTableCountry, type TableCountry, type TableFood, type TablePlate } from "@/lib/table/my-table";
 import { useFoodi } from "./FoodiSheet";
 import { ImageCredit } from "./ImageCredit";
 import { PreviewBanner } from "./bits";
@@ -50,12 +50,33 @@ const TW = 100;
 const TH = 130;
 const PAD = 6;
 
-export function MyTableView({ foods, countries, preview }: { foods: TableFood[]; countries: TableCountry[]; preview: boolean }) {
+export function MyTableView({ countries, preview }: { countries: TableCountry[]; preview: boolean }) {
   const { open } = useFoodi();
   const hydrated = useHydrated();
   const entries = useLocal((s) => s.entries);
   const nCountries = useLocal(exploredCountries).length;
-  const { plates, hidden } = useMemo(() => setTable(entries, foods, countries), [entries, foods, countries]);
+  // 사진·국가색 조회표: 식탁에 올라갈 최근 MAX_PLATES 개 기록만 서버에서 받아 온다 (id 와 slug 둘 다 — 미리보기 ↔ 실DB 로 id 가 바뀐 기록도 찾게)
+  const keys = useMemo(() => {
+    const recent = Object.entries(entries).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_PLATES);
+    return [...new Set(recent.flatMap(([id, e]) => [id, e.slug]))].sort().join(",");
+  }, [entries]);
+  const [foods, setFoods] = useState<TableFood[] | null>(null);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!keys) return setFoods([]);
+    const ctrl = new AbortController();
+    fetch(`/api/foods/table?keys=${encodeURIComponent(keys)}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? (r.json() as Promise<TableFood[]>) : []))
+      .then(setFoods)
+      .catch(() => {
+        // 조회에 실패해도 식탁은 차린다 (사진 없이 아이콘 접시)
+        if (!ctrl.signal.aborted) setFoods([]);
+      });
+    return () => ctrl.abort();
+  }, [hydrated, keys]);
+  // 기록을 읽고 조회표까지 받은 뒤에 접시를 놓는다 (사진 없는 접시가 먼저 깜빡이지 않게)
+  const ready = hydrated && foods !== null;
+  const { plates, hidden } = useMemo(() => setTable(entries, foods ?? [], countries), [entries, foods, countries]);
   const total = plates.length + hidden;
   const [selId, setSelId] = useState<string | null>(null);
   const cur = plates.find((p) => p.id === selId) ?? null;
@@ -72,7 +93,7 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
     .map((k) => ({ key: k, n: plates.filter((p) => p.continent === k).length }))
     .filter((c) => c.n);
   const counts = (["liked", "tried", "saved"] as const).map((s) => ({ s, n: plates.filter((p) => p.statuses.includes(s)).length })).filter((c) => c.n);
-  const empty = hydrated && total === 0;
+  const empty = ready && total === 0;
 
   return (
     <main className="space-y-6 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:mx-auto lg:max-w-4xl lg:pt-8">
@@ -83,7 +104,7 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
         <Eyebrow>My Table</Eyebrow>
         {/* 하이드레이션 전에는 저장된 기록을 모른다 → 빈 식탁 문구가 깜빡이지 않게 중립 문구 */}
         <h1 className="text-h1 font-bold text-balance text-ink">
-          {!hydrated ? "식탁을 차리는 중…" : empty ? "아직 빈 식탁이에요" : (
+          {!ready ? "식탁을 차리는 중…" : empty ? "아직 빈 식탁이에요" : (
             <>
               <span className="text-leaf">{nCountries}개국 · {total}개</span> 음식이 차려졌어요
             </>
@@ -92,7 +113,7 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
         <p className="text-sm text-ink-soft">{empty ? "푸디에게 물어보면 첫 접시가 놓여요." : "처음 탐험한 음식부터 차례로 놓였어요. 접시를 눌러 보세요."}</p>
       </div>
 
-      <TableTop plates={hydrated ? plates : []} ghosts={empty} selId={selId} onSelect={(id) => setSelId((s) => (s === id ? null : id))} />
+      <TableTop plates={ready ? plates : []} ghosts={empty} selId={selId} onSelect={(id) => setSelId((s) => (s === id ? null : id))} />
 
       {empty && (
         <button type="button" onClick={() => open({ listen: true })} className={`${btn("lime", "md")} w-full`}>
@@ -103,7 +124,7 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
       {cur ? (
         <PlateCard key={cur.id} p={cur} onClose={() => setSelId(null)} />
       ) : (
-        hydrated &&
+        ready &&
         total > 0 && (
           <p className="flex items-center justify-center gap-1.5 text-center text-caption text-muted">
             <Icon name="info" className="size-4 shrink-0" />
@@ -142,7 +163,7 @@ export function MyTableView({ foods, countries, preview }: { foods: TableFood[];
         </section>
       )}
 
-      {hydrated && total > 0 && <TableCardButton plates={plates} countries={nCountries} foods={total} />}
+      {ready && total > 0 && <TableCardButton plates={plates} countries={nCountries} foods={total} />}
     </main>
   );
 }

@@ -4,6 +4,7 @@ import "server-only";
 import { supabasePublic } from "@/lib/db/supabase-server";
 import { env } from "@/lib/env";
 import { previewContent } from "@/lib/preview/source";
+import { cachedContent } from "./cache";
 import { supabaseContent } from "./supabase-source";
 import type { ContentSource } from "./types";
 
@@ -27,6 +28,10 @@ export async function dataStatus(): Promise<DataStatus> {
 
 export const isLive = async () => (await dataStatus()).live;
 
+// live 소스는 프로세스 안에서 한 번만 만들고 목록 조회는 캐시한다 (lib/content/cache.ts)
+let live: ContentSource | null = null;
 export async function getContent(): Promise<ContentSource> {
-  return (await isLive()) ? supabaseContent(supabasePublic()) : previewContent;
+  if (!(await isLive())) return previewContent;
+  return (live ??= cachedContent(supabaseContent(supabasePublic())));
 }
+export { invalidateContent } from "./cache";

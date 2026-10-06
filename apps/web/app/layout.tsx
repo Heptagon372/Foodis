@@ -35,6 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         {/* 그리기 전에 테마를 정해 깜빡임이 없게 (data-theme 은 서버 HTML 에 없으므로 html 의 하이드레이션 경고는 끈다) */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
       </head>
       <body className="antialiased">

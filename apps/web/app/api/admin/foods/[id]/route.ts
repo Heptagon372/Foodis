@@ -3,6 +3,7 @@
 import { requireApi } from "@/lib/admin/auth";
 import { apiError, db, replaceDietSources, toRow } from "@/lib/admin/data";
 import { dietProblems, FoodEdit } from "@/lib/admin/rules";
+import { invalidateContent } from "@/lib/content";
 import { z } from "zod";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -16,6 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { error } = await db().from("foods").update(toRow(parsed.data, s.userId)).eq("id", id);
   if (error) return apiError(500, error.message);
   await replaceDietSources(id, parsed.data.diet_sources);
+  invalidateContent();
   return Response.json({ ok: true, verified: false });
 }
 
@@ -23,5 +25,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const s = await requireApi("admin");
   if (s instanceof Response) return s;
   const { error } = await db().from("foods").delete().eq("id", (await params).id);
-  return error ? apiError(500, error.message) : Response.json({ ok: true });
+  if (error) return apiError(500, error.message);
+  invalidateContent();
+  return Response.json({ ok: true });
 }

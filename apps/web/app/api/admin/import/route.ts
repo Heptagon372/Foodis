@@ -4,6 +4,7 @@
 import { requireApi } from "@/lib/admin/auth";
 import { apiError, db, replaceDietSources, toRow } from "@/lib/admin/data";
 import { dietProblems, parseCsv, reviewRowToEdit } from "@/lib/admin/rules";
+import { invalidateContent } from "@/lib/content";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
       { onConflict: "food_id,field,url" },
     );
   }
+  if (body.apply) invalidateContent();
   const count = (a: Item["action"]) => items.filter((i) => i.action === a).length;
   return Response.json({ applied: Boolean(body.apply), total: items.length, create: count("create"), update: count("update"), skipped: count("skip_verified"), errors: count("error"), items });
 }

@@ -92,8 +92,8 @@ function Demo() {
     });
   const resetLocal = () => {
     if (!confirm("이 기기의 탐험 기록·온보딩을 지우고 첫 방문 상태로 돌릴까요? (데모 팩은 남아요)")) return;
-    update((s) => ({ ...s, introSeen: false, onboarded: false, diet: [], allergens: [], tastes: [], entries: {} }));
-    setMsg("첫 방문 상태로 초기화했어요. 홈으로 가면 인트로부터 시작해요.");
+    update((s) => ({ ...s, onboarded: false, diet: [], allergens: [], tastes: [], entries: {} }));
+    setMsg("첫 방문 상태로 초기화했어요.");
   };
   const download = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" }));
@@ -231,10 +231,6 @@ function Demo() {
       <VoiceBench />
 
       <section className="flex flex-wrap gap-2 pb-4 text-sm">
-        <Link href="/intro" className={btn("outline", "sm")}>
-          <Icon name="replay" className="size-4" />
-          인트로 다시 보기
-        </Link>
         <button type="button" onClick={resetLocal} className={btn("outline", "sm")}>
           첫 방문 상태로 초기화
         </button>

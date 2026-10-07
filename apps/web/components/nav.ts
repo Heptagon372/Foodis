@@ -74,4 +74,4 @@ export function activeHref(path: string, items: NavItem[] = ALL): string | null 
 }
 
 /** 셸(상단 내비·푸터·탭 바)을 숨기는 화면 — 첫 진입 흐름과 어드민 */
-export const isBareRoute = (path: string) => ["/onboarding", "/intro", "/admin", "/login"].some((p) => path.startsWith(p));
+export const isBareRoute = (path: string) => ["/onboarding", "/admin", "/login"].some((p) => path.startsWith(p));

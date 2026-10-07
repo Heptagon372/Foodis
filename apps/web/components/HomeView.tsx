@@ -1,17 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { SlideFood } from "@/lib/content/slides";
 import type { FoodSummary } from "@/lib/content/types";
-import { exploredCountries, update, useHydrated, useLocal } from "@/lib/client/passport";
+import { exploredCountries, useHydrated, useLocal } from "@/lib/client/passport";
 import { impress, useTaste } from "@/lib/client/taste";
 import { selectedGuards } from "@/lib/diet/guard";
 import { buildProfile, rankFoods } from "@/lib/taste/engine";
 import { FoodCard } from "./FoodCard";
 import { FoodMarquee } from "./FoodMarquee";
 import { useFoodi } from "./FoodiSheet";
-import { Intro } from "./Intro";
 import { DesktopLanding } from "./landing/DesktopLanding";
 import type { RotationFood, SiteFacts } from "./landing/types";
 import { PreviewBanner, Section } from "./bits";
@@ -32,29 +30,10 @@ const todayIndex = (n: number) => {
   return n ? (seed * 2654435761) % n : 0;
 };
 
-// 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일 트리(lg:hidden)와 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다 (docs/design/18)
+// 홈은 컨트롤러: 계산·노출 기록은 여기 한 곳에서, 화면은 모바일 트리(lg:hidden)와 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다 (docs/design/18)
 export function HomeView({ foods, slides, continents, preview, site }: { foods: FoodSummary[]; slides: SlideFood[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
-  const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
-  // 재방문: 세션당 한 번 1초 단축 인트로 (05 문서 §2)
-  // 초기값은 읽기만 (StrictMode 가 두 번 불러도 같은 값), 기록은 마운트 뒤에
-  const [splash, setSplash] = useState(() => {
-    try {
-      return typeof window !== "undefined" && !sessionStorage.getItem("foodis:splash");
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("foodis:splash", "1");
-    } catch {
-      /* 저장소 막힘 → 매번 보여도 1초 */
-    }
-  }, []);
-  const introSeen = useLocal((s) => s.introSeen);
-  const onboarded = useLocal((s) => s.onboarded);
   const diet = useLocal((s) => s.diet);
   const tastes = useLocal((s) => s.tastes);
   const signals = useTaste((s) => s.signals);
@@ -109,17 +88,9 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
     impress(picks);
   }, [hydrated, picks]);
 
-  const finishIntro = () => {
-    update((s) => ({ ...s, introSeen: true }));
-    if (!onboarded) router.push("/onboarding");
-  };
-
   return (
-    // 문서의 main 은 하나 — 모바일·데스크톱 두 트리를 감싼다. Intro 는 fixed 대화상자라 어느 트리에도 넣지 않는다 (데스크톱에서도 보이고 introSeen 이 기록되게)
+    // 문서의 main 은 하나 — 모바일·데스크톱 두 트리를 감싼다
     <main>
-      {hydrated && !introSeen && <Intro onDone={finishIntro} />}
-      {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
-
       <div className="space-y-4 px-5 pt-[max(1rem,env(safe-area-inset-top))] lg:hidden">
       <TopBar />
 

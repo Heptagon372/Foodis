@@ -3,7 +3,6 @@
 // 뉴스레터·SNS·약관처럼 없는 것은 넣지 않는다
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useHydrated, useLocal } from "@/lib/client/passport";
 import { Wordmark } from "./bits";
 import { Icon } from "./icons";
 import { AskForm } from "./landing/parts";
@@ -16,10 +15,6 @@ const HOME_BTN =
 
 export function SiteFooter() {
   const path = usePathname();
-  const hydrated = useHydrated();
-  const introSeen = useLocal((s) => s.introSeen);
-  // 첫 방문 인트로 중에는 숨긴다 (DesktopNav 와 같은 조건)
-  if (path === "/" && hydrated && !introSeen) return null;
   // 맨 위로: 스크롤 + 키보드 포커스도 히어로 제목으로 (포커스가 바닥에 남지 않게)
   const toTop = () => {
     window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });

@@ -46,7 +46,7 @@ cp .env.example .env
 
 DB: Supabase 프로젝트 생성 → SQL Editor 에 `supabase/migrations/` 의 `0001` → `0002` → `0003` → `0004` → `0005` → `0006` → `0007` 순서로 실행 (또는 `pnpm --filter web exec supabase db push`).
 
-사용자 로그인 (선택, [docs/design/06](docs/design/06_회원_로그인_동기화_v1.md)): Supabase → Authentication → URL Configuration 의 Redirect URLs 에 `http://localhost:3000/auth/callback` (배포 주소도) 추가. 카카오·Google 은 Authentication → Providers 에서 켜면 로그인 화면에 버튼이 자동으로 나타난다 — 꺼져 있으면 이메일 로그인만 보인다.
+사용자 로그인 (선택, [docs/design/06](docs/design/06_회원_로그인_동기화_v1.md)): Supabase → Authentication → URL Configuration 의 Redirect URLs 에 `http://localhost:3000/auth/callback` (배포 주소도) 추가. 카카오·Google 은 Authentication → Providers 에서 켜면 로그인 화면에 버튼이 자동으로 나타난다 — 꺼져 있으면 이메일 로그인만 보인다. 인스타그램(프로페셔널 계정만)은 Supabase 제공자가 없어 직접 OAuth 를 돈다: `0013_social_links.sql` 실행 + `apps/web/.env.local` 에 `INSTAGRAM_APP_ID` · `INSTAGRAM_APP_SECRET` (Meta 앱, Redirect URI `/auth/instagram/callback`). 설정 → 계정의 "연결된 계정"에서 카카오·Google·인스타를 한 계정에 붙였다 뗄 수 있다 — Authentication → Sign In / Providers 의 **Allow manual linking** 을 켜야 한다 ([06 §7](docs/design/06_회원_로그인_동기화_v1.md)).
 
 ## 검증
 

@@ -2,15 +2,17 @@
 // 회원 계정 (F-AUTH-01·02). 로그인은 선택 — 안 해도 모든 기능이 브라우저 저장으로 돈다.
 // 로그인하면: 처음 1번 이 기기 기록과 계정 기록을 합치고(merge), 그 뒤엔 바뀐 것만 올린다(push).
 // 응답은 언제나 계정의 전체 상태라서, 다른 기기에서 쌓은 기록도 이때 같이 내려온다.
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { visibleEmail } from "@/lib/auth/links";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 import type { Allergen, DietKey } from "@/lib/foodi/schema";
 import { getState, subscribe as subscribeLocal, update, type LocalState, type PassportEntry, type PassportStatus } from "./passport";
 
 export const authAvailable = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-export type AccountUser = { id: string; email: string | null; name: string | null; avatar: string | null; provider: string };
+/** email 은 화면에 보여도 되는 메일만 (인스타 전용 회원의 가짜 메일은 null) · handle 은 인스타 @아이디 · provider 는 가입한 방법 */
+export type AccountUser = { id: string; email: string | null; name: string | null; handle: string | null; avatar: string | null; provider: string };
 export type Account = {
   status: "off" | "loading" | "guest" | "user";
   user: AccountUser | null;
@@ -124,8 +126,36 @@ function apply(uid: string, sent: LocalState, r: SyncResponse) {
 const toUser = (session: Session): AccountUser => {
   const u = session.user;
   const m = (u.user_metadata ?? {}) as Record<string, string | undefined>;
-  return { id: u.id, email: u.email ?? null, name: m.full_name ?? m.name ?? m.nickname ?? null, avatar: m.avatar_url ?? m.picture ?? null, provider: (u.app_metadata?.provider as string) ?? "email" };
+  // 인스타로 가입한 회원은 Supabase 상 '이메일' 가입이라 app_metadata.foodis_provider 로 구분한다 (app/auth/instagram/callback)
+  const provider = u.app_metadata?.foodis_provider === "instagram" ? "instagram" : ((u.app_metadata?.provider as string) ?? "email");
+  const handle = provider === "instagram" ? (m.user_name ?? null) : null;
+  return { id: u.id, email: visibleEmail(u.email), name: m.full_name ?? m.name ?? m.nickname ?? (handle ? `@${handle}` : null), handle, avatar: m.avatar_url ?? m.picture ?? null, provider };
 };
+
+/** 계정 연결·해제 뒤 세션을 새로 받아 이름·사진·제공자를 다시 읽는다 (같은 회원이라 onAuthStateChange 로는 갱신되지 않음) */
+export async function reloadUser() {
+  const { data } = await supabaseBrowser().auth.refreshSession();
+  if (data.session) set({ user: toUser(data.session) });
+}
+
+export type AuthProviders = Record<"kakao" | "google", boolean>;
+let providersReq: Promise<AuthProviders> | null = null;
+/** Supabase 에서 켠 OAuth 제공자 (공개 설정 /auth/v1/settings, 앱에서 1번만 묻는다). 꺼진 제공자를 누르면 Supabase 의 JSON 오류 화면으로 가 버려서 숨긴다.
+ *  확인 전 null — 버튼을 그리지 않아 깜빡임이 없다. 확인 실패면 보여 주고 오류는 콜백에서 안내 */
+export function useAuthProviders(): AuthProviders | null {
+  const [p, setP] = useState<AuthProviders | null>(null);
+  useEffect(() => {
+    if (!authAvailable) return;
+    let alive = true;
+    providersReq ??= fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! } })
+      .then((r) => r.json())
+      .then((d: { external?: Record<string, boolean> }) => ({ kakao: !!d.external?.kakao, google: !!d.external?.google }))
+      .catch(() => ({ kakao: true, google: true }));
+    void providersReq.then((v) => alive && setP(v));
+    return () => void (alive = false);
+  }, []);
+  return p;
+}
 
 let started = false;
 /** 앱 전체에서 1번 (components/AccountSync.tsx) */

@@ -3,7 +3,7 @@
 // → 왜 FOODIS(Why us) → 이렇게 물어보세요(Review 자리) → FAQ → CTA. 모양은 레퍼런스의 진한 판 + 파낸 모서리(노치) + 도킹 화살표.
 // 화면만 그린다 — 인트로·노출 기록·sessionStorage 같은 부수효과는 HomeView 한 곳에서. 숨은 트리(모바일)에서는 사진·영상을 내려받지 않는다
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SlideFood } from "@/lib/content/slides";
 import type { FoodSummary } from "@/lib/content/types";
 import { exploredCountries, useHydrated, useLocal } from "@/lib/client/passport";
@@ -25,11 +25,13 @@ import { btn, Eyebrow, IconButton, IconTile, ProgressBar } from "../ui";
 import { VoiceButton } from "../VoiceButton";
 import { ASKS, faq, MORE_FEATURES, SOURCES, WHY } from "./copy";
 import { AskForm, dockBtn, FoodTile, IntroClip, LandingHead, useCarousel } from "./parts";
-import type { SiteFacts } from "./types";
+import type { RotationFood, SiteFacts } from "./types";
 
 type Recent = { id: string; slug: string; flag: string; name_ko: string };
 type Props = {
   today: FoodSummary | undefined;
+  /** 히어로 '오늘의 탐험' 카드가 7초마다 돌아가며 보여 줄 음식들 (오늘 음식이 첫 장, 그 뒤는 취향 엔진 순). 비어 있으면 today 만 */
+  rotation: RotationFood[];
   ranked: Ranked<FoodSummary>[];
   learning: boolean;
   confidence: number;
@@ -47,12 +49,12 @@ type Props = {
 
 const ko = (n: number) => n.toLocaleString("ko-KR");
 
-export function DesktopLanding({ today, ranked, learning, confidence, conditionCount, dietFiltered, recent, eatsPhoto, slides, site, preview }: Props) {
+export function DesktopLanding({ today, rotation, ranked, learning, confidence, conditionCount, dietFiltered, recent, eatsPhoto, slides, site, preview }: Props) {
   return (
     <div data-landing className="hidden space-y-20 pb-6 pt-2 lg:block xl:space-y-24">
       {preview && <PreviewBanner />}
       <div className="space-y-8">
-        <Hero today={today} learning={learning} confidence={confidence} conditionCount={conditionCount} site={site} />
+        <Hero today={today} rotation={rotation} learning={learning} confidence={confidence} conditionCount={conditionCount} site={site} />
         <FoodMarquee foods={slides} size="lg" />
         <SourcesBand site={site} />
       </div>
@@ -68,7 +70,7 @@ export function DesktopLanding({ today, ranked, learning, confidence, conditionC
 
 /* ───────── 히어로: 진한 판 + 왼쪽 위 노치(묻기 알약) + 아래 노치(바로가기 4칸) ───────── */
 
-function Hero({ today, learning, confidence, conditionCount, site }: { today: FoodSummary | undefined; learning: boolean; confidence: number; conditionCount: number; site: SiteFacts }) {
+function Hero({ today, rotation, learning, confidence, conditionCount, site }: { today: FoodSummary | undefined; rotation: RotationFood[]; learning: boolean; confidence: number; conditionCount: number; site: SiteFacts }) {
   const { open } = useFoodi();
   const hydrated = useHydrated();
   const q = useQuest();
@@ -105,7 +107,7 @@ function Hero({ today, learning, confidence, conditionCount, site }: { today: Fo
               Different Cultures, One&nbsp;<span className="font-serif italic">Table.</span>
             </span>
           </div>
-          <p className="mt-12 max-w-[30rem] text-subtitle text-white/80">검색창 대신 말로 물어보세요. 푸디가 세계 음식 지도에서 찾은 음식 카드로 답하고, 라디오와 음식의 여정으로 다음 나라까지 이어 줘요.</p>
+          <p className="mt-12 max-w-[30rem] text-subtitle text-white/80">검색창 대신 말로 물어보세요. 푸디가 음식 카드로 답하고, 다음 나라까지 이어 줘요.</p>
           <div className="mt-8 flex items-center gap-5">
             <VoiceButton size="md" state="idle" onPress={() => open({ listen: true })} />
             <span>
@@ -132,7 +134,7 @@ function Hero({ today, learning, confidence, conditionCount, site }: { today: Fo
           <p aria-hidden className="mb-4 text-right text-[12px] tracking-[0.5em] text-white/60">
             VOICE · FOOD · CULTURE
           </p>
-          <div className="relative flex-1">{today ? <TodayCard today={today} /> : <TodayEmpty />}</div>
+          <div className="relative flex-1">{today ? <TodayCard foods={rotation.length ? rotation : [today]} /> : <TodayEmpty />}</div>
         </div>
 
         {/* 둥근 버튼 2개 (레퍼런스의 하트·북마크 자리) */}
@@ -164,16 +166,61 @@ function Hero({ today, learning, confidence, conditionCount, site }: { today: Fo
 
 const ROUND = "grid size-14 place-items-center rounded-full bg-surface text-leaf shadow-lift ring-[5px] ring-white/12 transition hover:bg-lime hover:text-on-lime";
 
-function TodayCard({ today }: { today: FoodSummary }) {
+/** 한 장 보여 주는 시간 · 흐려지며 사라지는 시간 (ms) */
+const ROTATE_MS = 7000;
+const FADE_MS = 450;
+
+/** 오늘의 탐험 카드 — foods 를 7초마다 한 장씩: 흐려지며 사라졌다가(blur + 투명) 다음 음식 사진·설명이 나타난다.
+ *  멈춤: 마우스를 올리거나 카드 안에 포커스가 있을 때(읽는 중) · 탭이 숨겨졌을 때 · prefers-reduced-motion 이면 아예 돌지 않는다 */
+function TodayCard({ foods }: { foods: RotationFood[] }) {
   const { open } = useFoodi();
+  const [i, setI] = useState(0);
+  const [hidden, setHidden] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const today = foods[i] ?? foods[0];
+  const many = foods.length > 1;
+
+  useEffect(() => {
+    if (!many || paused) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let fade: ReturnType<typeof setTimeout> | undefined;
+    const tick = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      setHidden(true);
+      fade = setTimeout(() => {
+        setI((x) => (x + 1) % foods.length);
+        setHidden(false);
+      }, FADE_MS);
+    }, ROTATE_MS);
+    return () => {
+      clearInterval(tick);
+      if (fade) clearTimeout(fade);
+    };
+  }, [many, paused, foods.length]);
+
+  // 다음 장 사진을 미리 받아 두어 바뀌는 순간 비지 않게
+  useEffect(() => {
+    if (!many) return;
+    const next = foods[(i + 1) % foods.length]?.image_url;
+    if (next) new Image().src = next;
+  }, [i, many, foods]);
+
   const guardFood = useMemo(() => ({ ...today, ingredients: today.ingredient_names }), [today]);
   const guard = useGuard(guardFood);
   const href = `/food/${today.slug}`;
   const blurb = today.summary ?? (today.fame_rank === 1 ? `${today.country_name}에서 가장 널리 알려진 음식이에요. 푸디에게 이야기를 들어 보세요.` : "푸디에게 이 음식 이야기를 물어보세요.");
+  const fade = `transition-[opacity,filter] duration-[450ms] ease-out ${hidden ? "opacity-0 blur-sm" : "opacity-100 blur-0"}`;
   return (
     <>
-      <article className="notch notch-br dock-sm card flex h-full flex-col rounded-[28px] p-2.5">
-        <TrackLink food={today} src="home_today" href={href} aria-label={`${today.name_ko} 사진 — 자세히 보기`} className="relative block h-52 shrink-0 overflow-hidden rounded-[20px] focus-visible:outline-offset-[-3px]" style={accentBg(today.accent, today.image_url)}>
+      <article
+        className="notch notch-br dock-sm card flex h-full flex-col rounded-[28px] p-2.5"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setPaused(false)}
+        aria-live="polite"
+      >
+        <TrackLink food={today} src="home_today" href={href} aria-label={`${today.name_ko} 사진 — 자세히 보기`} className={`relative block h-52 shrink-0 overflow-hidden rounded-[20px] focus-visible:outline-offset-[-3px] ${fade}`} style={accentBg(today.accent, today.image_url)}>
           <span className="glass absolute left-3 top-3 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-semibold text-ink">
             <span aria-hidden>{today.flag}</span>
             {today.country_name}
@@ -184,9 +231,22 @@ function TodayCard({ today }: { today: FoodSummary }) {
               {today.flag}
             </span>
           )}
+          {many && (
+            // 몇 장째인지 — 점만 (글자 없이). 클릭은 사진 링크라 점은 장식
+            <span aria-hidden className="glass absolute bottom-3 left-3 flex h-6 items-center gap-1 rounded-full px-2">
+              {foods.map((f, k) => (
+                <span key={f.id} className={`h-1.5 rounded-full transition-all duration-300 ${k === i ? "w-4 bg-brand" : "w-1.5 bg-ink/30"}`} />
+              ))}
+            </span>
+          )}
         </TrackLink>
-        <div className="flex flex-1 flex-col gap-2 px-3 pb-2 pr-16 pt-4">
-          <Eyebrow>오늘의 탐험{today.fame_rank === 1 ? ` · ${today.country_name}의 대표 음식` : ""}</Eyebrow>
+        <div className={`flex flex-1 flex-col gap-2 px-3 pb-2 pr-16 pt-4 ${fade}`}>
+          {/* 취향 엔진이 고른 장은 이유를 보여 준다 ("좋아하는 맛" · "아직 안 가본 대륙" …), 오늘 음식·대표 음식은 나라 이름 */}
+          <Eyebrow className={today.reason ? "flex items-center gap-1 text-leaf" : "text-leaf"}>
+            {today.reason && <Icon name="sparkle" className="size-3.5" />}
+            {i === 0 ? "오늘의 탐험" : today.reason ? `내 취향 · ${today.reason}` : "오늘의 탐험"}
+            {!today.reason && today.fame_rank === 1 ? ` · ${today.country_name}의 대표 음식` : ""}
+          </Eyebrow>
           <h2 className="text-h2 font-bold text-ink">{today.name_ko}</h2>
           <p className="line-clamp-2 text-[15px] text-ink-soft">{blurb}</p>
           {guard.hits[0] && (
@@ -382,7 +442,7 @@ function Features({ recent, eatsPhoto, site }: { recent: Recent[]; eatsPhoto: Fo
           <div className={`absolute inset-x-0 bottom-0 p-8 pr-24 ${eatsPhoto?.image_url ? "text-white" : "text-ink"}`}>
             <Eyebrow className={eatsPhoto?.image_url ? "text-lime" : "text-leaf"}>Eat nearby</Eyebrow>
             <h3 className="mt-2 text-[1.75rem] font-bold leading-tight">탐험한 음식, 근처에서 맛보기</h3>
-            <p className={`mt-2 ${eatsPhoto?.image_url ? "text-white/80" : "text-ink-soft"}`}>반경 3~10km 안에서 실제로 먹어 볼 수 있는 음식점을 찾아요. 위치는 열 때 한 번 묻고, 주변 검색에만 쓴 뒤 저장하지 않아요.</p>
+            <p className={`mt-2 ${eatsPhoto?.image_url ? "text-white/80" : "text-ink-soft"}`}>반경 3~10km 안의 음식점을 찾아요. 위치는 저장하지 않아요.</p>
           </div>
         </Tile>
       </div>
@@ -572,7 +632,7 @@ function Cta({ site }: { site: SiteFacts }) {
             <br />
             푸디에게 물어보세요
           </h2>
-          <p className="mt-5 max-w-md text-subtitle text-white/80">로그인 없이 바로 시작해요. 기록은 이 브라우저에 쌓이고, 원하면 계정으로 이어 갈 수 있어요.</p>
+          <p className="mt-5 max-w-md text-subtitle text-white/80">로그인 없이 바로 시작해요. 기록은 원하면 계정으로 이어 가요.</p>
           <div className="mt-8 flex gap-3">
             <button type="button" onClick={() => open({ listen: true })} className={btn("lime", "lg")}>
               <Icon name="mic" className="size-5" />

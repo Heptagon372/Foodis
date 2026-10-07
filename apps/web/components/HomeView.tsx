@@ -13,7 +13,7 @@ import { FoodMarquee } from "./FoodMarquee";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
 import { DesktopLanding } from "./landing/DesktopLanding";
-import type { SiteFacts } from "./landing/types";
+import type { RotationFood, SiteFacts } from "./landing/types";
 import { PreviewBanner, Section } from "./bits";
 import { startRadio } from "@/lib/client/radio";
 import { ImageCredit } from "./ImageCredit";
@@ -82,6 +82,25 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
   const ranked = rankFoods(pool, profile, continentOf, { limit: 6, exclude: new Set(today ? [today.id] : []), ignored });
   const picks = ranked.map((r) => r.food);
   const learning = profile.confidence < 0.3;
+  // 데스크톱 '오늘의 탐험' 카드 회전 (7초마다 다음 장): 오늘 음식 + 취향 엔진이 고른 음식(사진·소개 글 있는 것, 이유 포함) 최대 5장.
+  // 취향 신호가 없는 첫 방문은 엔진이 나라별 대표 음식을 주고, 하이드레이션 전엔 서버와 같은 기본 프로필이라 첫 화면이 어긋나지 않는다.
+  // 취향 후보가 모자라면 대표 음식(날짜로 고정)으로 채운다
+  const rotation = useMemo(() => {
+    if (!today) return [] as RotationFood[];
+    const out: RotationFood[] = [today];
+    const seen = new Set([today.id, eatsPhoto?.id]);
+    for (const r of ranked) {
+      if (out.length >= 6) break;
+      if (!r.food.image_url || !r.food.summary || seen.has(r.food.id)) continue;
+      seen.add(r.food.id);
+      out.push({ ...r.food, reason: learning ? undefined : r.reason || undefined });
+    }
+    const rest = photoPool.filter((f) => f.summary && !seen.has(f.id));
+    const start = rest.length ? todayIndex(rest.length) : 0;
+    for (let k = 0; out.length < 6 && k < rest.length; k++) out.push(rest[(start + k * 11) % rest.length]);
+    return out.filter((f, i, a) => a.findIndex((x) => x.id === f.id) === i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ranked·photoPool 은 foods·식이 조건·취향 프로필에서 파생 (키로 비교)
+  }, [today?.id, foods, diet, allergens, eatsPhoto?.id, learning, ranked.map((r) => r.food.id + r.reason).join()]);
   // 노출 기록 (지나친 추천을 알기 위해) — 화면에 들어올 때 한 번
   const shown = useRef(false);
   useEffect(() => {
@@ -101,13 +120,13 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
       {hydrated && !introSeen && <Intro onDone={finishIntro} />}
       {hydrated && introSeen && splash && <Intro short onDone={() => setSplash(false)} />}
 
-      <div className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:hidden">
+      <div className="space-y-4 px-5 pt-[max(1rem,env(safe-area-inset-top))] lg:hidden">
       <TopBar />
 
       {preview && <PreviewBanner />}
 
       {/* 1행: 히어로(오늘의 탐험 사진 위 큰 인사 + 핵심 CTA) | 이번 주 챌린지 — 레퍼런스 docs/design/17 */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         <Hero today={today} onTalk={() => open({ listen: true })} onAsk={() => open()} />
         {/* 첫 화면에서 바로 보이게 히어로 바로 아래 — 랜덤 음식이 옆으로 흘러간다 */}
         <FoodMarquee foods={slides} />
@@ -174,7 +193,7 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
         ) : (
           <p className="flex items-start gap-2 text-sm text-muted">
             <Icon name="mic" className="mt-px size-4 shrink-0 text-leaf" />
-            아직 탐험 기록이 없어요. 위의 &lsquo;푸디에게 말하기&rsquo;로 첫 여행을 시작해 보세요.
+            아직 기록이 없어요. 푸디에게 말을 걸어 보세요.
           </p>
         )}
       </Section>
@@ -182,6 +201,7 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
 
       <DesktopLanding
         today={today}
+        rotation={rotation}
         ranked={ranked}
         learning={learning}
         confidence={profile.confidence}
@@ -201,7 +221,7 @@ export function HomeView({ foods, slides, continents, preview, site }: { foods: 
 function Hero({ today, onTalk, onAsk }: { today: FoodSummary | undefined; onTalk: () => void; onAsk: () => void }) {
   const photo = today?.image_url;
   return (
-    <section className="forest-panel relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden rounded-[28px] px-6 pb-6 pt-14 lg:min-h-[25rem] lg:p-9">
+    <section className="forest-panel relative isolate flex min-h-[20rem] flex-col justify-end overflow-hidden rounded-[28px] px-5 pb-5 pt-12 lg:min-h-[25rem] lg:p-9">
       {photo && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- 외부 음식 사진 (FoodCard 와 같은 소스) */}
@@ -210,12 +230,12 @@ function Hero({ today, onTalk, onAsk }: { today: FoodSummary | undefined; onTalk
         </>
       )}
       <Eyebrow className="text-lime">Let&apos;s explore</Eyebrow>
-      <h1 className="mt-3 text-[2.25rem] font-bold leading-[1.08] tracking-[-0.03em] text-white lg:text-[3.25rem]">
+      <h1 className="mt-2 text-[2.125rem] font-extrabold leading-[1.06] tracking-[-0.035em] text-white lg:text-[3.25rem]">
         <span className="block">오늘은 어디로</span>
         <span className="block">떠나볼까요?</span>
       </h1>
-      <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-white/75">세계 음식 문화를 목소리로 탐험하는 가장 쉬운 방법.</p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <p className="mt-2 max-w-sm text-sm text-white/75">말 한마디로 떠나는 세계 음식 여행</p>
+      <div className="mt-5 flex flex-wrap items-center gap-2.5">
         <button type="button" onClick={onTalk} className={btn("lime", "lg")} aria-label="푸디에게 말하기">
           <Icon name="mic" className="size-5" />
           푸디에게 말하기
@@ -243,14 +263,14 @@ function Hero({ today, onTalk, onAsk }: { today: FoodSummary | undefined; onTalk
 /** 기능 타일 — 제목 + 초록 부제 + 그림 칸 + 오른쪽 아래 원형 화살표(또는 동작 버튼). 카드 전체가 링크 */
 function Tile({ href, title, sub, children, action }: { href: string; title: string; sub: string; children: ReactNode; action?: { icon: IconName; label: string; onClick: () => void } }) {
   return (
-    <div className="panel group relative flex flex-col gap-3 rounded-[24px] p-3.5 transition hover:border-leaf/40 lg:p-4">
+    <div className="panel group relative flex flex-col gap-2.5 rounded-[24px] p-3 transition hover:-translate-y-0.5 hover:border-leaf/40 hover:shadow-lift lg:p-4">
       <div>
         <Link href={href} className="text-[15px] font-semibold text-ink after:absolute after:inset-0 after:rounded-[24px] lg:text-base">
           {title}
         </Link>
         <p className="text-caption font-medium text-leaf">{sub}</p>
       </div>
-      <div className="relative h-24 overflow-hidden rounded-[18px] border border-line bg-[radial-gradient(80%_90%_at_50%_100%,var(--neon-fill),transparent_70%)] lg:h-32" aria-hidden>
+      <div className="relative h-20 overflow-hidden rounded-[18px] border border-line bg-[radial-gradient(80%_90%_at_50%_100%,var(--neon-fill),transparent_70%)] lg:h-32" aria-hidden>
         {children}
       </div>
       {action ? (

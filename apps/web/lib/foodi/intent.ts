@@ -2,6 +2,7 @@
 // 슬롯(국가·음식)은 항상 DB 목록과 대조한다: LLM 이 뽑은 이름도 DB 에 없으면 "지도에 없음"으로 처리 (04 문서 §5-3).
 import type { LLMProvider, Usage } from "@/lib/providers/types";
 import type { CountryRow, FoodName } from "./repo";
+import { tagsFromText } from "./keywords";
 import { DIET_KEYS, IntentOutput, type DietKey, type Intent } from "./schema";
 
 export type Vocab = { countries: CountryRow[]; foods: FoodName[] };
@@ -113,7 +114,8 @@ export function findUnknownPlace(text: string, vocab: Vocab): string | null {
   for (const m of normalizeAliases(text).matchAll(/(?:^|\s)([가-힣A-Za-z]{2,10})\s*(?:의\s*)?(?:음식|요리)/g)) {
     const w = m[1];
     if (PLACE_STOP.has(w) || /(는|은|이|가|을|를|도|만|로|에서|인데|한|할|된|있는|없는|먹는|좋은)$/.test(w)) continue;
-    if (CONTINENT_WORDS.some(([re]) => re.test(w)) || extractDiet(w).length) continue;
+    // 맛·재료 말("매운맛 음식", "발효 요리")은 지도 밖 이름이 아니라 취향 — Food DNA 질문이 "지도에 없어요"로 빠지지 않게
+    if (CONTINENT_WORDS.some(([re]) => re.test(w)) || extractDiet(w).length || tagsFromText(w).length) continue;
     if (findCountry(w, vocab.countries) || findFood(w, vocab.foods)) continue;
     return w;
   }

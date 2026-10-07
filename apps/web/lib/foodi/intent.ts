@@ -203,6 +203,8 @@ const AS_INGREDIENT = /^\s*(?:이|가|을|를|도)?\s*(?:들어간|들어가는|
 // 범주어 이름("만두"·"피자")을 추천·종류 질문에 쓰면 '그런 종류'. "만두 같은 음식"은 비슷한 음식 찾기라 여기 넣지 않는다
 const AS_CATEGORY = /종류|여러\s*가지|들\s*(?:추천|알려|보여)/;
 const LIKE_THIS = /비슷한|닮은|같은|비교/;
+/** 오타 교정 후보에서 빼는 말 — 질문 동사·꾸밈말·범주어 */
+const NOT_A_NAME = /추천|알려|설명|비슷|닮은|같은|음식|요리|나라|좋아|싶어|먹고|먹어|있는|없는|어떤|무슨|해줘|할래|줄래|뭐야|어디|어때|주세요|이야기|문화|기원|유래|역사|다른|세계|오늘|내일|사람|우리/;
 
 /** 규칙만으로 판단. 확신이 없으면 intent=null */
 export function ruleClassify(text: string, contextFoodId: string | undefined, vocab: Vocab): Omit<IntentResult, "via" | "usage" | "intent"> & { intent: Intent | null } {
@@ -238,6 +240,21 @@ export function ruleClassify(text: string, contextFoodId: string | undefined, vo
     if (near) {
       foodId = near.id;
       unknownTarget = null;
+    }
+  }
+  // "똠양꿍이랑 비슷한 음식"처럼 '어떤 음식이야' 꼴이 아니어도, 이름을 콕 집는 자리(…이랑 비슷한 · …은 · …을)의 낱말이면 오타 교정을 해 본다
+  if (!foodId && !countryCode && !contextFoodId && /비슷|닮은|같은|어떤|무슨|뭐야|알려|설명|기원|유래|먹어도/.test(text)) {
+    for (const m of t.matchAll(/([가-힣]{3,12}?)(?:이랑|랑|하고|과|와|은|는|이|가|을|를|의|이란|란)?(?=\s|$|[?!.,])/g)) {
+      const w = m[1];
+      if (NOT_A_NAME.test(w)) continue;
+      const q = parseQuery(w, vocab.index ?? null);
+      if (hasSlots(q) || hasSoft(q)) continue;
+      const near = fuzzyFind(w, nameIndexOf(vocab.foods));
+      if (near) {
+        foodId = near.id;
+        unknownTarget = null;
+        break;
+      }
     }
   }
   const hasTarget = Boolean(contextFoodId || foodId);

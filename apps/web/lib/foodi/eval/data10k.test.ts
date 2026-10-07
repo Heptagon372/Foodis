@@ -151,6 +151,12 @@ describe.skipIf(!hasImportData())("1만 개 실데이터 — 검색·랭킹 v2",
       expect(r.cards.length).toBeGreaterThan(0);
       expect(r.cards.map((c) => c.slug)).not.toContain("pad-thai");
     });
+    it("오타 교정은 '…이랑 비슷한' 자리에서도: 똠양꿍 → 똠 얌 꿍과 비슷한 음식", async () => {
+      const r = await run("똠양꿍이랑 비슷한 음식 알려줘");
+      expect(r.intent).toBe("compare_similar");
+      expect(r.cards.length).toBeGreaterThan(0);
+      expect(r.cards.map((c) => c.slug)).not.toContain("tom-yum-kung");
+    });
     it("'다른 나라에도' → 대상과 다른 나라만", async () => {
       const r = await run("만두 같은 음식 다른 나라에도 있어?");
       expect(r.intent).toBe("compare_similar");

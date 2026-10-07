@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mic } from "lucide-react";
-import { useHydrated, useLocal } from "@/lib/client/passport";
 import { useFoodi } from "./FoodiSheet";
 import { Icon } from "./icons";
 import { activeHref, isBareRoute, NAV_GROUPS, type NavItem } from "./nav";
@@ -19,10 +18,8 @@ const RIGHT: NavItem[] = [{ ...pick("/community"), also: ["/news"] }, { ...pick(
 export function TabBar() {
   const path = usePathname();
   const { open } = useFoodi();
-  const hydrated = useHydrated();
-  const introSeen = useLocal((s) => s.introSeen);
-  // 인트로가 떠 있는 동안(첫 방문 홈)·온보딩·로그인에서는 숨긴다
-  if (isBareRoute(path) || (path === "/" && hydrated && !introSeen)) return null;
+  // 온보딩·로그인에서는 숨긴다
+  if (isBareRoute(path)) return null;
   const active = activeHref(path, [...LEFT, ...RIGHT]);
   const tab = (it: NavItem) => {
     const on = active === it.href;

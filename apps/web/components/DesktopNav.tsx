@@ -17,11 +17,8 @@ export function DesktopNav() {
   const path = usePathname();
   const { open } = useFoodi();
   const hydrated = useHydrated();
-  const introSeen = useLocal((s) => s.introSeen);
   const countries = useLocal(exploredCountries);
   const q = useQuest();
-  // 첫 방문 인트로가 덮고 있을 땐 숨긴다 (TabBar 와 같은 조건 — 키보드 포커스가 덮인 링크로 가지 않게)
-  if (path === "/" && hydrated && !introSeen) return null;
   const active = activeHref(path);
   // 메뉴 옆 작은 숫자 — 하이드레이션 뒤에만
   const badge: Record<string, ReactNode> = hydrated

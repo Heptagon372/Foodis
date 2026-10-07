@@ -29,7 +29,7 @@ async function main() {
   const clubs = await pick("/api/community/clubs", (j) => ((j as { clubs?: { id: string }[] }).clubs ?? (j as { id: string }[]))?.[0]?.id);
 
   const pages: Check[] = [
-    "/", "/intro", "/map", "/eats", "/news", "/radio", "/quests", "/passport", "/passport/table", "/settings", "/onboarding", "/login", "/demo",
+    "/", "/map", "/eats", "/news", "/radio", "/quests", "/passport", "/passport/table", "/settings", "/onboarding", "/login", "/demo",
     "/community", "/community/write", "/community/clubs/new",
     "/food/kimchi", "/food/sushi", "/food/tom-yum-kung", "/food/cozonac", "/food/pad-thai", "/food/injera",
     "/country/KR", "/country/TH", "/country/QA", "/country/WS", "/country/ZZ",

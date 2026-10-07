@@ -10,7 +10,6 @@ export type PassportStatus = "explored" | "tried" | "liked" | "saved";
 export type PassportEntry = { slug: string; name_ko: string; flag: string; cc: string; tags: string[]; statuses: PassportStatus[]; at: number };
 export type LocalState = {
   v: 1;
-  introSeen: boolean;
   onboarded: boolean;
   diet: DietKey[];
   /** 식단 카테고리 중 추천 필터(diet)에 없는 것 — 종교·채식 단계·다이어트·건강 (lib/diet/guard). 이 기기에만 저장 */
@@ -21,7 +20,7 @@ export type LocalState = {
 };
 
 const KEY = "foodis:v1";
-const INITIAL: LocalState = { v: 1, introSeen: false, onboarded: false, diet: [], guards: [], allergens: [], tastes: [], entries: {} };
+const INITIAL: LocalState = { v: 1, onboarded: false, diet: [], guards: [], allergens: [], tastes: [], entries: {} };
 
 let state: LocalState = INITIAL;
 let loaded = false;

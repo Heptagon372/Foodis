@@ -103,11 +103,8 @@ function DisplaySettings() {
           ))}
         </div>
       </SettingCard>
-      <SettingCard icon="replay" title="처음 화면" desc="인트로와 취향 고르기를 다시 볼 수 있어요. 탐험 기록은 그대로예요.">
+      <SettingCard icon="replay" title="처음 화면" desc="취향 고르기를 다시 볼 수 있어요. 탐험 기록은 그대로예요.">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => (update((s) => ({ ...s, introSeen: false })), router.push("/"))} className={btn("outline", "sm")}>
-            인트로 다시 보기
-          </button>
           <button type="button" onClick={() => router.push("/onboarding")} className={btn("outline", "sm")}>
             취향 다시 고르기
           </button>

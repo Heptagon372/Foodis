@@ -7,7 +7,7 @@ import { sentences } from "@/lib/radio/script";
 import { Icon } from "./icons";
 import { IconButton } from "./ui";
 
-const HIDDEN = ["/radio", "/admin", "/login", "/onboarding", "/intro"];
+const HIDDEN = ["/radio", "/admin", "/login", "/onboarding"];
 
 export function useRadioMiniVisible() {
   const r = useRadio();

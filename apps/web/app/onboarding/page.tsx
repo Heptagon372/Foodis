@@ -36,7 +36,7 @@ function OnboardingForm() {
   const flip = <T,>(list: T[], v: T, max = 99) => (list.includes(v) ? list.filter((x) => x !== v) : list.length < max ? [...list, v] : list);
 
   const finish = (save: boolean) => {
-    update((s) => ({ ...s, introSeen: true, onboarded: true, ...(save ? { diet, guards, tastes, allergens } : {}) }));
+    update((s) => ({ ...s, onboarded: true, ...(save ? { diet, guards, tastes, allergens } : {}) }));
     router.push("/");
   };
 

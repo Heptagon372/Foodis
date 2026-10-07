@@ -88,7 +88,7 @@ export async function audioCount(pack: DemoPack): Promise<number> {
 /** 데모에서 열 화면(HTML)과 그 화면이 쓰는 JS·CSS 를 미리 받아 둔다 → 서비스 워커가 오프라인에서 꺼내 준다 */
 export async function precachePages(pack: DemoPack, onProgress: (done: number, total: number) => void): Promise<number> {
   const countries = new Set(pack.items.flatMap((i) => i.response.cards.map((c) => c.country.code)));
-  const urls = ["/", "/passport", "/intro", "/onboarding", ...pack.food_slugs.map((s) => `/food/${s}`), ...[...countries].map((c) => `/country/${c}`)];
+  const urls = ["/", "/passport", "/onboarding", ...pack.food_slugs.map((s) => `/food/${s}`), ...[...countries].map((c) => `/country/${c}`)];
   const cache = await caches.open(PAGES_CACHE);
   const assets = new Set<string>();
   let ok = 0;

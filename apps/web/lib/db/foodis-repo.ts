@@ -30,6 +30,10 @@ const INDEX_TTL_MS = 10 * 60_000;
 let indexCache: { at: number; rows: IndexedFood[] } | null = null;
 let indexLoading: Promise<IndexedFood[]> | null = null;
 let countryCache: { at: number; rows: CountryRow[] } | null = null;
+/** 오늘 사용액 집계 캐시 (UTC 날짜 기준 — api_usage.created_at 과 같은 기준) */
+let usageCache: { at: number; day: string; value: number } | null = null;
+const USAGE_TTL_MS = 60_000;
+const todayKey = () => new Date().toISOString().slice(0, 10);
 /** match_foods_v2(0016) 가 DB 에 있나 — 모르면 null (첫 호출에서 확인) */
 let hasV2: boolean | null = null;
 /** 임베딩이 공개 음식의 몇 %에 있나 (10분 캐시). 일부만 있으면 의미 신호를 끈다 — 임베딩이 있는 8%만 점수를 받아 순위가 그쪽으로 쏠리기 때문 */
@@ -281,6 +285,8 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
         usages.map((u) => ({ provider: u.provider, operation: u.operation, units: u.units, unit_type: u.unitType, cost_usd: u.costUsd, conversation_id: conversationId })),
       );
       if (error) throw error;
+      // 방금 쓴 비용을 집계 캐시에 더해 둔다 — 다음 질문이 DB 를 다시 읽지 않아도 예산을 맞게 본다
+      if (usageCache && usageCache.day === todayKey()) usageCache.value += usages.reduce((a, u) => a + (u.costUsd ?? 0), 0);
     },
 
     async markExplored(userId, foodIds) {
@@ -292,11 +298,20 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
     },
 
     async usageTodayUsd() {
-      const since = new Date();
-      since.setUTCHours(0, 0, 0, 0);
-      const { data, error } = await db.from("api_usage").select("cost_usd").gte("created_at", since.toISOString());
-      if (error) throw error;
-      return data.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
+      // 질문마다 오늘 기록 전체를 읽고 있었다 — PostgREST 는 1,000행에서 자르므로 하루 1,000건이 넘으면 예산을 실제보다 작게 봤다.
+      // → 쪽으로 다 읽고 60초 캐시 (recordUsage 가 그 사이 비용을 더한다)
+      const day = todayKey();
+      if (usageCache && usageCache.day === day && Date.now() - usageCache.at < USAGE_TTL_MS) return usageCache.value;
+      const since = `${day}T00:00:00.000Z`;
+      let value = 0;
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await db.from("api_usage").select("cost_usd").gte("created_at", since).order("id").range(from, from + 999);
+        if (error) throw error;
+        value += data.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
+        if (data.length < 1000) break;
+      }
+      usageCache = { at: Date.now(), day, value };
+      return value;
     },
 
     async cacheGet<T>(key: string) {

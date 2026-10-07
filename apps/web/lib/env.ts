@@ -43,8 +43,9 @@ export const env = {
   // ── STT (registry/stt.ts)
   sttModel: str("STT_MODEL", "gpt-transcribe")!,
   // 서버 STT 체인 (10 문서 §3): 쉼표로 1순위부터. 키 없는 엔진은 건너뛰고, 실패하면 다음 엔진으로
-  sttChainKo: str("STT_KO", "elevenlabs,clova,gemini,openai")!, // 한국어(사투리 포함)
-  sttChainMulti: str("STT_MULTI", "elevenlabs,gemini,openai")!, // 언어 자동 감지(외국어)
+  // 기본은 Gemini 먼저 (2026-10-07: 듣기·말하기 모두 Gemini 로 통일 — 키 하나, 표준어 정리까지 한 번에)
+  sttChainKo: str("STT_KO", "gemini,elevenlabs,clova,openai")!, // 한국어(사투리 포함)
+  sttChainMulti: str("STT_MULTI", "gemini,elevenlabs,openai")!, // 언어 자동 감지(외국어)
   sttElevenlabsKey: str("ELEVENLABS_API_KEY"),
   sttElevenlabsModel: str("STT_ELEVENLABS_MODEL", "scribe_v2")!,
   sttClovaSecret: str("CLOVA_SPEECH_SECRET"), // CLOVA Speech 도메인 Secret Key
@@ -56,7 +57,7 @@ export const env = {
 
   // ── TTS (registry/tts.ts · 목소리 카탈로그 lib/voice/catalog.ts · design/11 문서)
   // 기본 체인의 1순위. 사용자가 목소리를 고르면 그 제공자가 먼저, 실패하면 이 순서로
-  ttsProvider: str("TTS_PROVIDER", "google") as "google" | "openai" | "gemini" | "elevenlabs" | "clova",
+  ttsProvider: str("TTS_PROVIDER", "gemini") as "google" | "openai" | "gemini" | "elevenlabs" | "clova",
   googleTtsCredentials: str("GOOGLE_TTS_CREDENTIALS_JSON"),
   googleTtsVoice: str("GOOGLE_TTS_VOICE", "ko-KR-Wavenet-A")!, // P3 에서 Chirp 3 HD 한국어 확인 후 교체
   openaiTtsVoice: str("OPENAI_TTS_VOICE", "coral")!,

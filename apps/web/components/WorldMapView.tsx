@@ -280,7 +280,8 @@ export function WorldMapView({
 
       {/* 지도 + 나라 패널: 넓은 화면은 패널이 지도 위 왼쪽에 겹쳐 뜨고(확대는 그 오른쪽 칸으로), 좁은 화면은 지도 바로 아래 */}
       <div className="relative">
-      <figure className="wm-sea relative overflow-hidden rounded-[28px] border border-line shadow-soft [perspective:1100px]" style={{ aspectRatio: map.aspect }}>
+      {/* PC: 지도가 한 화면 안에 다 들어오게 높이를 화면에 맞춘다 (넘치면 휠이 지도 확대에 걸려 페이지가 안 내려간다). 남는 폭은 바다로 채워진다 */}
+      <figure className="wm-sea relative overflow-hidden rounded-[28px] border border-line shadow-soft [perspective:1100px] lg:max-h-[max(26rem,calc(100dvh_-_var(--desk-nav)_-_15rem))] lg:w-full" style={{ aspectRatio: map.aspect }}>
         {/* 판을 살짝 눕혀 3D 로. 눕히면 위쪽이 좁아지니 조금 키워 모서리를 채운다 */}
         <div className="size-full [transform:rotateX(16deg)_scale(1.1)] [transform-origin:50%_62%]">
           <svg
@@ -389,7 +390,7 @@ export function WorldMapView({
               ["전체 보기", Maximize2, () => (setSelected(null), setNav((v) => ({ view: "all", n: v.n + 1 })))],
             ] as const
           ).map(([name, Glyph, act]) => (
-            <button key={name} type="button" aria-label={name} onClick={act} className="glass grid size-9 place-items-center rounded-full text-ink transition active:scale-95">
+            <button key={name} type="button" aria-label={name} onClick={act} className="glass grid size-10 place-items-center rounded-full text-ink transition active:scale-95">
               <Glyph className="size-4" strokeWidth={2.25} />
             </button>
           ))}

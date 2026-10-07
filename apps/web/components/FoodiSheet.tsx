@@ -20,6 +20,7 @@ import { btn, IconButton, IconTile, ProgressBar } from "./ui";
 import { VoiceButton, type VoiceState } from "./VoiceButton";
 import { InAppNotice, MicHelp } from "./MicHelp";
 import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
+import { ScrollRow } from "./ScrollRow";
 import { noteFeature } from "@/lib/client/taste";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
@@ -352,7 +353,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
           <p className="text-subtitle font-medium text-ink">{t.res.speech}</p>
           {t.res.passport && <PassportCard p={t.res.passport} />}
           {t.res.cards.length > 0 && (
-            <div className="snap-row -mx-5 px-5">
+            <ScrollRow label="추천" className="snap-row -mx-5 px-5">
               {t.res.cards.map((c) => (
                 <div key={c.food_id} className="w-[82%]" onClickCapture={(e) => void ((e.target as HTMLElement).closest("a") && track("rec_accept", { food_id: c.food_id, via: "open" }))}>
                   <FoodCard
@@ -376,7 +377,7 @@ function TurnView({ t, onEdit, onFollowUp, onKnown }: { t: Turn; onEdit: () => v
                   />
                 </div>
               ))}
-            </div>
+            </ScrollRow>
           )}
           <div className="flex flex-wrap gap-2">
             {t.res.follow_ups.map((f) => (

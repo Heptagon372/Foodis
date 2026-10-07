@@ -53,7 +53,8 @@ export function RadioView({ channels, preview, startFood }: Props) {
         </button>
       )}
 
-      <div className="snap-row -mx-5 px-5 pb-2" role="group" aria-label="채널">
+      {/* 폰: 밀어서 넘기는 줄 / 태블릿·PC: 3칸 격자 — 넓은 화면에서 채널이 잘려 보이지 않게 */}
+      <div className="snap-row -mx-5 px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0" role="group" aria-label="채널">
         {channels.map((c) => {
           const on = activeChannel === c.id && !r.channel?.includes(":");
           return (
@@ -63,7 +64,7 @@ export function RadioView({ channels, preview, startFood }: Props) {
               onClick={() => void startRadio({ channel: c.id })}
               disabled={!c.ready}
               aria-pressed={on}
-              className={`relative flex w-36 shrink-0 snap-start flex-col items-start gap-5 rounded-3xl border p-4 text-left transition active:scale-[0.98] disabled:opacity-50 ${
+              className={`relative flex w-36 shrink-0 snap-start flex-col md:w-auto items-start gap-5 rounded-3xl border p-4 text-left transition active:scale-[0.98] disabled:opacity-50 ${
                 on ? "border-brand bg-brand text-on-brand shadow-brand" : "glass text-ink"
               }`}
             >

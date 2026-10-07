@@ -1,6 +1,6 @@
 "use client";
 // 데스크톱 랜딩·푸터 공용 부품 (docs/design/18): 묻기 알약 · 도킹 화살표 · 섹션 머리 · 캐러셀 · 인트로 영상 칸 · 음식 사진 타일
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { accentBg } from "../FoodCard";
 import { useFoodi } from "../FoodiSheet";
@@ -81,23 +81,8 @@ export function LandingHead({ id, eyebrow, title, desc, aside, tone = "light" }:
   );
 }
 
-/** 가로 캐러셀 (레퍼런스 3의 화살표 띠): 화살표로 한 화면의 80%씩, 끝에 닿으면 화살표를 끈다 */
-export function useCarousel<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [edge, setEdge] = useState({ atStart: true, atEnd: false });
-  const measure = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    setEdge({ atStart: el.scrollLeft <= 4, atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
-  }, []);
-  useEffect(() => {
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [measure]);
-  const by = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: reduced() ? "auto" : "smooth" });
-  return { ref, onScroll: measure, prev: () => by(-1), next: () => by(1), ...edge };
-}
+/** 가로 캐러셀 (레퍼런스 3의 화살표 띠) — 앱 공용 가로 줄(ScrollRow)과 같은 훅 */
+export { useCarousel } from "../ScrollRow";
 
 const CLIP = "/intro/foodis-intro.mp4";
 

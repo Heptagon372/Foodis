@@ -1,0 +1,7 @@
+// Windows 는 국기 이모지 글꼴이 없어 🇰🇷 가 "KR" 글자로 보인다 → 국기가 디자인의 중심인 앱이라 필수.
+// 국기를 지원하지 않는 브라우저에서만 Twemoji 국기 글꼴(자체 호스팅, 국기 코드 포인트만)을 연결한다.
+// 예전엔 하이드레이션 뒤(useEffect)에 연결해 첫 화면에 "KR" 이 잠깐 보였다 → <head> 에서 그리기 전에 판별하고 글꼴을 미리 받는다 (layout.tsx).
+// 판별 방법은 country-flag-emoji-polyfill(MIT)과 같다: 웃는 얼굴은 색으로 그려지는데 국기(🇨🇭)는 안 그려지면 지원 안 함
+export const FLAG_FONT = "/fonts/TwemojiCountryFlags.woff2";
+
+export const FLAG_SCRIPT = `(function(){try{var F='"Twemoji Mozilla","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji","EmojiOne Color","Android Emoji",sans-serif';var c=document.createElement("canvas");c.width=c.height=1;var x=c.getContext("2d",{willReadFrequently:true});if(!x)return;x.textBaseline="top";x.font="100px "+F;x.scale(.01,.01);var px=function(t,col){x.clearRect(0,0,100,100);x.fillStyle=col;x.fillText(t,0,0);return x.getImageData(0,0,1,1).data.join(",")};var ok=function(t){var w=px(t,"#fff"),b=px(t,"#000");return b===w&&b.indexOf("0,0,0,")!==0};if(!ok("\\uD83D\\uDE0A")||ok("\\uD83C\\uDDE8\\uD83C\\uDDED"))return;var l=document.createElement("link");l.rel="preload";l.as="font";l.type="font/woff2";l.crossOrigin="anonymous";l.href="${FLAG_FONT}";document.head.appendChild(l);var s=document.createElement("style");s.textContent='@font-face{font-family:"Twemoji Country Flags";unicode-range:U+1F1E6-1F1FF,U+1F3F4,U+E0062-E0063,U+E0065,U+E0067,U+E006C,U+E006E,U+E0073-E0074,U+E0077,U+E007F;src:url("${FLAG_FONT}") format("woff2");font-display:block}';document.head.appendChild(s)}catch(e){}})()`;

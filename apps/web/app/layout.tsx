@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { AccountSync } from "@/components/AccountSync";
 import { AppFrame } from "@/components/AppFrame";
-import { FlagPolyfill } from "@/components/FlagPolyfill";
 import { FoodiProvider } from "@/components/FoodiSheet";
 import { QuestToast } from "@/components/QuestToast";
 import { RadioMini } from "@/components/RadioMini";
 import { SWRegister } from "@/components/SWRegister";
 import { TabBar } from "@/components/TabBar";
 import { Tracker } from "@/components/Tracker";
+import { FLAG_SCRIPT } from "@/lib/client/flags";
 import { THEME_COLOR, THEME_SCRIPT } from "@/lib/client/theme";
 import "./globals.css";
 
@@ -35,11 +35,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         {/* 그리기 전에 테마를 정해 깜빡임이 없게 (data-theme 은 서버 HTML 에 없으므로 html 의 하이드레이션 경고는 끈다) */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* 국기 이모지가 없는 브라우저(Windows)만 국기 글꼴을 그리기 전에 연결 — 첫 화면에 "KR" 글자가 비치지 않게 (lib/client/flags.ts) */}
+        <script dangerouslySetInnerHTML={{ __html: FLAG_SCRIPT }} />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
       </head>
       <body className="antialiased">
-        <FlagPolyfill />
         <SWRegister />
         <AccountSync />
         <Tracker />

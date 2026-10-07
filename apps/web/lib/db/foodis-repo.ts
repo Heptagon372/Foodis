@@ -1,8 +1,6 @@
 // FoodisRepo 의 Supabase 구현. 컬럼·RPC 는 supabase/migrations/0001_init.sql 기준.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import FAME from "@/lib/content/fame.json";
-import POPULARITY from "@/lib/content/popularity.json";
 import { avoidTerms, canonAllergens } from "@/lib/diet/allergens";
 import { checkDiet } from "@/lib/diet/consistency";
 import type { IndexedFood, IngRole } from "@/lib/foodi/food-index";
@@ -10,8 +8,6 @@ import { fameScore } from "@/lib/foodi/names";
 import { emptyDiet, type CountryRow, type FoodisRepo, type FoodRow, type UserContext, type VectorParams } from "@/lib/foodi/repo";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 
-const fame = FAME as Record<string, number>;
-const popularity = POPULARITY as Record<string, number>;
 
 const FOOD_SELECT =
   "id, slug, name_ko, name_en, country_code, origin_note, summary, history, culture_story, region_in_country, cooking_method, course_type, taste_tags, image_url, image_credit, allergens, diet_note, " +
@@ -19,7 +15,8 @@ const FOOD_SELECT =
   "countries(name_ko, flag_emoji, accent_color), sources(title, url), food_ingredients(role, ingredients(name_ko))";
 
 const INDEX_SELECT =
-  "id, slug, name_ko, name_en, name_local, country_code, taste_tags, cooking_method, course_type, allergens, image_url, " +
+  // fame_rank · popularity: 나라 안 순위 · 세계 유명도(위키 언어판 수) — 0014 컬럼, pnpm db:fame 이 채운다
+  "id, slug, name_ko, name_en, name_local, country_code, taste_tags, cooking_method, course_type, allergens, image_url, fame_rank, popularity, " +
   "diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, food_ingredients(role, ingredients(name_ko))";
 
 const dietOf = (r: Record<string, unknown>) => Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`] as DietLevel])) as Record<DietKey, DietLevel>;
@@ -33,7 +30,7 @@ const INDEX_TTL_MS = 10 * 60_000;
 let indexCache: { at: number; rows: IndexedFood[] } | null = null;
 let indexLoading: Promise<IndexedFood[]> | null = null;
 let countryCache: { at: number; rows: CountryRow[] } | null = null;
-/** match_foods_v2(0012) 가 DB 에 있나 — 모르면 null (첫 호출에서 확인) */
+/** match_foods_v2(0016) 가 DB 에 있나 — 모르면 null (첫 호출에서 확인) */
 let hasV2: boolean | null = null;
 /** 임베딩이 공개 음식의 몇 %에 있나 (10분 캐시). 일부만 있으면 의미 신호를 끈다 — 임베딩이 있는 8%만 점수를 받아 순위가 그쪽으로 쏠리기 때문 */
 let coverageCache: { at: number; value: number } | null = null;
@@ -89,8 +86,8 @@ async function loadIndex(db: SupabaseClient): Promise<IndexedFood[]> {
     diet: dietOf(r),
     allergens: canonAllergens(r.allergens as string[]),
     ingredients: ingredientsOf(r).map((x) => ({ name: x.ingredients!.name_ko, role: (ROLE_ORDER[x.role] !== undefined ? x.role : "sub") as IngRole })),
-    fame_rank: fame[r.slug as string] ?? null,
-    links: popularity[r.slug as string] ?? null,
+    fame_rank: (r.fame_rank as number | null) ?? null,
+    links: (r.popularity as number | null) ?? null,
     has_image: Boolean(r.image_url),
     has_story: hasStory.has(r.id as string),
     has_history: hasHistory.has(r.id as string),
@@ -141,7 +138,7 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
       country_filter: p.countryCode,
       match_count: p.count,
     };
-    // v2(0012): 거리순 + LIMIT → HNSW 인덱스. 아직 SQL 을 실행하지 않은 DB 면 v1 로 (한 번 없다고 확인하면 그 뒤로는 바로 v1)
+    // v2(0016): 거리순 + LIMIT → HNSW 인덱스. 아직 SQL 을 실행하지 않은 DB 면 v1 로 (한 번 없다고 확인하면 그 뒤로는 바로 v1)
     if (hasV2 !== false) {
       const { data, error } = await db.rpc("match_foods_v2", filters);
       if (!error) {

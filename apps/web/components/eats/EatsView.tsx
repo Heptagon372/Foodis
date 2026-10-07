@@ -10,6 +10,7 @@ import type { PlacesSetup } from "@/lib/places/server";
 import type { NearbyResponse, RankedPlace } from "@/lib/places/types";
 import { Icon } from "../icons";
 import { PlaceCard } from "../taste/PlaceCard";
+import { ScrollRow } from "../ScrollRow";
 import { TopBar } from "../TopBar";
 import { Eyebrow } from "../ui";
 
@@ -43,21 +44,23 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
   const needle = q.trim().toLowerCase();
   // 서버 검색: 화면이 받은 목록은 나라별 대표 음식뿐이라, 검색어가 있으면 전체 음식에서 더 찾아 뒤에 붙인다 (로컬 결과는 즉시, 서버 결과는 잠시 뒤)
   const [remote, setRemote] = useState<{ q: string; foods: ExploreFood[] } | null>(null);
+  // 지금 검색어 — 늦게 도착한 지난 검색어의 응답은 버린다. 요청 자체는 끊지 않는다: cleanup 에서 abort 하면
+  // 개발 모드의 Fast Refresh(처음 API 라우트를 컴파일할 때도 일어난다)가 effect 를 다시 돌릴 때 진행 중이던 검색이 사라져 "맞는 음식이 없어요"가 떴다
+  const latest = useRef(needle);
+  latest.current = needle;
   useEffect(() => {
     if (!needle) return;
-    const ctrl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/foods/explore?q=${encodeURIComponent(needle)}`, { signal: ctrl.signal })
+      fetch(`/api/foods/explore?q=${encodeURIComponent(needle)}`)
         .then((r) => (r.ok ? (r.json() as Promise<ExploreFood[]>) : []))
-        .then((list) => setRemote({ q: needle, foods: list }))
+        .then((list) => {
+          if (latest.current === needle) setRemote({ q: needle, foods: list });
+        })
         .catch(() => {
           /* 서버 검색 실패 → 로컬 결과만 */
         });
     }, 150);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
+    return () => clearTimeout(t);
   }, [needle]);
   const matches = useMemo(() => {
     const byCat = (f: ExploreFood) => cat === "all" || f.cats.includes(cat);
@@ -298,21 +301,21 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
           />
           <kbd className="hidden rounded-md border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted sm:block">Enter</kbd>
         </form>
-        <div className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 [scrollbar-width:none]" role="group" aria-label="음식 분류">
+        <ScrollRow label="분류" className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 [scrollbar-width:none]" role="group" aria-label="음식 분류">
           {FOOD_CATS.map(([k, name]) => (
             <button
               key={k}
               type="button"
               aria-pressed={cat === k}
               onClick={() => setCat(k)}
-              className={`h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition ${cat === k ? "bg-brand text-white shadow-[0_6px_18px_-6px_#2b8645]" : "border border-line bg-surface text-ink-soft hover:text-ink"}`}
+              className={`h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition ${cat === k ? "bg-brand text-white shadow-[0_6px_18px_-6px_#2b8645]" : "border border-line bg-surface text-ink-soft hover:text-ink"}`}
             >
               {name}
             </button>
           ))}
-        </div>
+        </ScrollRow>
         {matches.length ? (
-          <ul className="snap-row -mx-3.5 px-3.5 pb-1" aria-label="음식">
+          <ScrollRow as="ul" label="음식" className="snap-row -mx-3.5 px-3.5 pb-1" aria-label="음식">
             {matches.slice(0, 40).map((f) => {
               const on = food?.slug === f.slug;
               return (
@@ -334,7 +337,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                 </li>
               );
             })}
-          </ul>
+          </ScrollRow>
         ) : (
           <p className="px-1 py-3 text-sm text-muted">맞는 음식이 없어요. 다른 이름이나 분류로 찾아보세요.</p>
         )}
@@ -475,7 +478,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                 </p>
               )}
               {places.length > 0 && (
-                <ul className="snap-row gap-2! pb-1" aria-label="찾은 음식점">
+                <ScrollRow as="ul" label="음식점" className="snap-row gap-2! pb-1" aria-label="찾은 음식점">
                   {places.map((p, i) => {
                     const on = p.id === selected;
                     const s = stats[p.id];
@@ -511,7 +514,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
                       </li>
                     );
                   })}
-                </ul>
+                </ScrollRow>
               )}
             </div>
           )}

@@ -1,12 +1,14 @@
 // 음식 미디어 적재: apps/web/lib/preview/media.json → Supabase (food_photos · food_youtube).
 // 사용:
+//   pnpm db:media [-- --dry-run]   (= node --env-file=apps/web/.env.local tools/load-food-media.mjs)
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node tools/load-food-media.mjs [--dry-run]
+// 전제: 0010_food_media.sql 실행 (food_photos · food_youtube 테이블).
 // 전제: s08_load.py 로 foods 가 이미 올라가 있고 slug 가 media.json 키와 같아야 한다.
 // 재실행 안전 (upsert). 음식마다 사진 전부 삭제 후 재적재해서 순서(rank)도 맞춘다.
 import { readFileSync } from "node:fs";
 
 const DRY = process.argv.includes("--dry-run");
-const SUPA_URL = process.env.SUPABASE_URL?.replace(/\/$/, "");
+const SUPA_URL = (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)?.replace(/\/$/, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!DRY && (!SUPA_URL || !KEY)) {
   console.error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 가 필요합니다 (또는 --dry-run).");
@@ -26,7 +28,9 @@ async function rest(path, { method = "GET", body, prefer, params } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!r.ok) throw new Error(`${method} ${path} ${r.status} ${await r.text()}`);
-  return r.status === 204 ? null : r.json();
+  // return=minimal 쓰기(201)는 본문이 비어 있다
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
 }
 
 async function chunked(rows, n, fn) {
@@ -41,14 +45,9 @@ async function main() {
   const slugToId = new Map();
   if (!DRY) {
     for (let from = 0; ; from += 1000) {
-      const page = await rest("foods", { params: { select: "id,slug", order: "slug" }, prefer: `count=exact` });
-      // Range 헤더 안 쓰고도 1회에 1000. 더 많으면 offset 으로.
+      const page = await rest("foods", { params: { select: "id,slug", order: "slug", offset: String(from), limit: "1000" } });
       page.forEach((r) => slugToId.set(r.slug, r.id));
       if (page.length < 1000) break;
-      // 간단히 offset 재조회
-      const more = await rest("foods", { params: { select: "id,slug", order: "slug", offset: String(from + 1000), limit: "1000" } });
-      more.forEach((r) => slugToId.set(r.slug, r.id));
-      if (more.length < 1000) break;
     }
     console.log(`[media] foods 매핑 ${slugToId.size}개`);
   }

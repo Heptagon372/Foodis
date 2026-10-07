@@ -2,8 +2,9 @@
 // 실서비스와 같은 데이터로 검색·랭킹을 검증한다 (data10k.test.ts · scripts/eval-retrieval-10k.ts). 임베딩은 없다(의미 신호 꺼짐).
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import FAME from "@/lib/content/fame.json";
-import POPULARITY from "@/lib/content/popularity.json";
+// 순위·세계 유명도 스냅샷 { slug: [나라 안 순위, 위키 언어판 수] } — 운영 DB 는 foods.fame_rank·popularity(0014, pnpm db:fame).
+// 테스트는 네트워크 없이 돌아야 해서 2026-10-07 값(DB 에 적재한 것과 같은 원본)을 테스트 옆에 둔다. 앱 번들에는 들어가지 않는다
+import SNAPSHOT from "./fame-snapshot.json";
 import { fameScore } from "../names";
 import { canonAllergens } from "@/lib/diet/allergens";
 import { checkDiet } from "@/lib/diet/consistency";
@@ -32,7 +33,7 @@ export type ImportData = { raws: Raw[]; rows: IndexedFood[]; countries: (Country
 let cached: ImportData | undefined;
 export function loadImport(): ImportData {
   if (cached) return cached;
-  const fame = FAME as Record<string, number>;
+  const fame = SNAPSHOT as unknown as Record<string, [number, number | null]>;
   const raws = readFileSync(IMPORT_FILE, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l) as Raw);
   const csv = readFileSync(COUNTRIES_FILE, "utf8").split(/\r?\n/).filter(Boolean);
   const cols = csv[0].split(",");
@@ -43,7 +44,7 @@ export function loadImport(): ImportData {
     tags: r.taste_tags ?? [], method: r.cooking_method ?? null, course: r.course_type ?? null,
     diet: Object.fromEntries(DIET_KEYS.map((k) => [k, r.diet[k] ?? "unknown"])) as Record<DietKey, DietLevel>,
     allergens: canonAllergens(r.allergens), ingredients: (r.ingredients ?? []).map((x) => ({ name: x.name_ko, role: x.role as IngRole })),
-    fame_rank: fame[r.slug] ?? null, links: (POPULARITY as Record<string, number>)[r.slug] ?? null, has_image: Boolean(r.image_url), has_story: Boolean(r.culture_story), has_history: Boolean(r.history),
+    fame_rank: fame[r.slug]?.[0] ?? null, links: fame[r.slug]?.[1] ?? null, has_image: Boolean(r.image_url), has_story: Boolean(r.culture_story), has_history: Boolean(r.history),
   }));
   cached = { raws, rows, countries, idOf };
   return cached;

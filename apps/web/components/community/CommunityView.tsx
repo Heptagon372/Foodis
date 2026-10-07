@@ -20,6 +20,7 @@ import { BuddyTab } from "./buddy/BuddyTab";
 import { ClubDirectory } from "./ClubDirectory";
 import { LoginPrompt } from "./parts";
 import { PostCard } from "./PostCard";
+import { ScrollRow } from "../ScrollRow";
 
 type Tab = "board" | "buddy" | "clubs";
 const TABS: Tab[] = ["board", "buddy", "clubs"];
@@ -144,7 +145,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
       ) : (
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8">
           <div className="space-y-4">
-            <div className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="게시판 고르기">
+            <ScrollRow label="게시판" className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="게시판 고르기">
               <button type="button" className={chip(filter === "all")} onClick={() => pick("all")} aria-pressed={filter === "all"}>
                 전체
               </button>
@@ -162,7 +163,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
                   </button>
                 );
               })}
-            </div>
+            </ScrollRow>
 
             {isCategory(filter) && (
               <p className="flex items-center gap-2 text-caption text-muted">

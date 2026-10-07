@@ -1,18 +1,34 @@
-// 콘텐츠 목록 서버 캐시. 음식 10,000여 개(약 8MB)를 홈·지도·맛집탐방·라디오·커뮤니티가 요청마다 다시 받아 오지 않게
+// 콘텐츠 목록 서버 캐시. 홈·지도·맛집탐방·라디오가 같은 목록(나라별 대표 음식 · 나라별 음식 수 · 이름 사전)을 요청마다 DB 에 다시 묻지 않게
 // 한 프로세스 안에서 5분간 재사용한다. 같은 순간 들어온 요청은 진행 중인 Promise 를 함께 기다린다(중복 조회 없음).
-// 어드민이 음식·나라를 고치면 invalidateContent() 로 즉시 비운다.
+// 5분이 지나면 지난 값을 바로 돌려주고 뒤에서 한 번만 새로 받는다(stale-while-revalidate) — 5분마다 첫 방문자가 10초씩 기다리지 않게.
+// 어드민이 음식·나라를 고치면 invalidateContent() 로 즉시 비운다 (다음 요청은 새 값을 기다린다).
 import "server-only";
 import { invalidateFoodIndex } from "@/lib/db/foodis-repo";
 import type { ContentSource } from "./types";
 
 const TTL_MS = 5 * 60_000;
 
-type Entry = { at: number; value: Promise<unknown> };
+type Entry = { at: number; value: Promise<unknown>; refreshing?: boolean };
 const store = new Map<string, Entry>();
 
 function memo<T>(key: string, load: () => Promise<T>): Promise<T> {
   const hit = store.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.value as Promise<T>;
+  if (hit) {
+    if (Date.now() - hit.at >= TTL_MS && !hit.refreshing) {
+      hit.refreshing = true;
+      const next = load();
+      // 새 값이 오면 갈아 끼운다. 그사이 invalidateContent() 로 비워졌으면 끼우지 않는다. 실패하면 지난 값을 계속 쓰고 다음 요청이 다시 시도
+      next.then(
+        () => {
+          if (store.get(key) === hit) store.set(key, { at: Date.now(), value: next });
+        },
+        () => {
+          hit.refreshing = false;
+        },
+      );
+    }
+    return hit.value as Promise<T>;
+  }
   const value = load();
   store.set(key, { at: Date.now(), value });
   // 실패한 조회는 캐시에 남기지 않는다 (다음 요청이 다시 시도)
@@ -22,13 +38,15 @@ function memo<T>(key: string, load: () => Promise<T>): Promise<T> {
   return value;
 }
 
-/** 목록 조회(listFoods · listCountries · countFoods)만 캐시한다. 단건 조회는 그대로 통과 */
+/** 화면마다 같은 값을 쓰는 목록만 캐시한다. 검색·키 조회·단건 조회는 그대로 통과 (API 응답의 Cache-Control 이 맡는다) */
 export function cachedContent(src: ContentSource): ContentSource {
   return {
     ...src,
-    listFoods: () => memo("foods", () => src.listFoods()),
     listCountries: () => memo("countries", () => src.listCountries()),
     countFoods: () => memo("count", () => src.countFoods()),
+    countryFoodCounts: () => memo("country-counts", () => src.countryFoodCounts()),
+    topFoods: (o) => memo(`top:${o.perCountry}:${o.continent ?? ""}`, () => src.topFoods(o)),
+    foodNames: () => memo("names", () => src.foodNames()),
   };
 }
 

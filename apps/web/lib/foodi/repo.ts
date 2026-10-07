@@ -32,7 +32,7 @@ export type FoodRow = {
 
 export type CountryRow = { code: string; name_ko: string; name_en: string; continent_group: string };
 /** country_code: 사진 인식 후보 목록에 나라를 함께 보여주려고 (F-VIS-01). 테스트 가짜 데이터는 생략 가능 */
-/** links: 위키 언어판 수 (세계적 유명도, apps/web/lib/content/popularity.json) */
+/** links: 위키 언어판 수 (세계적 유명도 — DB foods.popularity, 0014) */
 export type FoodName = { id: string; name_ko: string; name_en: string; name_local?: string | null; country_code?: string; fame_rank?: number | null; links?: number | null };
 
 export type UserContext = {

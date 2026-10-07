@@ -19,8 +19,6 @@ async function main() {
   const { ALLERGEN_KEYS, canonAllergens } = await import("@/lib/diet/allergens");
   const { checkDiet } = await import("@/lib/diet/consistency");
   const { DIET_KEYS } = await import("@/lib/foodi/schema");
-  const FAME = (await import("@/lib/content/fame.json")).default as Record<string, number>;
-  const POP = (await import("@/lib/content/popularity.json")).default as Record<string, number>;
 
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
   const all = async (table: string, select: string, order: string): Promise<Row[]> => {
@@ -34,7 +32,7 @@ async function main() {
   };
 
   const [foods, countries, sources, rels, emb] = await Promise.all([
-    all("foods", `id, slug, name_ko, name_en, country_code, verified, summary, history, culture_story, image_url, cooking_method, course_type, taste_tags, allergens, ${DIET_KEYS.map((k) => `diet_${k}`).join(", ")}, food_ingredients(role, ingredients(name_ko))`, "id"),
+    all("foods", `id, slug, name_ko, name_en, country_code, verified, fame_rank, popularity, summary, history, culture_story, image_url, cooking_method, course_type, taste_tags, allergens, ${DIET_KEYS.map((k) => `diet_${k}`).join(", ")}, food_ingredients(role, ingredients(name_ko))`, "id"),
     all("countries", "code, name_ko", "code"),
     all("sources", "food_id", "id"),
     all("food_relations", "from_food_id, to_food_id", "id"),
@@ -76,13 +74,13 @@ async function main() {
   for (const f of pub) for (const a of canonAllergens(f.allergens as string[])) if (!(ALLERGEN_KEYS as string[]).includes(a)) raw.set(a, (raw.get(a) ?? 0) + 1);
   log(`표준 키로 못 바꾼 알레르기 표기: ${raw.size ? [...raw].map(([a, n]) => `${a}×${n}`).join(", ") : "없음"}`);
   const korean = pub.filter((f) => ((f.allergens as string[]) ?? []).some((a) => /[가-힣]/.test(a))).length;
-  log(`  DB 에 한국어 알레르기 표기가 남은 음식: ${pct(korean)} (0011_allergen_keys.sql 실행 전이면 정상)`);
+  log(`  DB 에 한국어 알레르기 표기가 남은 음식: ${pct(korean)} (0015_allergen_keys.sql 실행 전이면 정상)`);
 
   const withSrc = new Set(sources.map((s) => s.food_id as string));
   log(`출처 없는 공개 음식: ${pct(pub.filter((f) => !withSrc.has(f.id as string)).length)}`);
   const pubIds = new Set(pub.map((f) => f.id as string));
   log(`관계 ${rels.length} · 비공개 음식을 가리키는 것 ${rels.filter((r) => !pubIds.has(r.to_food_id as string) || !pubIds.has(r.from_food_id as string)).length}`);
-  log(`나라 안 유명도(fame.json) 커버: ${pct(pub.filter((f) => FAME[f.slug as string]).length)} · 세계 유명도(popularity.json): ${pct(pub.filter((f) => POP[f.slug as string] != null).length)}`);
+  log(`나라 안 유명도(foods.fame_rank) 채움: ${pct(pub.filter((f) => f.fame_rank != null).length)} · 세계 유명도(foods.popularity): ${pct(pub.filter((f) => f.popularity != null).length)} — 비면 pnpm db:fame`);
   const models = new Map<string, number>();
   for (const e of emb) models.set(e.model as string, (models.get(e.model as string) ?? 0) + 1);
   log(`임베딩 ${emb.length}${models.size ? ` (${[...models].map(([m, n]) => `${m} ${n}`).join(", ")})` : ""} · 공개 음식 중 없는 것 ${pct(pub.filter((f) => !emb.some((e) => e.food_id === f.id)).length)}`);

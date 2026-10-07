@@ -10,7 +10,6 @@ export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("keys") ?? "";
   const keys = new Set(raw.split(",").filter((k) => KEY.test(k)).slice(0, MAX_PLATES * 2));
   if (!keys.size) return NextResponse.json([]);
-  const foods = await (await getContent()).listFoods();
-  const hit = foods.filter((f) => keys.has(f.id) || keys.has(f.slug)).map(toTableFood);
+  const hit = (await (await getContent()).foodsByKeys([...keys])).map(toTableFood);
   return NextResponse.json(hit, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
 }

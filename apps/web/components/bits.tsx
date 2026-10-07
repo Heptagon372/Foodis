@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { FoodSummary } from "@/lib/content/types";
 import { FoodCard } from "./FoodCard";
 import { Icon } from "./icons";
+import { ScrollRow } from "./ScrollRow";
 
 export function FollowUpChip({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
@@ -46,11 +47,11 @@ export function RelationRow({ label, note, foods }: { label: string; note?: stri
         <p className="text-sm font-semibold text-ink">{label}</p>
         {note && <p className="text-caption text-muted">{note}</p>}
       </div>
-      <div className="snap-row -mx-5 px-5 pb-1">
+      <ScrollRow label="음식" className="snap-row -mx-5 px-5 pb-1">
         {foods.map((f) => (
           <FoodCard key={f.id} food={f} size="S" />
         ))}
-      </div>
+      </ScrollRow>
     </div>
   );
 }

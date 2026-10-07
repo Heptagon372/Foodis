@@ -1,4 +1,4 @@
--- 0012 의미 검색 v2 (docs/design/19 §5 · docs/design/20 최적화). 여러 번 실행해도 안전.
+-- 0016 의미 검색 v2 (docs/design/19 §5 · docs/design/20 최적화). 여러 번 실행해도 안전.
 -- match_foods(v1)는 '0.55·유사도 + 0.30·취향 + 가산'으로 정렬해서 HNSW 인덱스(food_embeddings_hnsw)를 못 탄다 → 1만 개를 매번 전부 훑는다.
 -- 앱(lib/foodi/rank.ts)이 점수를 따로 계산하므로 DB 는 '가까운 순 후보'만 주면 된다 → 거리순 정렬 + LIMIT 으로 인덱스를 탄다.
 -- 앱은 이 함수가 있으면 쓰고, 없으면 v1 을 순수 유사도 순으로 쓴다 (lib/db/foodis-repo.ts) — 실행 전·후 모두 동작한다.

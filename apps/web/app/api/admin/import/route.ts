@@ -19,9 +19,14 @@ export async function POST(req: Request) {
   if (!rows.length) return apiError(400, "읽을 수 있는 행이 없어요");
   if (rows.length > 500) return apiError(413, "한 번에 500행까지");
 
-  const { data: existing, error } = await db().from("foods").select("id, slug, verified");
+  // 이 CSV 에 든 slug 만 조회한다 — 전체를 select 하면 1,000행 상한에 걸려 1만 개 중 일부만 보고, 검수 완료 음식을 '새 음식'으로 덮어쓴다
+  const slugs = [...new Set(rows.map((r) => reviewRowToEdit(r).slug))];
+  const found = await Promise.all(
+    Array.from({ length: Math.ceil(slugs.length / 150) }, (_, i) => db().from("foods").select("id, slug, verified").in("slug", slugs.slice(i * 150, i * 150 + 150))),
+  );
+  const error = found.find((r) => r.error)?.error;
   if (error) return apiError(500, error.message);
-  const bySlug = new Map(existing.map((f) => [f.slug as string, f]));
+  const bySlug = new Map(found.flatMap((r) => r.data ?? []).map((f) => [f.slug as string, f]));
   const { data: countries } = await db().from("countries").select("code");
   const known = new Set((countries ?? []).map((c) => c.code as string));
 

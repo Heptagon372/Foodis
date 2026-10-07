@@ -8,6 +8,11 @@ export const env = {
   supabaseAnonKey: str("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   supabaseServiceKey: str("SUPABASE_SERVICE_ROLE_KEY"),
 
+  // ── 인스타그램 로그인 (lib/auth/instagram.ts · docs/design/06 §7). Meta 개발자 앱 → Instagram → "Instagram 로그인으로 API 설정"의 앱 ID·시크릿
+  // 둘 다 있어야 로그인 화면·계정 연결에 인스타 버튼이 보인다. 시크릿은 서버 전용
+  instagramAppId: str("INSTAGRAM_APP_ID"),
+  instagramAppSecret: str("INSTAGRAM_APP_SECRET"),
+
   // ── LLM (lib/providers/registry/llm.ts · docs/design/09_AI_제공자_구성_v2.md)
   // 시도 순서. 키 없는 제공자는 건너뛰고, 장애(429·5xx·시간 초과·키 오류)면 다음 제공자로. anthropic 은 넣을 때만 쓴다
   llmProviders: (str("LLM_PROVIDERS", "gemini,openai")!).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),

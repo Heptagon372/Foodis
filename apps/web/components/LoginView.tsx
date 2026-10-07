@@ -1,12 +1,15 @@
 "use client";
-// 로그인 (F-AUTH-01): 카카오 · Google (Supabase OAuth) + 이메일 코드. 게스트 기록은 로그인 직후 계정과 합쳐진다 (F-AUTH-02)
+// 로그인 (F-AUTH-01): 카카오 · Google (Supabase OAuth) · 인스타그램 (직접 OAuth, app/auth/instagram) + 이메일 코드. 게스트 기록은 로그인 직후 계정과 합쳐진다 (F-AUTH-02)
+// 모바일은 화면 전체, PC(sm 이상)는 가운데 카드 한 장
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { authAvailable, useAccount } from "@/lib/client/account";
+import { authErrorText, safeNext } from "@/lib/auth/links";
+import { authAvailable, useAccount, useAuthProviders } from "@/lib/client/account";
 import { exploredCountries, useLocal } from "@/lib/client/passport";
 import { supabaseBrowser } from "@/lib/db/supabase-browser";
 import { Wordmark } from "./bits";
+import { GoogleGlyph, InstagramGlyph, INSTAGRAM_GRADIENT, KakaoGlyph } from "./BrandIcons";
 import { Icon } from "./icons";
 import { btn } from "./ui";
 
@@ -17,16 +20,19 @@ const NOTE = "flex items-start gap-2 rounded-2xl border border-diet-warn/25 bg-d
 
 type Provider = "kakao" | "google";
 
-export function LoginView({ live }: { live: boolean }) {
+/** instagram: 서버에 인스타 앱 ID·시크릿이 있는지 (값은 넘기지 않는다) */
+export function LoginView({ live, instagram }: { live: boolean; instagram: boolean }) {
   return (
     <Suspense>
-      <Login live={live} />
+      <Login live={live} instagram={instagram} />
     </Suspense>
   );
 }
 
-/** Supabase 원문 오류 → 사용자 말 */
+/** Supabase 원문 오류 · 인스타 콜백 오류 코드 → 사용자 말 */
 function friendly(msg: string, provider?: Provider): string {
+  const known = authErrorText(msg);
+  if (known) return known;
   if (/provider is not enabled|Unsupported provider/i.test(msg))
     return `${provider === "kakao" ? "카카오" : provider === "google" ? "Google" : "이"} 로그인은 아직 준비 중이에요. 이메일로 로그인해 주세요.`;
   if (/rate limit|too many/i.test(msg))
@@ -37,20 +43,17 @@ function friendly(msg: string, provider?: Provider): string {
   return `로그인하지 못했어요: ${msg}`;
 }
 
-function Login({ live }: { live: boolean }) {
+function Login({ live, instagram }: { live: boolean; instagram: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
-  const next =
-    params.get("next")?.startsWith("/") && !params.get("next")?.startsWith("//")
-      ? params.get("next")!
-      : "/passport";
+  const next = safeNext(params.get("next"));
   const acct = useAccount();
   const countries = useLocal(exploredCountries).length;
   const foods = useLocal((s) => Object.keys(s.entries).length);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"start" | "code">("start");
-  const [busy, setBusy] = useState<Provider | "email" | "code" | null>(null);
+  const [busy, setBusy] = useState<Provider | "instagram" | "email" | "code" | null>(null);
   const [msg, setMsg] = useState<{
     tone: "info" | "error";
     text: string;
@@ -61,26 +64,18 @@ function Login({ live }: { live: boolean }) {
   );
 
   // Supabase 에서 켠 로그인 방식만 버튼으로 — 꺼진 제공자를 누르면 Supabase 오류 화면(JSON)으로 가 버린다
-  const [providers, setProviders] = useState<Record<Provider, boolean> | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!authAvailable) return;
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
-      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
-    })
-      .then((r) => r.json())
-      .then((d: { external?: Record<string, boolean> }) =>
-        setProviders({
-          kakao: !!d.external?.kakao,
-          google: !!d.external?.google,
-        }),
-      )
-      .catch(() => setProviders({ kakao: true, google: true })); // 확인 실패 시 보여 주고, 오류는 콜백에서 안내
-  }, []);
+  const providers = useAuthProviders();
   const social = (["kakao", "google"] as const).filter(
     (p) => providers?.[p] ?? false,
   );
+  // 카카오·Google 확인이 끝난 뒤 함께 그린다 — 먼저 그리면 위에 버튼이 끼어들며 아래로 밀린다
+  const withInstagram = authAvailable && instagram && providers !== null;
+  // 제공자 화면에서 '뒤로'로 돌아오면(bfcache) "이동 중…" 이 남지 않게
+  useEffect(() => {
+    const reset = (e: PageTransitionEvent) => e.persisted && setBusy(null);
+    addEventListener("pageshow", reset);
+    return () => removeEventListener("pageshow", reset);
+  }, []);
 
   const callback = () =>
     `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
@@ -97,6 +92,12 @@ function Login({ live }: { live: boolean }) {
       setBusy(null);
       setMsg({ tone: "error", text: friendly(error.message, provider) });
     }
+  };
+  // 인스타그램은 Supabase 제공자가 아니라 우리 서버 라우트가 OAuth 를 돈다
+  const instagramLogin = () => {
+    setBusy("instagram");
+    setMsg(null);
+    location.assign(`/auth/instagram?mode=login&next=${encodeURIComponent(next)}`);
   };
   const sendCode = async () => {
     setBusy("email");
@@ -125,10 +126,22 @@ function Login({ live }: { live: boolean }) {
     router.replace(next);
   };
 
+  const notice = msg && (
+    <p
+      role={msg.tone === "error" ? "alert" : "status"}
+      className={`flex items-start gap-2 rounded-2xl px-3.5 py-2.5 text-sm ${msg.tone === "error" ? "border border-diet-no/25 bg-diet-no/10 text-diet-no" : "bg-lime-soft text-ink"}`}
+    >
+      <Icon name={msg.tone === "error" ? "warn" : "check-circle"} className={`mt-0.5 size-4 shrink-0 ${msg.tone === "error" ? "" : "text-leaf"}`} />
+      {msg.text}
+    </p>
+  );
+
   if (acct.status === "user") {
     return (
       <Shell>
-        <div className="card flex flex-col items-center gap-3 rounded-[28px] p-6 text-center">
+        {/* 로그인한 채로 온 오류(예: 인스타 연결 요청 만료)도 보이게 */}
+        {notice}
+        <div className="flex flex-col items-center gap-3 rounded-[28px] text-center max-sm:card max-sm:p-6">
           <span className="grid size-14 place-items-center rounded-[18px] bg-lime-soft text-leaf" aria-hidden>
             <Icon name="check-circle" className="size-6" />
           </span>
@@ -194,7 +207,7 @@ function Login({ live }: { live: boolean }) {
               // 카카오 공식 표기(노랑 #FEE500 + 검정 85%)는 브랜드 가이드라 테마와 무관하게 고정
               className="relative flex h-12 w-full items-center justify-center rounded-full bg-[#FEE500] font-semibold text-black/85 transition active:scale-[0.99] disabled:opacity-50"
             >
-              <KakaoIcon />
+              <KakaoGlyph className="absolute left-5 size-5" />
               {busy === "kakao" ? "카카오로 이동 중…" : "카카오로 시작하기"}
             </button>
           )}
@@ -206,11 +219,29 @@ function Login({ live }: { live: boolean }) {
               // Google 공식 라이트 버튼(흰 바탕 + #1F1F1F 글자) — 다크 테마에서도 브랜드 가이드의 라이트 표기를 쓴다
               className="relative flex h-12 w-full items-center justify-center rounded-full border border-[#747775] bg-white font-semibold text-[#1f1f1f] transition active:scale-[0.99] disabled:opacity-50"
             >
-              <GoogleIcon />
+              <GoogleGlyph className="absolute left-5 size-5" />
               {busy === "google" ? "Google 로 이동 중…" : "Google 로 시작하기"}
             </button>
           )}
-          {social.length > 0 && (
+          {withInstagram && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                disabled={!!busy}
+                onClick={instagramLogin}
+                // 인스타그램 브랜드 그라데이션 + 흰 글자 — 카카오·Google 과 같은 높이·모양의 알약
+                className={`relative flex h-12 w-full items-center justify-center rounded-full ${INSTAGRAM_GRADIENT} font-semibold text-white transition active:scale-[0.99] disabled:opacity-50`}
+              >
+                <InstagramGlyph className="absolute left-5 size-5" />
+                {busy === "instagram" ? "인스타그램으로 이동 중…" : "인스타그램으로 시작하기"}
+              </button>
+              {/* Meta 정책: 인스타그램 API 로그인은 프로페셔널 계정만 (개인 계정은 동의 화면에서 막힌다) */}
+              <p className="px-2 text-center text-caption text-muted">
+                인스타그램은 프로페셔널(비즈니스·크리에이터) 계정만 로그인할 수 있어요
+              </p>
+            </div>
+          )}
+          {(social.length > 0 || withInstagram) && (
             <div className="flex items-center gap-3 py-1 text-caption text-muted">
               <span className="h-px flex-1 bg-line" />
               또는 이메일
@@ -262,27 +293,19 @@ function Login({ live }: { live: boolean }) {
           <button
             type="button"
             onClick={() => (setStep("start"), setCode(""), setMsg(null))}
-            className={`${btn("ghost", "sm")} w-full`}
+            className={`${btn("ghost")} w-full`}
           >
             이메일 다시 입력
           </button>
         </form>
       )}
 
-      {msg && (
-        <p
-          role={msg.tone === "error" ? "alert" : "status"}
-          className={`flex items-start gap-2 rounded-2xl px-3.5 py-2.5 text-sm ${msg.tone === "error" ? "border border-diet-no/25 bg-diet-no/10 text-diet-no" : "bg-lime-soft text-ink"}`}
-        >
-          <Icon name={msg.tone === "error" ? "warn" : "check-circle"} className={`mt-0.5 size-4 shrink-0 ${msg.tone === "error" ? "" : "text-leaf"}`} />
-          {msg.text}
-        </p>
-      )}
+      {notice}
 
       <div className="space-y-3 pt-2 text-center">
         <Link
           href={next}
-          className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-leaf underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-leaf underline-offset-4 hover:underline"
         >
           로그인 없이 계속 둘러보기
           <Icon name="next" className="size-4" />
@@ -297,49 +320,17 @@ function Login({ live }: { live: boolean }) {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  // 모바일: 화면 전체 / PC(sm↑): 가운데 카드 한 장 (바깥 틀은 AppFrame 의 bare 경로 — max-w-md, lg 에서 max-w-lg)
   return (
-    <main className="flex min-h-dvh flex-col gap-6 px-6 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between">
-        <Wordmark />
-      </header>
-      <div className="flex flex-1 flex-col justify-center gap-6">
-        {children}
+    <main className="flex min-h-dvh flex-col px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))] sm:justify-center sm:px-0 sm:py-12">
+      <div className="flex flex-1 flex-col gap-6 sm:card sm:flex-none sm:rounded-[32px] sm:p-8">
+        <header className="flex items-center justify-between">
+          <Wordmark />
+        </header>
+        <div className="flex flex-1 flex-col justify-center gap-6">
+          {children}
+        </div>
       </div>
     </main>
-  );
-}
-
-function KakaoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="absolute left-5 size-5" aria-hidden>
-      <path
-        fill="#000"
-        d="M12 3.5c-5.25 0-9.5 3.3-9.5 7.36 0 2.62 1.75 4.92 4.4 6.22-.15.52-.94 3.3-.97 3.52 0 0-.02.16.09.22.1.06.23.01.23.01.3-.04 3.48-2.28 4.03-2.67.56.08 1.13.12 1.72.12 5.25 0 9.5-3.3 9.5-7.4S17.25 3.5 12 3.5Z"
-        opacity=".9"
-      />
-    </svg>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="absolute left-5 size-5" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.94l3.66-2.84Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.96 10.96 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38Z"
-      />
-    </svg>
   );
 }

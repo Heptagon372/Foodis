@@ -17,6 +17,7 @@ import { startRadio } from "@/lib/client/radio";
 import { ImageCredit } from "./ImageCredit";
 import { QuestChallengeCard } from "./QuestBoard";
 import { TopBar } from "./TopBar";
+import { ScrollRow } from "./ScrollRow";
 import { Icon, type IconName } from "./icons";
 import { btn, Eyebrow } from "./ui";
 
@@ -148,11 +149,11 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
             </Link>
           }
         >
-          <div className="snap-row -mx-5 px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:*:w-full xl:grid-cols-6">
+          <ScrollRow label="추천" className="snap-row -mx-5 px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:*:w-full xl:grid-cols-6">
             {ranked.map((r) => (
               <FoodCard key={r.food.id} food={r.food} size="M" reason={r.reason} src="home_rec" />
             ))}
-          </div>
+          </ScrollRow>
         </Section>
       )}
 
@@ -195,7 +196,7 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
 function Hero({ today, onTalk, onAsk }: { today: FoodSummary | undefined; onTalk: () => void; onAsk: () => void }) {
   const photo = today?.image_url;
   return (
-    <section className="forest-panel relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden rounded-[28px] p-6 lg:min-h-[25rem] lg:p-9">
+    <section className="forest-panel relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden rounded-[28px] px-6 pb-6 pt-14 lg:min-h-[25rem] lg:p-9">
       {photo && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- 외부 음식 사진 (FoodCard 와 같은 소스) */}
@@ -248,11 +249,11 @@ function Tile({ href, title, sub, children, action }: { href: string; title: str
         {children}
       </div>
       {action ? (
-        <button type="button" onClick={action.onClick} aria-label={action.label} className="cta absolute bottom-5 right-5 z-10 grid size-9 place-items-center rounded-full transition active:scale-95 lg:bottom-6 lg:right-6">
+        <button type="button" onClick={action.onClick} aria-label={action.label} className="cta absolute bottom-5 right-5 z-10 grid size-10 place-items-center rounded-full transition active:scale-95 lg:bottom-6 lg:right-6">
           <Icon name={action.icon} className="size-4 translate-x-px fill-current" />
         </button>
       ) : (
-        <span className="glass absolute bottom-5 right-5 grid size-9 place-items-center rounded-full text-ink transition group-hover:text-leaf lg:bottom-6 lg:right-6" aria-hidden>
+        <span className="glass absolute bottom-5 right-5 grid size-10 place-items-center rounded-full text-ink transition group-hover:text-leaf lg:bottom-6 lg:right-6" aria-hidden>
           <Icon name="next" className="size-4" />
         </span>
       )}

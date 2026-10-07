@@ -446,8 +446,8 @@ body {
   to { opacity: 1; transform: none; filter: none; }
 }
 .hud-up { animation: hud-up 320ms cubic-bezier(0.2, 0.9, 0.25, 1) both; }
-/* 반경 슬라이더 */
-.hud-range { appearance: none; height: 4px; border-radius: 999px; background: linear-gradient(90deg, #2b8645 var(--p, 0%), rgb(43 134 69 / 0.15) var(--p, 0%)); }
+/* 반경 슬라이더 — 보이는 막대는 4px, 손가락이 잡는 높이는 24px (위아래 10px 는 투명 여백) */
+.hud-range { appearance: none; height: 24px; padding-block: 10px; cursor: pointer; border-radius: 999px; background: linear-gradient(90deg, #2b8645 var(--p, 0%), rgb(43 134 69 / 0.15) var(--p, 0%)); background-clip: content-box; }
 .hud-range::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #2b8645; box-shadow: 0 2px 8px rgb(43 134 69 / 0.4); cursor: pointer; }
 .hud-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #2b8645; box-shadow: 0 2px 8px rgb(43 134 69 / 0.4); cursor: pointer; }
 }

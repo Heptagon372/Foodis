@@ -17,12 +17,19 @@ export async function dataStatus(): Promise<DataStatus> {
   if (!hasSupabaseKeys()) return { live: false, reason: "Supabase 키 없음" };
   if (status && Date.now() - status.at < 60_000) return status.value;
   const { count, error } = await supabasePublic().from("foods").select("id", { count: "exact" }).limit(1);
+  // 한 번 live 였는데 확인 요청만 잠깐 실패(네트워크 끊김·시간 초과)하면 live 를 유지하고 10초 뒤 다시 본다 —
+  // 순간 오류 한 번에 1분 동안 실제 사용자에게 미리보기 샘플이 보이지 않게. 테이블 없음(PGRST205)은 진짜 상태라 그대로
+  if (error && status?.value.live && error.code !== "PGRST205") {
+    status = { at: Date.now() - 50_000, value: status.value };
+    return status.value;
+  }
   const value: DataStatus = error
     ? { live: false, reason: error.code === "PGRST205" ? "DB 테이블 없음 (마이그레이션 필요)" : `DB 오류: ${error.message}` }
     : count
       ? { live: true, reason: `검수된 음식 ${count}개` }
       : { live: false, reason: "DB 연결됨 · 검수된 음식 0개" };
-  status = { at: Date.now(), value };
+  // 오류(서버 막 켜진 직후의 첫 연결 실패 등)는 1분이 아니라 5초만 기억한다 — 곧바로 다시 확인해 live 로 돌아오게
+  status = { at: error ? Date.now() - 55_000 : Date.now(), value };
   return value;
 }
 

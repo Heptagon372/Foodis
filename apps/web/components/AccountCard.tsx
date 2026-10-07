@@ -1,9 +1,10 @@
 "use client";
-// Passport 의 계정 영역 (F-AUTH-01·02): 게스트 → 로그인 권유, 회원 → 동기화 상태 · 로그아웃 · 탈퇴
+// Passport 의 계정 영역 (F-AUTH-01·02): 게스트 → 로그인 권유, 회원 → 동기화 상태 · 연결된 계정(카카오·Google·Instagram) · 로그아웃 · 탈퇴
 import Link from "next/link";
 import { useState } from "react";
 import { deleteAccount, signOut, useAccount, type Account } from "@/lib/client/account";
 import { Icon } from "./icons";
+import { LinkedAccounts } from "./LinkedAccounts";
 import { btn, IconTile } from "./ui";
 
 const SYNC_LABEL: Record<Account["sync"], string> = {
@@ -14,7 +15,7 @@ const SYNC_LABEL: Record<Account["sync"], string> = {
   preview: "미리보기 모드라 이 기기에만 저장돼요",
 };
 
-const PROVIDER: Record<string, string> = { kakao: "카카오", google: "Google", email: "이메일" };
+const PROVIDER: Record<string, string> = { kakao: "카카오", google: "Google", instagram: "Instagram", email: "이메일" };
 
 /** 게스트용 한 줄 권유 — 기록이 조금 쌓였을 때만 */
 export function AccountNudge({ foods }: { foods: number }) {
@@ -39,6 +40,7 @@ export function AccountCard() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [broken, setBroken] = useState(false); // 인스타 프로필 사진 주소는 며칠 뒤 만료된다 → 첫 글자로
 
   if (acct.status === "off" || acct.status === "loading") return null;
   if (acct.status === "guest") {
@@ -59,22 +61,24 @@ export function AccountCard() {
   }
 
   const u = acct.user!;
-  const initial = (u.name ?? u.email ?? "?").trim().charAt(0).toUpperCase();
+  const initial = (u.name ?? u.email ?? "?").replace(/^@/, "").trim().charAt(0).toUpperCase();
+  // 이름 옆 보조 표시: 메일, 없으면 인스타 @아이디 (이름이 이미 @아이디면 생략). 인스타 전용 회원의 가짜 메일은 u.email 에 오지 않는다
+  const sub = u.name && u.email ? u.email : u.handle && u.name !== `@${u.handle}` ? `@${u.handle}` : null;
   return (
     <div className="card space-y-4 rounded-3xl p-5">
       <div className="flex items-center gap-3">
-        {u.avatar ? (
+        {u.avatar && !broken ? (
           // eslint-disable-next-line @next/next/no-img-element -- 제공자 프로필 이미지(외부 도메인)
-          <img src={u.avatar} alt="" className="size-11 rounded-full object-cover" referrerPolicy="no-referrer" />
+          <img src={u.avatar} alt="" className="size-11 rounded-full object-cover" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
         ) : (
           <span className="grid size-11 place-items-center rounded-full bg-brand text-lg font-bold text-on-brand" aria-hidden>
             {initial}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-ink">{u.name ?? u.email}</p>
+          <p className="truncate font-semibold text-ink">{u.name ?? u.email ?? "내 계정"}</p>
           <p className="truncate text-caption text-muted">
-            {PROVIDER[u.provider] ?? u.provider} 로그인{u.name && u.email ? ` · ${u.email}` : ""}
+            {PROVIDER[u.provider] ?? u.provider} 로그인{sub ? ` · ${sub}` : ""}
           </p>
         </div>
       </div>
@@ -88,6 +92,7 @@ export function AccountCard() {
           {SYNC_LABEL[acct.sync]}
         </p>
       )}
+      <LinkedAccounts />
       <div className="flex gap-2">
         <button type="button" disabled={busy} onClick={() => (setBusy(true), void signOut().finally(() => setBusy(false)))} className={`${btn("outline", "sm")} flex-1`}>
           로그아웃

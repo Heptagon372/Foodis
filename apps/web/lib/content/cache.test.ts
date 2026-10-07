@@ -43,12 +43,37 @@ describe("cachedContent", () => {
     expect(src.listFoods).toHaveBeenCalledTimes(1);
   });
 
-  it("5분이 지나면 다시 조회한다", async () => {
-    const { src, cached } = source(async () => [food]);
-    await cached.listFoods();
+  it("5분이 지나면 지난 값을 바로 주고 뒤에서 한 번만 다시 조회한다", async () => {
+    const fresh = { id: "2", slug: "bibimbap" } as FoodSummary;
+    let n = 0;
+    const { src, cached } = source(() => new Promise((r) => setTimeout(() => r(n++ ? [fresh] : [food]), 50)));
+    const first = cached.listFoods();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(await first).toEqual([food]);
     vi.setSystemTime(Date.now() + 5 * 60_000 + 1);
-    await cached.listFoods();
+    // 기다리지 않고 지난 값 — 같은 순간 여러 요청이 와도 다시 조회는 한 번
+    expect(await cached.listFoods()).toEqual([food]);
+    expect(await cached.listFoods()).toEqual([food]);
     expect(src.listFoods).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(50);
+    expect(await cached.listFoods()).toEqual([fresh]);
+    expect(src.listFoods).toHaveBeenCalledTimes(2);
+  });
+
+  it("뒤에서 다시 받다 실패하면 지난 값을 계속 쓰고 다음 요청이 다시 시도한다", async () => {
+    let fail = false;
+    const { src, cached } = source(async () => {
+      if (fail) throw new Error("db down");
+      return [food];
+    });
+    await cached.listFoods();
+    fail = true;
+    vi.setSystemTime(Date.now() + 5 * 60_000 + 1);
+    expect(await cached.listFoods()).toEqual([food]);
+    await vi.advanceTimersByTimeAsync(0);
+    fail = false;
+    expect(await cached.listFoods()).toEqual([food]);
+    expect(src.listFoods).toHaveBeenCalledTimes(3);
   });
 
   it("실패한 조회는 캐시에 남기지 않는다", async () => {

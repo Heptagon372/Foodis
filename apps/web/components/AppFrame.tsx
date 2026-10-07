@@ -1,5 +1,5 @@
 "use client";
-// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 데스크톱(lg)은 sticky 상단 알약 내비(--desk-nav) + 넓은 본문(최대 72rem) + 사이트 푸터 (docs/design/18).
+// 화면 틀: 모바일은 한 손 폭(max-w-md) + 하단 탭, 태블릿·반쪽 창(md, 768px~)은 본문만 넓게(max-w-2xl) — 폰 폭 열이 가운데 덩그러니 뜨지 않게, 데스크톱(lg)은 sticky 상단 알약 내비(--desk-nav) + 넓은 본문(최대 72rem) + 사이트 푸터 (docs/design/18).
 // 어드민·첫 진입 흐름(온보딩·로그인)은 셸 없이 — 경로로 나눈다
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -19,7 +19,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <div className={mini ? "lg:pb-28" : undefined}>
       {/* sticky 내비는 children 앞, 같은 래퍼 안이어야 페이지 끝까지 붙어 있다 (조상에 overflow-hidden 금지) */}
       <DesktopNav />
-      <div className={`mx-auto min-h-dvh max-w-md lg:min-h-[calc(100dvh_-_var(--desk-nav))] lg:max-w-6xl lg:px-6 ${mini ? "pb-56 lg:pb-16" : "pb-32 lg:pb-16"}`}>{children}</div>
+      <div className={`mx-auto min-h-dvh max-w-md md:max-w-2xl lg:min-h-[calc(100dvh_-_var(--desk-nav))] lg:max-w-6xl lg:px-6 ${mini ? "pb-56 lg:pb-16" : "pb-32 lg:pb-16"}`}>{children}</div>
       <SiteFooter />
     </div>
   );

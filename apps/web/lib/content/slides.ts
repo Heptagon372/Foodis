@@ -1,4 +1,4 @@
-// 홈 '랜덤 음식 슬라이드'(components/FoodMarquee) 고르기 — 서버에서 요청마다 새로 뽑는다 (홈은 force-dynamic)
+// 홈 '랜덤 음식 슬라이드'(components/FoodMarquee) 고르기 — 서버에서 요청마다 새로 뽑는다 (홈은 force-dynamic). 후보는 홈이 이미 받은 나라별 대표 음식(topFoods)
 import type { FoodSummary } from "./types";
 
 export type SlideFood = { slug: string; name_ko: string; flag: string; accent: string; country_name: string; country_code: string; image_url: string; taste_tags: string[] };

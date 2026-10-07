@@ -244,11 +244,13 @@ export function supabaseRepo(db: SupabaseClient): FoodisRepo {
     async getUserContext(userId): Promise<UserContext> {
       const base: UserContext = { userId, diet: emptyDiet(), allergens: [], tagWeights: {}, exploredCountries: [], exploredFoodIds: [] };
       if (!userId) return base;
-      const [diet, dna, passport] = await Promise.all([
+      const [diet, dna, passport, profile] = await Promise.all([
         db.from("dietary_profiles").select("*").eq("user_id", userId).maybeSingle(),
         db.from("food_dna").select("tag_weights").eq("user_id", userId).maybeSingle(),
         db.from("passport_entries").select("food_id, foods(country_code)").eq("user_id", userId),
+        db.from("profiles").select("display_name").eq("user_id", userId).maybeSingle(),
       ]);
+      base.displayName = profile.data?.display_name ?? null;
       if (diet.data) {
         for (const k of DIET_KEYS) base.diet[k] = Boolean(diet.data[k]);
         base.allergens = diet.data.allergens ?? [];

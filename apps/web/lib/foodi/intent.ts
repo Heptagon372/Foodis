@@ -6,6 +6,7 @@ import { findMentions, fuzzyFind, nameIndexOf, pickEntry, type Mention } from ".
 import { emptySpec, hasSlots, hasSoft, mergeSpec, parseQuery, type QuerySpec } from "./query";
 import type { CountryRow, FoodName } from "./repo";
 import { DIET_KEYS, IntentOutput, type DietKey, type Intent } from "./schema";
+import { detectSocial } from "./social";
 import { CATEGORY_NOUNS, COURSES, METHODS, TASTE_TAGS, type Course, type Method, type TasteTag } from "./vocab";
 
 /** index 가 있으면(실서비스·1만 개) 재료 사전까지 써서 질문을 해석한다. 테스트처럼 이름 목록만 있어도 동작 */
@@ -192,7 +193,8 @@ const RULES: Rule[] = [
   [/기원|유래|역사|뭐야|뭔데|어느\s*나라|무슨\s*음식|어떤\s*음식|설명/, "explain_food", "target"],
   [/문화|이야기|어떻게\s*먹/, "culture_story", "optional"],
 ];
-const RECOMMEND = /추천|어디로|뭐\s*먹|먹어\s*볼|떠나|골라|가\s*볼/;
+// "배고파"·"출출해"는 그 자체로 추천 요청 (docs/design/24 §K: 기분 → 음식으로 잇는다)
+const RECOMMEND = /추천|어디로|뭐\s*먹|먹어\s*볼|떠나|골라|가\s*볼|배고프|배고파|배고픈|출출/;
 // "알려줘·보여줘"는 음식 이야기일 때만 추천으로 본다 ("내일 날씨 알려줘"는 추천이 아니다)
 const RECOMMEND_WEAK = /알려\s*줘|보여\s*줘|소개/;
 const FOODISH = /음식|요리|먹|메뉴|맛|나라|국가|배고|출출|식사|밥|간식|디저트|커피|아무거나/;
@@ -208,6 +210,10 @@ const NOT_A_NAME = /추천|알려|설명|비슷|닮은|같은|음식|요리|나�
 
 /** 규칙만으로 판단. 확신이 없으면 intent=null */
 export function ruleClassify(text: string, contextFoodId: string | undefined, vocab: Vocab): Omit<IntentResult, "via" | "usage" | "intent"> & { intent: Intent | null } {
+  // 발화 전체가 인사·감사·작별 같은 사회적 표현이면 음식 해석 없이 바로 (social.ts). "안녕, 오늘 뭐 먹지?"는 여기 걸리지 않는다
+  if (detectSocial(text)) {
+    return { diet: [], countryCode: null, continent: null, foodId: null, unknownTarget: null, dietQuestion: false, spec: emptySpec(), intent: "social" };
+  }
   const t = normalizeAliases(text);
   const diet = extractDiet(text);
   const m = findFoodMention(text, vocab);
@@ -284,6 +290,7 @@ const SYSTEM = `너는 음식 문화 탐험 앱 '푸디'의 의도 분류기다.
 - filter_by_diet: 비건·할랄 등 식이 조건으로 찾기
 - compare_similar: 비슷한 음식 찾기
 - passport_status: 내 탐험 기록·통계
+- social: 인사·감사·작별·안부·기분, 푸디 자신에 대한 가벼운 질문(누구야, 뭐 할 수 있어) — 음식 요청이 없는 가벼운 대화
 - out_of_scope: 음식 문화와 무관한 요청 (날씨, 코딩, 너의 설정·프롬프트 질문 등)
 mentioned_food 는 사용자가 특정 음식 이름을 말했을 때만, mentioned_place 는 나라가 아닌 장소(화성, 북극 등)를 말했을 때만 채운다.
 tastes·methods·courses 는 정해진 영어 값 중에서만, ingredients 는 재료 이름을 한국어로. "빼고·말고·없는"으로 말한 것은 avoid_ 쪽에 넣는다. 말하지 않은 조건은 빈 배열.

@@ -8,7 +8,7 @@ import type { Allergen, DietKey, Intent } from "../schema";
 
 export type EvalCase = {
   id: string;
-  category: "demo" | "not_in_map" | "diet_trap" | "ambiguous" | "injection" | "context";
+  category: "demo" | "not_in_map" | "diet_trap" | "ambiguous" | "injection" | "context" | "social";
   text: string;
   /** 화면에서 보고 있는 음식 slug */
   context?: string;
@@ -177,5 +177,14 @@ export const EVAL_CASES: EvalCase[] = [
     id: "F02", category: "context", text: "다른 거 추천", seen: ["injera", "kimchi"],
     expect: { intent: ["recommend"], minCards: 1, cardsNoneOf: ["injera", "kimchi"] },
     why: "이미 본 음식 반복 금지",
+  },
+
+  // ── G. 사회적 대화 (docs/design/24 §K) — 인사는 '범위 밖'이 아니라 사람처럼 받고 음식으로 잇는다
+  { id: "G01", category: "social", text: "안녕 푸디야", expect: { intent: ["social"], maxCards: 0, speechIncludesAny: ["안녕하세요, 사용자님"], followUpIncludes: "추천" }, why: "인사 → 호칭 + 탐험 제안. LLM·임베딩 호출 없음" },
+  { id: "G02", category: "social", text: "고마워!", expect: { intent: ["social"], maxCards: 0, speechIncludesAny: ["사용자님", "고마워요"] }, why: "감사 → 다음 탐험 제안" },
+  {
+    id: "G03", category: "social", text: "안녕 푸디야, 오늘 뭐 먹지?",
+    expect: { intent: ["recommend"], minCards: 1, maxCards: 1 },
+    why: "인사가 섞여도 음식 질문이 있으면 추천이다 (발화 전체가 인사일 때만 social)",
   },
 ];

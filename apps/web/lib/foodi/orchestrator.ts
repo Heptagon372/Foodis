@@ -9,6 +9,7 @@ import { classify, CONTINENT_WORDS, fallbackIntent, ruleClassify, type IntentRes
 import type { FoodisRepo, FoodRow } from "./repo";
 import { retrieve } from "./retrieve";
 import { passportAnswer, passportSummary } from "./passport";
+import { detectSocial, socialAnswer } from "./social";
 import { AskRequest, DIET_KEYS, type AskResponse, type FoodCard, type GenerateOutput, type Intent, type PassportSummary } from "./schema";
 
 export type OrchestratorDeps = {
@@ -54,8 +55,10 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
     if (max > 0) ctx.tagWeights = Object.fromEntries(Object.entries(req.guest.tag_weights).slice(0, 30).map(([t, w]) => [t, w / max]));
   }
 
+  // 인사·감사 같은 사회적 발화: LLM·임베딩 없이 바로 답한다 (이름·시간이 들어가므로 캐시도 하지 않는다 — docs/design/24 §K)
+  const social = detectSocial(req.text);
   // 캐시는 대화 첫 질문만 (데모 질문 10개가 여기 해당). "다른 거 추천" 같은 이어지는 질문은 매번 새로
-  const cacheable = req.seen_food_ids.length === 0;
+  const cacheable = req.seen_food_ids.length === 0 && !social;
   // 사용자가 고른 모델은 목록·키 검증만 먼저 (캐시 키에 들어간다). premium 강등은 사용액을 본 뒤에
   const requested = deps.models ? allowedModel(req.model, deps.models.ready) : null;
   const cacheKey = answerCacheKey(req.text, ctx, req.context_food_id, requested?.id);
@@ -78,9 +81,9 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   let answeredBy: Usage | undefined;
 
   const [intentRes, embedding] = await Promise.all([
-    overBudget ? Promise.resolve(ruleOnly(req.text, req.context_food_id, vocab)) : classify(llm, req.text, req.context_food_id, vocab),
-    // 임베딩은 의도와 무관하게 병렬로 미리 계산 (비용 ≈ 0, 지연 절감)
-    overBudget
+    overBudget || social ? Promise.resolve(ruleOnly(req.text, req.context_food_id, vocab)) : classify(llm, req.text, req.context_food_id, vocab),
+    // 임베딩은 의도와 무관하게 병렬로 미리 계산 (비용 ≈ 0, 지연 절감). 사회적 발화는 검색이 없으니 건너뛴다
+    overBudget || social
       ? Promise.resolve(null)
       : deps.embedder.embed([req.text]).then(
           (r) => (usages.push(r.usage), r.vectors[0]),
@@ -115,7 +118,10 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   const recommendAlternatives = () =>
     retrieve(repo, { intent: "recommend", diet: intentRes.diet, countryCode: null, continent: null, targetId: null, ctx, seen: req.seen_food_ids, embedding: null, text: req.text, index, seed });
 
-  if (intent === "passport_status") {
+  if (intent === "social") {
+    // 규칙이 종류까지 알면 그 문장, LLM 이 social 로만 분류했으면 일반 잡담 문장. 사실은 DB 값(탐험 나라 수)만 쓴다
+    out = socialAnswer(social ?? "chat", { displayName: ctx.displayName, exploredCountries: ctx.exploredCountries.length, countryCount: countries.length, now: started, seed });
+  } else if (intent === "passport_status") {
     passport = passportSummary(ctx, countries);
     out = passportAnswer(passport);
   } else if (intentRes.unknownTarget && !targetId) {
@@ -241,7 +247,7 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
     repo.recordUsage(usages, conversationId).catch(() => {}),
     userId && cards.length ? repo.markExplored(userId, cards.map((c) => c.food_id)).catch(() => {}) : null,
     // 검증 통과한 '일반' 답만 캐시. 개인 기록(passport)·강등된 답(고른 모델의 답이 아님)은 캐시하지 않는다
-    cacheable && validated && intent !== "passport_status" && !downgraded ? repo.cacheSet(cacheKey, "answer", response, CACHE_TTL_HOURS).catch(() => {}) : null,
+    cacheable && validated && intent !== "passport_status" && intent !== "social" && !downgraded ? repo.cacheSet(cacheKey, "answer", response, CACHE_TTL_HOURS).catch(() => {}) : null,
   ]);
 
   return { ...response, conversation_id: conversationId };

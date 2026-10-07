@@ -37,6 +37,8 @@ export type FoodName = { id: string; name_ko: string; name_en: string; name_loca
 
 export type UserContext = {
   userId: string | null;
+  /** profiles.display_name — 인사말의 호칭 ("{이름}님", 없으면 "사용자님"). LLM 프롬프트에는 넣지 않는다 */
+  displayName?: string | null;
   diet: Record<DietKey, boolean>;
   allergens: string[];
   tagWeights: Record<string, number>;

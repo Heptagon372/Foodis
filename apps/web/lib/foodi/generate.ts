@@ -1,8 +1,10 @@
 // 답변 생성 + 검증 + 템플릿 대체 (04 문서 RAG ⑤~⑦). LLM 은 후보 안에서 '고르고 설명'만 한다.
 import type { LLMProvider, Usage } from "@/lib/providers/types";
+import { findMentions, nameIndexOf } from "./names";
 import { ANSWER_SYSTEM_V1, INTENT_GUIDE } from "./prompts/answer.v1";
 import type { FoodName, FoodRow, UserContext } from "./repo";
 import { GenerateOutput, type DietKey, type DietLevel, type Intent } from "./schema";
+import { COURSE_KO, METHOD_KO, type Course, type Method } from "./vocab";
 
 export const DIET_LABEL: Record<DietKey, string> = { vegan: "비건", vegetarian: "채식", halal: "할랄", gluten_free: "글루텐 프리", dairy_free: "유제품 없음" };
 const LEVEL_SPEECH: Record<DietLevel, string> = { yes: "가능한 음식이에요", depends: "조리법에 따라 달라요", no: "맞지 않는 음식이에요", unknown: "아직 확인되지 않았어요" };
@@ -29,6 +31,8 @@ export type GenContext = {
   targetId: string | null;
   dietQuestion: boolean;
   askedDiet: DietKey[];
+  /** food_id → 검색 점수에서 나온 고른 이유 (retrieve.ts). LLM 이 지어낸 이유 대신 이걸 말한다 */
+  why?: Record<string, string[]>;
 };
 
 export function buildUserMessage(g: GenContext): string {
@@ -43,9 +47,14 @@ export function buildUserMessage(g: GenContext): string {
     history: g.intent === "explain_food" ? f.history : undefined,
     origin_note: f.origin_note,
     ...(withStory ? { culture_story: f.culture_story } : {}),
+    region: f.region_in_country ?? undefined,
+    cooking_method: f.cooking_method ? (METHOD_KO[f.cooking_method as Method] ?? f.cooking_method) : undefined,
+    course: f.course_type ? (COURSE_KO[f.course_type as Course] ?? f.course_type) : undefined,
+    main_ingredients: f.ingredients?.length ? f.ingredients.slice(0, 4) : undefined,
     taste_tags: f.taste_tags,
     diet: f.diet,
     explored_country: g.ctx.exploredCountries.includes(f.country_code),
+    matched: g.why?.[f.id]?.length ? g.why[f.id] : undefined,
   }));
   // 개인정보 최소화: 종교·건강 추론 없이 "조건 있음" 수준으로만 전달 (11 문서 §7)
   const profile = { diet_conditions: g.needDiet.map((k) => DIET_LABEL[k]), explored_country_count: g.ctx.exploredCountries.length };
@@ -61,6 +70,8 @@ export function buildUserMessage(g: GenContext): string {
 export type Validation = { ok: true } | { ok: false; reason: string };
 
 const HEDGE = /아니|않|없|확인|다를|달라|어려|모르|주의|빼고|대신/;
+/** 다른 음식을 먹어 보라고 권하는 말 — 후보 밖 음식이 이런 문장에 나오면 거부 */
+const SUGGEST = /살펴보|떠나|추천|어때|어떨|맛보|먹어\s*보|탐험|가\s*볼|만나\s*보/;
 
 /** 후보 밖 food_id·음식명, 식이 조건 위반, DB 에 없는 식이 단정을 잡아낸다 (04 문서 §5 할루시네이션 방어). */
 export function validate(out: GenerateOutput, g: Pick<GenContext, "foods" | "intent" | "targetId" | "needDiet" | "ctx" | "text">, allNames: FoodName[]): Validation {
@@ -80,16 +91,19 @@ export function validate(out: GenerateOutput, g: Pick<GenContext, "foods" | "int
 
   const candNames = g.foods.flatMap((c) => [c.name_ko, c.name_en.toLowerCase()]);
   // "중국 만두예요"처럼 DB 음식명이 일반 명사로도 쓰인다 → 후보의 DB 문장이나 사용자 질문에 이미 있는 말은 'AI가 끌어온 음식'이 아니다
-  const known = [g.text, ...g.foods.flatMap((c) => [c.summary, c.history, c.culture_story, c.diet_note, c.origin_note])].join(" ").toLowerCase();
-  const speech = out.speech.toLowerCase();
-  for (const n of allNames) {
-    if (ids.has(n.id)) continue;
-    for (const name of [n.name_ko, n.name_en.toLowerCase()]) {
-      if (name.length < 2 || !speech.includes(name)) continue;
-      // "라멘"이 후보 "돈코츠 라멘"의 일부처럼, 후보 이름 안에 포함된 경우는 허용
-      if (candNames.some((c) => c.includes(name)) || known.includes(name)) continue;
-      return { ok: false, reason: `후보 밖 음식 언급: ${name}` };
-    }
+  const known = [g.text, ...g.foods.flatMap((c) => [c.summary, c.history, c.culture_story, c.diet_note, c.origin_note, c.region_in_country, ...(c.ingredients ?? [])])].join(" ").toLowerCase();
+  // 1만 개 이름 인식기로 찾는다 — 단순 포함 검사는 "아시아"를 음식 '아시'로, "부자"를 음식 '부자'로 오인했다 (names.ts)
+  const speechLower = out.speech.toLowerCase();
+  for (const m of findMentions(out.speech, nameIndexOf(allNames), [], { assumeFood: true })) {
+    if (m.entries.some((e) => ids.has(e.id))) continue;
+    const name = m.text.toLowerCase();
+    // "라멘"이 후보 "돈코츠 라멘"의 일부처럼, 후보 이름 안에 포함된 경우는 허용
+    if (candNames.some((c) => c.includes(name))) continue;
+    // DB 문장에 있는 말("중국 만두예요")은 허용하되, 그 말로 '다음에 먹어 보라'고 제안하면 후보 밖 음식 추천이다
+    // ("다음 탐험으로 중국 만두를 살펴보는 건 어때요" — 2026-10-07 라이브 평가 D05)
+    const sentence = speechLower.slice(Math.max(0, speechLower.lastIndexOf(".", m.start) + 1), (speechLower.indexOf(".", m.end) + 1 || speechLower.length));
+    if (known.includes(name) && !SUGGEST.test(sentence)) continue;
+    return { ok: false, reason: `후보 밖 음식 언급: ${m.text}` };
   }
 
   // ③ 정직한 불확실성: DB 가 no/unknown 인 식이 조건을 '된다'고 단정하는 문장 차단
@@ -136,6 +150,9 @@ export async function generate(llm: LLMProvider, g: GenContext, allNames: FoodNa
   }
   return { out: null, usages, failures };
 }
+
+/** 카드에 붙는 이유: 검색 점수의 이유 중 첫째 (20자 이내) */
+const reasonOf = (g: GenContext, id: string, fallback: string) => (g.why?.[id]?.[0] ?? fallback).slice(0, 20);
 
 const FOLLOW = {
   story: "문화 이야기 들려줘",
@@ -187,7 +204,7 @@ export function templateAnswer(g: GenContext): GenerateOutput {
     if (!others.length) return templateAnswer({ ...g, intent: "recommend" });
     const names = others.map((f) => `${f.country.name_ko} ${f.name_ko}`).join(", ");
     const lead = target ? `${josa(target.name_ko, "과와")} 비슷한 음식은 세계 곳곳에 있어요.` : "비슷한 음식을 모아봤어요.";
-    return { speech: `${lead} ${names}. 카드에서 무엇이 닮았는지 확인해 보세요.`, picks: others.map((f) => ({ food_id: f.id, reason: "비슷한 음식" })), follow_ups: [FOLLOW.story, FOLLOW.other] };
+    return { speech: `${lead} ${names}. 카드에서 무엇이 닮았는지 확인해 보세요.`, picks: others.map((f) => ({ food_id: f.id, reason: reasonOf(g, f.id, "비슷한 음식") })), follow_ups: [FOLLOW.story, FOLLOW.other] };
   }
 
   if (intent === "filter_by_diet") {
@@ -197,7 +214,7 @@ export function templateAnswer(g: GenContext): GenerateOutput {
     const names = picks.map((f) => f.name_ko).join(", ");
     return {
       speech: `${cond ? `${cond} 기준으로 ` : ""}${josa(names, "을를")} 골랐어요.${anyDepends ? " 노란 표시는 조리법에 따라 다른 음식이니 주문할 때 확인해 주세요." : ""}`,
-      picks: picks.map((f) => ({ food_id: f.id, reason: cond ? `${cond} 조건` : "추천" })),
+      picks: picks.map((f) => ({ food_id: f.id, reason: cond ? `${cond} 조건` : reasonOf(g, f.id, "추천") })),
       follow_ups: [FOLLOW.story, FOLLOW.other],
     };
   }
@@ -209,7 +226,7 @@ export function templateAnswer(g: GenContext): GenerateOutput {
   const caution = depends.length ? ` ${depends.map((k) => DIET_LABEL[k]).join("·")} 기준으로는 조리법에 따라 달라요.${first.diet_note ? ` ${first.diet_note}` : ""} 주문할 때 확인해 주세요.` : "";
   return {
     speech: `${unexplored ? `${josa(first.country.name_ko, "은는")} 아직 안 가보셨네요. ${first.name_ko}, 어때요?` : `${where(first)}, 어때요?`} ${first.summary ?? ""}${caution}`.trim(),
-    picks: [{ food_id: first.id, reason: unexplored ? "아직 안 가본 나라" : "추천 1순위" }],
+    picks: [{ food_id: first.id, reason: unexplored ? "아직 안 가본 나라" : reasonOf(g, first.id, "추천 1순위") }],
     follow_ups: [FOLLOW.story, FOLLOW.similar, FOLLOW.other],
   };
 }

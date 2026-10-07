@@ -50,7 +50,8 @@ describe("검수 시트 가져오기", () => {
   });
 });
 
-it("임베딩 텍스트는 s09 와 같은 구성", () => {
-  const t = embeddingText({ name_ko: "인제라", name_en: "Injera", summary: "시큼한 빵", taste_tags: ["sour", "fermented"], cooking_method: "fermented", course_type: "bread", culture_story: null, diet: { vegan: "yes" }, mainIngredients: ["테프"], countryKo: "에티오피아" });
-  expect(t.split("\n")).toEqual(["인제라 (Injera) — 에티오피아 음식", "시큼한 빵", "맛·특징: 새콤한, 발효", "주재료: 테프", "조리법: fermented, 분류: bread", "식이: vegan"]);
+it("임베딩 문서 v2: 질의와 같은 한국어 이름표 (맛·조리법·종류·식이), 빈 줄은 뺀다", () => {
+  const t = embeddingText({ name_ko: "인제라", name_en: "Injera", summary: "시큼한 빵", taste_tags: ["sour", "fermented"], cooking_method: "fermented", course_type: "bread", culture_story: null, diet: { vegan: "yes", halal: "depends" }, mainIngredients: ["테프"], subIngredients: ["물"], countryKo: "에티오피아", region: "고원 지대" });
+  expect(t.split("\n")).toEqual(["인제라 (Injera) — 에티오피아 고원 지대 음식", "시큼한 빵", "맛·특징: 새콤한, 발효", "주재료: 테프", "부재료: 물", "조리법: 발효한, 종류: 빵", "식이: 비건"]);
+  expect(embeddingText({ name_ko: "a", name_en: "A", summary: null, taste_tags: [], cooking_method: null, course_type: null, culture_story: null, diet: {}, mainIngredients: [], countryKo: "가나" })).toBe("a (A) — 가나 음식");
 });

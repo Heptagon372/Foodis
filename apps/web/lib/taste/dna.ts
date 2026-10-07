@@ -11,6 +11,9 @@ export const STRAND_LABEL: Record<string, string> = {
   smoky: "훈연", herbal: "허브", creamy: "크리미", crispy: "바삭", rich: "진한맛", fresh: "산뜻", nutty: "고소",
   grilled: "구이", fried: "튀김", rice: "쌀", noodle: "면", bread: "빵", dumpling: "만두", meat: "고기",
   seafood: "해산물", vegetable: "채소", legume: "콩", dairy: "유제품", street_food: "길거리",
+  // 1만 개 정리본의 새 어휘 (lib/foodi/vocab.ts TASTE_TAGS)
+  bitter: "쌉쌀", floral: "꽃향", light: "가벼운", crunchy: "바삭", chewy: "쫄깃", soft: "부드러운", hot: "따뜻한", cold: "차가운",
+  soup: "국물", egg: "달걀", fruit: "과일",
 };
 
 export type Strand = { tag: string; label: string; w: number };

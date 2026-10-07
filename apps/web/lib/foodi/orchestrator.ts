@@ -4,6 +4,7 @@ import { allowedModel, applyBudget, modelUsed, type LLMProviderId, type ModelInf
 import type { Embedder, LLMProvider, Usage } from "@/lib/providers/types";
 import { answerCacheKey } from "@/lib/guard/cache";
 import { DIET_LABEL, generate, josa, templateAnswer, type GenContext } from "./generate";
+import { foodIndexOf } from "./food-index";
 import { classify, CONTINENT_WORDS, fallbackIntent, ruleClassify, type IntentResult, type Vocab } from "./intent";
 import type { FoodisRepo, FoodRow } from "./repo";
 import { retrieve } from "./retrieve";
@@ -65,9 +66,14 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   }
 
   // 예산 초과 → 캐시·템플릿 모드: LLM·임베딩 호출 없이 규칙 + 키워드 검색만 (11 문서 §6)
-  const [spentUsd, countries, foodNames] = await Promise.all([repo.usageTodayUsd().catch(() => 0), repo.countries(), repo.allFoodNames()]);
+  const [spentUsd, countries, rows] = await Promise.all([repo.usageTodayUsd().catch(() => 0), repo.countries(), repo.foodIndex()]);
   const overBudget = spentUsd >= deps.dailyBudgetUsd;
-  const vocab: Vocab = { countries, foods: foodNames };
+  // 1만 개 색인 (이름 인식 · 재료 사전 · 점수 계산). repo 가 같은 배열을 주는 동안 다시 만들지 않는다
+  const index = foodIndexOf(rows, countries);
+  const foodNames = index.foodNames;
+  const vocab: Vocab = { countries, foods: foodNames, index };
+  // 점수 동점 깨기 씨앗: 같은 날·같은 사람은 같은 순서 (답 캐시 24시간과 맞물림), 날이 바뀌면 다른 음식도 올라온다
+  const seed = `${new Date(started).toISOString().slice(0, 10)}:${userId ?? "guest"}`;
   const { llm, downgraded } = chooseLLM(deps, requested, spentUsd);
   let answeredBy: Usage | undefined;
 
@@ -82,6 +88,8 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
         ),
   ]);
   if (intentRes.usage) usages.push(intentRes.usage);
+  // 질문에서 말한 알레르기("땅콩 알레르기 있는데")는 이번 답에서 프로필 알레르기처럼 하드 필터로 (안전 쪽 합집합)
+  if (intentRes.spec.allergens.length) ctx.allergens = [...new Set([...ctx.allergens, ...intentRes.spec.allergens])];
   let intent: Intent = intentRes.intent;
   // 질문에서 이름으로 가리킨 음식이 화면에 떠 있는 음식보다 우선 ("비엔나 커피 이야기도 들려줘"를 터키 커피 화면에서 말해도)
   const targetId = intentRes.foodId ?? req.context_food_id ?? null;
@@ -91,6 +99,7 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
   let validated = true;
   let notInMap: string | undefined;
   let passport: PassportSummary | undefined;
+  let why: Record<string, string[]> = {};
 
   const baseGen = (f: FoodRow[], needDiet: GenContext["needDiet"], i: Intent = intent): GenContext => ({
     text: req.text,
@@ -101,9 +110,10 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
     targetId,
     dietQuestion: intentRes.dietQuestion,
     askedDiet: intentRes.diet,
+    why,
   });
   const recommendAlternatives = () =>
-    retrieve(repo, { intent: "recommend", diet: intentRes.diet, countryCode: null, continent: null, targetId: null, ctx, seen: req.seen_food_ids, embedding: null, text: req.text });
+    retrieve(repo, { intent: "recommend", diet: intentRes.diet, countryCode: null, continent: null, targetId: null, ctx, seen: req.seen_food_ids, embedding: null, text: req.text, index, seed });
 
   if (intent === "passport_status") {
     passport = passportSummary(ctx, countries);
@@ -139,12 +149,16 @@ export async function ask(deps: OrchestratorDeps, input: AskRequest, userId: str
       seen: req.seen_food_ids,
       embedding,
       text: req.text,
+      index,
+      spec: intentRes.spec,
+      seed,
     });
     foods = r.foods;
+    why = r.why;
     // 지도에 있는 나라지만 검수된 음식이 아직 없을 때 (150개국 중 일부): 같은 대륙에서 대신 고른다
     const emptyCountry = !foods.length && intentRes.countryCode && !targetId && (intent === "recommend" || intent === "filter_by_diet") ? countries.find((c) => c.code === intentRes.countryCode) : undefined;
     const near = emptyCountry
-      ? (await retrieve(repo, { intent, diet: intentRes.diet, countryCode: null, continent: emptyCountry.continent_group, targetId: null, ctx, seen: req.seen_food_ids, embedding, text: req.text })).foods
+      ? (await retrieve(repo, { intent, diet: intentRes.diet, countryCode: null, continent: emptyCountry.continent_group, targetId: null, ctx, seen: req.seen_food_ids, embedding, text: req.text, index, spec: intentRes.spec, seed })).foods
       : [];
     const g = baseGen(foods, r.needDiet);
     if (emptyCountry) {

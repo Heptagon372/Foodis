@@ -11,7 +11,11 @@
     "test": "vitest run",
     "db:types": "supabase gen types typescript --linked > lib/db/types.gen.ts",
     "eval:live": "vitest run lib/foodi/eval --mode live",
-    "bench:voice": "tsx --conditions=react-server scripts/bench-voice.ts"
+    "bench:voice": "tsx --conditions=react-server scripts/bench-voice.ts",
+    "embed:foods": "tsx --conditions=react-server scripts/embed-foods.ts",
+    "eval:retrieval": "tsx --conditions=react-server scripts/eval-retrieval-10k.ts",
+    "qa:data": "tsx --conditions=react-server scripts/qa-data.ts",
+    "qa:crawl": "tsx scripts/qa-crawl.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

@@ -2,6 +2,7 @@
 // 근거는 이미 검수된 값(식이 5종·알레르기)과 재료·이름·맛 태그 — AI 추측을 쓰지 않는 순수 규칙이라 같은 음식은 늘 같은 결과가 나온다.
 // 원칙 (03 문서와 같다): 확실한 근거(재료·식이 no·알레르기)만 '위험', 조리법에 따라 다르거나 소개글에서만 보이면 '주의'. 모르면 경고하지 않는다(정보 부족 표시).
 import type { Allergen, DietKey, DietLevel } from "@/lib/foodi/schema";
+import { canonAllergens } from "./allergens";
 
 // ── 1. 재료 신호(flag)
 export const FLAGS = [
@@ -108,7 +109,7 @@ const TAG_FLAGS: Record<string, [Flag, Strength][]> = {
   legume: [["legume", "yes"]],
 };
 
-const ALLERGEN_FLAG: Record<string, Flag> = { nuts: "nuts", peanut: "peanut", shellfish: "shellfish", fish: "fish", egg: "egg", soy: "soy", wheat: "wheat", dairy: "dairy", sesame: "sesame" };
+const ALLERGEN_FLAG: Record<string, Flag> = { nuts: "nuts", peanut: "peanut", shellfish: "shellfish", mollusc: "shellfish", fish: "fish", egg: "egg", soy: "soy", wheat: "wheat", dairy: "dairy", sesame: "sesame" };
 
 export type GuardFood = {
   name_ko: string;
@@ -156,7 +157,7 @@ export function flagsOf(food: GuardFood): FlagMap {
   else if (d.dairy_free === "depends") put("dairy", "maybe");
 
   // ② 알레르기 (검수된 값 → 확실)
-  for (const a of food.allergens ?? []) if (ALLERGEN_FLAG[a]) put(ALLERGEN_FLAG[a], "yes");
+  for (const a of canonAllergens(food.allergens)) if (ALLERGEN_FLAG[a]) put(ALLERGEN_FLAG[a], "yes");
 
   // ③ 맛 태그
   for (const t of food.taste_tags ?? []) for (const [f, s] of TAG_FLAGS[t] ?? []) put(f, s);

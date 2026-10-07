@@ -1,0 +1,61 @@
+name: Deploy to VPS
+
+# main 브랜치 push 되면 SSH로 서버 접속해서 pull + build + pm2 reload.
+# 수동으로도 실행 가능: Actions 탭 → "Deploy to VPS" → Run workflow.
+#
+# 필요한 Repository Secrets (Settings → Secrets and variables → Actions):
+#   SSH_HOST        VPS 공인 IP 또는 foodis.cloud
+#   SSH_USER        deploy  (server-setup.sh 가 만든 유저)
+#   SSH_PORT        22      (기본값이면 생략 가능 — 아래 default: 22 로 처리)
+#   SSH_PRIVATE_KEY 로컬에서 ssh-keygen 으로 만든 "배포 전용" 키의 **개인키 전체**
+#                   (-----BEGIN OPENSSH PRIVATE KEY----- 부터 -----END... 까지)
+#                   서버의 /home/deploy/.ssh/authorized_keys 에는 공개키를 추가해 둘 것.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & deploy via SSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/var/www/foodis"
+            cd "$APP_DIR"
+
+            echo "▶ git fetch & reset to origin/main"
+            git fetch --prune origin
+            git reset --hard origin/main
+
+            echo "▶ pnpm install (frozen)"
+            pnpm install --frozen-lockfile
+
+            echo "▶ next build"
+            pnpm --filter web build
+
+            echo "▶ pm2 reload (zero-downtime)"
+            pm2 reload scripts/deploy/pm2.config.cjs --update-env || \
+              pm2 start scripts/deploy/pm2.config.cjs
+
+            pm2 save
+
+            echo "✅ deployed $(git rev-parse --short HEAD)"

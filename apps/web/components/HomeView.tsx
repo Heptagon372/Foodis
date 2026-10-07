@@ -2,12 +2,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { SlideFood } from "@/lib/content/slides";
 import type { FoodSummary } from "@/lib/content/types";
 import { exploredCountries, update, useHydrated, useLocal } from "@/lib/client/passport";
 import { impress, useTaste } from "@/lib/client/taste";
 import { selectedGuards } from "@/lib/diet/guard";
 import { buildProfile, rankFoods } from "@/lib/taste/engine";
 import { FoodCard } from "./FoodCard";
+import { FoodMarquee } from "./FoodMarquee";
 import { useFoodi } from "./FoodiSheet";
 import { Intro } from "./Intro";
 import { DesktopLanding } from "./landing/DesktopLanding";
@@ -31,7 +33,7 @@ const todayIndex = (n: number) => {
 };
 
 // 홈은 컨트롤러: 계산·부수효과(인트로·노출 기록·sessionStorage)는 여기 한 곳에서, 화면은 모바일 트리(lg:hidden)와 데스크톱 랜딩(DesktopLanding, hidden lg:block) 둘로 그린다 (docs/design/18)
-export function HomeView({ foods, continents, preview, site }: { foods: FoodSummary[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
+export function HomeView({ foods, slides, continents, preview, site }: { foods: FoodSummary[]; slides: SlideFood[]; continents: Record<string, string>; preview: boolean; site: SiteFacts }) {
   const router = useRouter();
   const { open } = useFoodi();
   const hydrated = useHydrated();
@@ -105,8 +107,10 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
       {preview && <PreviewBanner />}
 
       {/* 1행: 히어로(오늘의 탐험 사진 위 큰 인사 + 핵심 CTA) | 이번 주 챌린지 — 레퍼런스 docs/design/17 */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         <Hero today={today} onTalk={() => open({ listen: true })} onAsk={() => open()} />
+        {/* 첫 화면에서 바로 보이게 히어로 바로 아래 — 랜덤 음식이 옆으로 흘러간다 */}
+        <FoodMarquee foods={slides} />
         <QuestChallengeCard />
       </div>
 
@@ -185,6 +189,7 @@ export function HomeView({ foods, continents, preview, site }: { foods: FoodSumm
         dietFiltered={diet.length + allergens.length > 0}
         recent={recent.map(([id, e]) => ({ id, slug: e.slug, flag: e.flag, name_ko: e.name_ko }))}
         eatsPhoto={eatsPhoto}
+        slides={slides}
         site={site}
         preview={preview}
       />

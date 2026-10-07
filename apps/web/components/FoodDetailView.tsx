@@ -122,7 +122,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
         )}
       </header>
 
-      <div className="relative -mt-7 space-y-6 rounded-t-[28px] bg-canvas px-5 pb-8 pt-6 lg:mt-0 lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0">
+      <div className="relative -mt-7 space-y-5 rounded-t-[28px] bg-canvas px-5 pb-8 pt-5 lg:mt-0 lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0">
         {preview && <PreviewBanner />}
 
         <div className="space-y-2">
@@ -198,7 +198,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
           {tab === "기본" && (
             <>
               {food.summary ? (
-                <p className="text-[17px] leading-relaxed text-ink">{food.summary}</p>
+                <p className="text-base leading-relaxed text-ink">{food.summary}</p>
               ) : (
                 // 자동 후보 음식: 소개 글 전이라 확인된 것(이름·나라·사진)만
                 <div className="card flex items-start gap-3 rounded-3xl p-4">
@@ -206,7 +206,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
                   <p className="min-w-0 text-[15px] leading-relaxed text-ink">
                     {food.country.name_ko}의 <b>{food.name_ko}</b>
                     {food.name_en !== food.name_ko && <span className="text-muted"> ({food.name_en})</span>}
-                    <span className="mt-1 block text-sm text-muted">소개 글은 출처를 확인하며 준비하고 있어요. 지금은 이름·나라·사진만 확인된 음식이에요.</span>
+                    <span className="mt-1 block text-sm text-muted">소개 글은 출처 확인 중이에요.</span>
                   </p>
                 </div>
               )}
@@ -297,7 +297,7 @@ export function FoodDetailView({ food, preview }: { food: FoodDetail; preview: b
                   </span>
                 </p>
               )}
-              <p className="text-caption text-muted">식이 정보는 대표 조리법 기준이에요. 식당·가정마다 다를 수 있으니 주문할 때 꼭 확인하세요.</p>
+              <p className="text-caption text-muted">대표 조리법 기준이에요. 주문할 때 꼭 확인하세요.</p>
               <ReportForm foodId={food.id} />
             </>
           )}
@@ -358,7 +358,6 @@ function GallerySection({ photos, name }: { photos: FoodDetail["gallery"]; name:
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 text-caption text-muted">사진마다 라이선스와 출처가 달라요. 썸네일을 누르면 원 페이지로 이동합니다.</p>
     </Facts>
   );
 }

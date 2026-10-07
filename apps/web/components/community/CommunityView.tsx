@@ -99,7 +99,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
   const writeLabel = tab === "clubs" ? "모임 만들기" : tab === "buddy" ? "밥친구 글쓰기" : "글쓰기";
 
   return (
-    <main className="space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pt-8">
+    <main className="space-y-4 px-5 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-8">
       <TopBar>
         <div className="lg:hidden">
           <Link href={writeHref} className={btn("lime", "sm")}>
@@ -113,7 +113,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
         <div className="space-y-1">
           <Eyebrow>World Table</Eyebrow>
           <h1 className="text-h1 font-bold text-ink">커뮤니티</h1>
-          <p className="text-sm text-ink-soft">같이 먹을 친구를 찾고, 취향이 맞는 모임에서 이야기해요.</p>
+          <p className="text-sm text-ink-soft">밥친구와 모임을 찾아보세요</p>
         </div>
         {/* btn() 에 inline-flex 가 들어 있어 hidden 과 섞지 않고 바깥에서 숨긴다 */}
         <div className="hidden shrink-0 lg:block">
@@ -132,7 +132,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
       <Link href="/news" className="card flex items-center gap-3 rounded-2xl px-4 py-3 transition hover:border-leaf/40 lg:hidden">
         <Icon name="newspaper" className="size-5 text-leaf" />
         <span className="flex-1 text-sm font-semibold text-ink">음식 뉴스 · 문화 뉴스</span>
-        <span className="text-caption text-muted">30분마다 업데이트</span>
+        <span className="text-caption text-muted">30분마다</span>
         <Icon name="next" className="size-4 text-muted" />
       </Link>
 
@@ -190,7 +190,7 @@ export function CommunityView({ mapProvider, mapKey }: { mapProvider: MapProvide
               </div>
             </div>
             {sort === "foryou" && (
-              <p className="-mt-2 text-caption text-muted">{top.length ? `자주 보는 ${top.map(([k]) => CATEGORY[k].label).join("·")} 글과 요즘 뜨는 모임을 먼저 보여 줘요.` : "모임을 둘러볼수록 내 취향에 맞춰 순서가 바뀌어요."}</p>
+              <p className="-mt-2 text-caption text-muted">{top.length ? `자주 보는 ${top.map(([k]) => CATEGORY[k].label).join("·")} 글 먼저` : "볼수록 취향 순으로 바뀌어요"}</p>
             )}
 
             {login && <LoginPrompt message={login} onClose={() => setLogin(null)} />}

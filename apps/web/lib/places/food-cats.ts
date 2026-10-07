@@ -28,10 +28,8 @@ export function catsOf(f: Pick<FoodSummary, "country_code" | "diet">, c: Pick<Co
   return out;
 }
 
+/** 순서는 받은 그대로 (DB 가 유명도 순 · 검색 관련도 순으로 준다) */
 export function toExploreFoods(foods: FoodSummary[], countries: Country[]): ExploreFood[] {
   const byCode = new Map(countries.map((c) => [c.code, c]));
-  const rank = (r?: number | null) => r ?? Number.MAX_SAFE_INTEGER;
-  return [...foods]
-    .sort((a, b) => rank(a.fame_rank) - rank(b.fame_rank))
-    .map((f) => ({ slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, flag: f.flag, image_url: f.image_url, cats: catsOf(f, byCode.get(f.country_code)) }));
+  return foods.map((f) => ({ slug: f.slug, name_ko: f.name_ko, name_en: f.name_en, flag: f.flag, image_url: f.image_url, cats: catsOf(f, byCode.get(f.country_code)) }));
 }

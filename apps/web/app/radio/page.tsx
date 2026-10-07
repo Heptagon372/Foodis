@@ -11,9 +11,8 @@ export default async function RadioPage({ searchParams }: { searchParams: Promis
   const content = await getContent();
   const food = start && /^[a-z0-9-]{1,80}$/.test(start) ? await content.getFood(start) : null;
   // 들려줄 음식이 없는 대륙 채널은 "준비 중"으로 (국가는 150개지만 검수된 음식은 일부 나라부터 채워진다)
-  const [foods, countries] = await Promise.all([content.listFoods(), content.listCountries()]);
-  const cont = new Map(countries.map((c) => [c.code, c.continent_group]));
-  const has = (continent: string | null) => !continent || foods.some((f) => cont.get(f.country_code) === continent);
+  const [counts, countries] = await Promise.all([content.countryFoodCounts(), content.listCountries()]);
+  const has = (continent: string | null) => !continent || countries.some((c) => c.continent_group === continent && (counts[c.code] ?? 0) > 0);
   return (
     <RadioView
       channels={Object.entries(CHANNELS).map(([id, c]) => ({ id, title: c.title, icon: c.icon, ready: has(c.continent) }))}

@@ -79,12 +79,27 @@ export type FoodDetail = FoodSummary & {
   youtube: YouTubeVideo | null;
 };
 
+/** 이름 사전 한 줄 (커뮤니티 글 → 음식 연결) */
+export type FoodName = { slug: string; name_ko: string; name_en: string };
+
+/** 화면이 쓰는 콘텐츠 조회. 음식 1만여 개를 통째로 주는 메서드는 두지 않는다 — 필요한 만큼만 DB 에서 고른다 (docs/design/22).
+ *  목록은 모두 나라 안 유명도(fame_rank) 순. live 는 food_cards 뷰·search_food_cards 함수(0014), preview 는 lib/content/catalog.ts 의 메모리 구현 */
 export interface ContentSource {
   readonly mode: "live" | "preview";
   listCountries(): Promise<Country[]>;
-  listFoods(): Promise<FoodSummary[]>;
-  /** 음식 수 — listFoods 는 한 번에 최대 1,000행(PostgREST 상한)이라 화면에 보일 개수는 이걸로 센다 */
   countFoods(): Promise<number>;
+  /** 나라별 음식 수 { KR: 120, … } — 지도 색칠·라디오 채널 준비 여부 */
+  countryFoodCounts(): Promise<Record<string, number>>;
+  /** 나라마다 유명도 상위 perCountry 개. 순서: 모든 나라의 1위 → 2위 → … (continent 를 주면 그 대륙만) */
+  topFoods(opts: { perCountry: number; continent?: string | null }): Promise<FoodSummary[]>;
+  /** 여러 나라 음식을 유명도 순으로 최대 limit 개 (음식이 없는 나라 화면의 '가까운 나라 음식') */
+  foodsInCountries(codes: string[], limit: number): Promise<FoodSummary[]>;
+  /** 한국어·영어 이름 부분 일치. 정확히 같은 이름 → 앞부분 일치 → 유명도 순 */
+  searchFoods(q: string, limit: number): Promise<FoodSummary[]>;
+  /** id 또는 slug 로 여러 개 (순서는 보장하지 않는다) */
+  foodsByKeys(keys: string[]): Promise<FoodSummary[]>;
+  /** 공개 음식 전체의 이름만 (slug · 한국어 · 영어) */
+  foodNames(): Promise<FoodName[]>;
   getFood(slug: string): Promise<FoodDetail | null>;
   getCountry(code: string): Promise<{ country: Country; foods: FoodSummary[] } | null>;
   /** 재료 탐색 (F-EXP-04): 이 재료를 쓰는 검수된 음식 */

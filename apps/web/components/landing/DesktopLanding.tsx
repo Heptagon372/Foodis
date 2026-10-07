@@ -1,9 +1,10 @@
 "use client";
-// 데스크톱(lg 이상) 홈 = 랜딩 페이지 (docs/design/18). 레퍼런스 구조: 히어로 → 출처 띠(Partners) → 기능 벤토(Features) → 추천(인기 띠)
+// 데스크톱(lg 이상) 홈 = 랜딩 페이지 (docs/design/18). 레퍼런스 구조: 히어로 → 랜덤 음식 슬라이드 → 출처 띠(Partners) → 기능 벤토(Features) → 추천(인기 띠)
 // → 왜 FOODIS(Why us) → 이렇게 물어보세요(Review 자리) → FAQ → CTA. 모양은 레퍼런스의 진한 판 + 파낸 모서리(노치) + 도킹 화살표.
 // 화면만 그린다 — 인트로·노출 기록·sessionStorage 같은 부수효과는 HomeView 한 곳에서. 숨은 트리(모바일)에서는 사진·영상을 내려받지 않는다
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
+import type { SlideFood } from "@/lib/content/slides";
 import type { FoodSummary } from "@/lib/content/types";
 import { exploredCountries, useHydrated, useLocal } from "@/lib/client/passport";
 import { useQuest } from "@/lib/client/quest";
@@ -14,6 +15,7 @@ import type { Ranked } from "@/lib/taste/engine";
 import { PreviewBanner } from "../bits";
 import { GuardTag, useGuard } from "../DietGuard";
 import { accentBg } from "../FoodCard";
+import { FoodMarquee } from "../FoodMarquee";
 import { useFoodi } from "../FoodiSheet";
 import { Icon, type IconName } from "../icons";
 import { ImageCredit } from "../ImageCredit";
@@ -37,18 +39,21 @@ type Props = {
   dietFiltered: boolean;
   recent: Recent[];
   eatsPhoto: FoodSummary | null;
+  /** 첫 화면 랜덤 음식 슬라이드 (app/page.tsx 가 요청마다 뽑는다) */
+  slides: SlideFood[];
   site: SiteFacts;
   preview: boolean;
 };
 
 const ko = (n: number) => n.toLocaleString("ko-KR");
 
-export function DesktopLanding({ today, ranked, learning, confidence, conditionCount, dietFiltered, recent, eatsPhoto, site, preview }: Props) {
+export function DesktopLanding({ today, ranked, learning, confidence, conditionCount, dietFiltered, recent, eatsPhoto, slides, site, preview }: Props) {
   return (
     <div data-landing className="hidden space-y-20 pb-6 pt-2 lg:block xl:space-y-24">
       {preview && <PreviewBanner />}
       <div className="space-y-8">
         <Hero today={today} learning={learning} confidence={confidence} conditionCount={conditionCount} site={site} />
+        <FoodMarquee foods={slides} size="lg" />
         <SourcesBand site={site} />
       </div>
       <Features recent={recent} eatsPhoto={eatsPhoto} site={site} />

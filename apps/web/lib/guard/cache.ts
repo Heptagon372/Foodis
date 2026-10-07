@@ -10,6 +10,10 @@ export function normalizeQuestion(text: string): string {
     .toLowerCase();
 }
 
+/** 답을 만드는 파이프라인 판. 검색·해석 규칙이 바뀌면 올린다 — 옛 규칙으로 만든 답이 24시간 캐시에 남아 계속 나가지 않게.
+ *  v2: 1만 개 검색·랭킹 (docs/design/19) */
+export const ANSWER_PIPELINE = "v2";
+
 /** 캐시 키 = 정규화 텍스트 + 식이 조건 + 탐험 국가 수 구간 (11 문서 §5). 개인 식별 정보는 넣지 않는다.
  *  modelId: 사용자가 고른 '푸디의 두뇌' — 다른 모델의 답이 섞이지 않게. 자동(기본 체인)이면 비워서 예전 키 그대로 */
 export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: string, modelId?: string | null): string {
@@ -27,5 +31,5 @@ export function answerCacheKey(text: string, ctx: UserContext, contextFoodId?: s
     .map(([t]) => t)
     .join(",");
   const raw = [normalizeQuestion(text), diet, ctx.allergens.slice().sort().join(","), bucket, dna, contextFoodId ?? "", ...(modelId ? [`model=${modelId}`] : [])].join("|");
-  return "answer:" + createHash("sha256").update(raw).digest("hex");
+  return `answer:${ANSWER_PIPELINE}:` + createHash("sha256").update(raw).digest("hex");
 }

@@ -1,21 +1,28 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canonAllergens } from "@/lib/diet/allergens";
+import { checkDiet } from "@/lib/diet/consistency";
 import { DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 import type { ContentSource, Country, FoodDetail, FoodName, FoodSummary, RelationType } from "./types";
 
+// 아래 열 목록 끝의 food_ingredients(ingredients(name_ko)): 식이 표가 재료와 모순인지 보려고 (비건 yes 인데 우유·버터 — 1만 개 중 45개, lib/diet/consistency.ts).
+// food_cards 뷰·검색 함수에도 그대로 붙는다. 열 목록은 리터럴로 둔다 (supabase-js 가 행 타입을 추론하게)
+const INGREDIENT_NAMES = "food_ingredients(ingredients(name_ko))";
 // 음식 카드 목록은 food_cards 뷰(0014)에서 — 나라 이름·국기·색이 평평하게 붙어 있고 fame_rank 는 나라 안 실제 순위(1부터 빈칸 없이)
 const CARD_COLS =
-  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, country_name, flag_emoji, accent_color, fame_rank";
+  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, country_name, flag_emoji, accent_color, fame_rank, food_ingredients(ingredients(name_ko))";
 // 상세·관계·재료처럼 foods 테이블에서 조인해 오는 곳 (fame_rank 는 foods 컬럼 — 순위 도구가 매긴 값)
 const SUMMARY_COLS =
-  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, fame_rank, countries(name_ko, flag_emoji, accent_color)";
+  "id, slug, name_ko, name_en, country_code, summary, taste_tags, image_url, image_credit, allergens, diet_vegan, diet_vegetarian, diet_halal, diet_gluten_free, diet_dairy_free, fame_rank, countries(name_ko, flag_emoji, accent_color), food_ingredients(ingredients(name_ko))";
 const COUNTRY_COLS = "code, name_ko, name_en, region, continent_group, flag_emoji, accent_color";
 /** PostgREST 한 번 응답 상한 (Supabase 기본 max_rows) */
 const PAGE = 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Row = Record<string, unknown>;
-const dietOf = (r: Row) => Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`]])) as Record<DietKey, DietLevel>;
+const ingredientNames = (r: Row) => ((r.food_ingredients as { ingredients: { name_ko: string } | null }[]) ?? []).flatMap((x) => (x.ingredients ? [x.ingredients.name_ko] : []));
+/** DB 식이 값 — 재료와 모순인 yes 는 depends 로 (카드·목록·상세·푸디 답이 같은 값) */
+const dietOf = (r: Row) => checkDiet(Object.fromEntries(DIET_KEYS.map((k) => [k, r[`diet_${k}`]])) as Record<DietKey, DietLevel>, ingredientNames(r)).diet;
 
 const toSummary = (r: Row): FoodSummary => {
   const c = r.countries as { name_ko: string; flag_emoji: string; accent_color: string };
@@ -23,7 +30,8 @@ const toSummary = (r: Row): FoodSummary => {
     id: r.id as string, slug: r.slug as string, name_ko: r.name_ko as string, name_en: r.name_en as string,
     country_code: r.country_code as string, flag: c.flag_emoji, accent: c.accent_color, country_name: c.name_ko,
     summary: r.summary as string | null, taste_tags: r.taste_tags as string[], image_url: r.image_url as string | null, image_credit: r.image_credit as string | null,
-    diet: dietOf(r), allergens: (r.allergens as string[]) ?? [], fame_rank: (r.fame_rank as number | null) ?? null,
+    // 알레르기: DB 에 한국어(우유)·영어(dairy) 표기가 섞여 있다 → 표준 키로 (lib/diet/allergens.ts)
+    diet: dietOf(r), allergens: canonAllergens(r.allergens as string[]), fame_rank: (r.fame_rank as number | null) ?? null,
   };
 };
 const fromCard = (r: Row): FoodSummary => toSummary({ ...r, countries: { name_ko: r.country_name, flag_emoji: r.flag_emoji, accent_color: r.accent_color } });
@@ -100,7 +108,7 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
       const { data, error } = await db
         .from("foods")
         .select(
-          `${SUMMARY_COLS.replace("countries(name_ko, flag_emoji, accent_color)", `countries(${COUNTRY_COLS})`)}, ` +
+          `${SUMMARY_COLS.replace("countries(name_ko, flag_emoji, accent_color)", `countries(${COUNTRY_COLS})`).replace(`, ${INGREDIENT_NAMES}`, "")}, ` +
             "name_local, region_in_country, origin_note, history, culture_story, cooking_method, course_type, diet_note, " +
             "food_ingredients(role, ingredients(slug, name_ko)), sources(field, url, title, license)",
         )

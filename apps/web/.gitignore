@@ -45,3 +45,4 @@ lib/foodi/eval/.last-*.json
 
 # 음성 지연 측정 청취용 오디오 (scripts/bench-voice.ts)
 /bench-out/
+qa-out/

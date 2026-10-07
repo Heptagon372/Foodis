@@ -1,5 +1,6 @@
 // 검수 규칙 (07 문서 §3.2 거버넌스 · docs/design/03 식이 태깅 기준 · foodis-data s07 과 같은 원칙). 순수 함수 — 테스트 가능.
 import { z } from "zod";
+import { COURSE_KO, METHOD_KO, TAG_KO, type Course, type Method } from "@/lib/foodi/vocab";
 import { ALLERGENS, DIET_KEYS, type DietKey, type DietLevel } from "@/lib/foodi/schema";
 
 const LEVEL = z.enum(["yes", "depends", "no", "unknown"]);
@@ -120,13 +121,9 @@ export function reviewRowToEdit(r: Record<string, string>): { slug: string; edit
   return { slug, edit: parsed.data };
 }
 
-// ── 임베딩 텍스트 (foodis-data/scripts/s09_embed.py embedding_text 와 같은 구성)
-const TAG_KO: Record<string, string> = {
-  spicy: "매운", fermented: "발효", soupy: "국물", sweet: "단", sour: "새콤한", salty: "짭짤한", umami: "감칠맛", smoky: "훈연향",
-  herbal: "허브향", creamy: "크리미한", crispy: "바삭한", rich: "진한", fresh: "산뜻한", nutty: "고소한", grilled: "구운", fried: "튀긴",
-  rice: "밥", noodle: "면", bread: "빵", dumpling: "만두", meat: "고기", seafood: "해산물", vegetable: "채소", legume: "콩",
-  dairy: "유제품", street_food: "길거리 음식",
-};
+// ── 임베딩 문서 v2 (docs/design/19 §5). 사람이 말로 찾을 법한 특징을 한국어로 — 질의("튀긴 디저트", "비건 국물")와 같은 말을 쓴다.
+// 맛·조리법·코스 이름표는 푸디 질의 해석(lib/foodi/vocab.ts)과 같은 표를 쓴다. 어드민 재생성 라우트 · scripts/embed-foods.ts 가 함께 쓴다.
+const DIET_KO: Record<string, string> = { vegan: "비건", vegetarian: "채식", halal: "할랄", gluten_free: "글루텐 프리", dairy_free: "유제품 없음" };
 export function embeddingText(f: {
   name_ko: string;
   name_en: string;
@@ -137,18 +134,22 @@ export function embeddingText(f: {
   culture_story: string | null;
   diet: Record<string, string>;
   mainIngredients: string[];
+  subIngredients?: string[];
   countryKo: string;
+  region?: string | null;
 }): string {
   const diet = Object.entries(f.diet)
     .filter(([, v]) => v === "yes")
-    .map(([k]) => k)
+    .map(([k]) => DIET_KO[k] ?? k)
     .join(", ");
+  const how = [f.cooking_method ? `조리법: ${METHOD_KO[f.cooking_method as Method] ?? f.cooking_method}` : "", f.course_type ? `종류: ${COURSE_KO[f.course_type as Course] ?? f.course_type}` : ""].filter(Boolean).join(", ");
   const lines = [
-    `${f.name_ko} (${f.name_en}) — ${f.countryKo} 음식`,
+    `${f.name_ko} (${f.name_en}) — ${f.countryKo}${f.region ? ` ${f.region}` : ""} 음식`,
     f.summary ?? "",
-    `맛·특징: ${f.taste_tags.map((t) => TAG_KO[t] ?? t).join(", ")}`,
-    `주재료: ${f.mainIngredients.join(", ")}`,
-    `조리법: ${f.cooking_method ?? ""}, 분류: ${f.course_type ?? ""}`,
+    f.taste_tags.length ? `맛·특징: ${f.taste_tags.map((t) => TAG_KO[t] ?? t).join(", ")}` : "",
+    f.mainIngredients.length ? `주재료: ${f.mainIngredients.join(", ")}` : "",
+    f.subIngredients?.length ? `부재료: ${f.subIngredients.join(", ")}` : "",
+    how,
   ];
   if (diet) lines.push(`식이: ${diet}`);
   if (f.culture_story) lines.push(f.culture_story.slice(0, 300));

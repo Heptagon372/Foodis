@@ -2,6 +2,8 @@
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node tools/load-food-import.mjs <file.jsonl> [--dry-run]
 // 같은 slug 는 새 파일 내용으로 덮어쓰고 verified=true 로 노출한다. 덮어쓰기 전 기존 행을 data/raw/_backup_<날짜>/ 에 저장.
 // 재료·출처·관계는 이 파일에 든 음식 것만 지우고 다시 넣는다 (다른 음식 데이터는 건드리지 않음).
+// 알레르기는 파일 표기(한국어) 그대로 넣는다 — 앱이 읽을 때 표준 키로 바꾼다(apps/web/lib/diet/allergens.ts). DB 도 정리하려면 적재 뒤
+// supabase/migrations/0015_allergen_keys.sql 을 다시 실행 (여러 번 실행해도 안전). 적재 뒤: pnpm db:fame (순위·세계 유명도) → apps/web 에서 pnpm embed:foods (임베딩)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 
 const file = process.argv[2];

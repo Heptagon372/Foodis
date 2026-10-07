@@ -1,7 +1,8 @@
 import type { DietKey, DietLevel } from "@/lib/foodi/schema";
+import { ALLERGEN_KO } from "@/lib/diet/allergens";
 import { Icon, type IconName } from "./icons";
 
-export const ALLERGEN_LABEL: Record<string, string> = { nuts: "견과류", peanut: "땅콩", shellfish: "갑각류", fish: "생선", egg: "달걀", soy: "대두", wheat: "밀", dairy: "유제품", sesame: "참깨" };
+export const ALLERGEN_LABEL: Record<string, string> = ALLERGEN_KO;
 
 export const DIET_LABEL: Record<DietKey, string> = { vegan: "비건", vegetarian: "채식", halal: "할랄", gluten_free: "글루텐 프리", dairy_free: "유제품 없음" };
 

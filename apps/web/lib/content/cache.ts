@@ -3,6 +3,7 @@
 // 5분이 지나면 지난 값을 바로 돌려주고 뒤에서 한 번만 새로 받는다(stale-while-revalidate) — 5분마다 첫 방문자가 10초씩 기다리지 않게.
 // 어드민이 음식·나라를 고치면 invalidateContent() 로 즉시 비운다 (다음 요청은 새 값을 기다린다).
 import "server-only";
+import { invalidateFoodIndex } from "@/lib/db/foodis-repo";
 import type { ContentSource } from "./types";
 
 const TTL_MS = 5 * 60_000;
@@ -49,5 +50,8 @@ export function cachedContent(src: ContentSource): ContentSource {
   };
 }
 
-/** 어드민 쓰기(음식 추가·수정·삭제·검수·가져오기·나라 동기화) 뒤에 호출 */
-export const invalidateContent = () => store.clear();
+/** 어드민 쓰기(음식 추가·수정·삭제·검수·가져오기·나라 동기화) 뒤에 호출 — 푸디 검색 색인(lib/db/foodis-repo, 10분)도 함께 비운다 */
+export const invalidateContent = () => {
+  store.clear();
+  invalidateFoodIndex();
+};

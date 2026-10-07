@@ -1,5 +1,6 @@
 // /api/foodi/ask 계약 (07 문서 §6.3). 클라이언트·서버·LLM 출력 스키마를 한 곳에서 관리한다.
 import { z } from "zod";
+import { COURSES, METHODS, TASTE_TAGS } from "./vocab";
 
 export const INTENTS = [
   "recommend",
@@ -52,6 +53,13 @@ export const IntentOutput = z.object({
   country_code: z.string().nullable().describe("특정 나라를 말했으면 ISO 3166-1 alpha-2, 아니면 null"),
   mentioned_food: z.string().nullable().describe("질문이 가리키는 특정 음식 이름(사용자가 말한 그대로). 없으면 null"),
   mentioned_place: z.string().nullable().describe("나라가 아닌 장소·지역·가상의 곳을 말했으면 그 이름(예: 화성, 북극). 없으면 null"),
+  // 1만 개 데이터의 통제 어휘 (vocab.ts) — 질문의 조건을 DB 가 아는 말로 옮긴다 (docs/design/19 §3)
+  tastes: z.array(z.enum(TASTE_TAGS)).default([]).describe("원하는 맛·특징. 말하지 않았으면 []"),
+  avoid_tastes: z.array(z.enum(TASTE_TAGS)).default([]).describe("싫다·빼 달라고 한 맛 (예: 안 매운 → spicy). 없으면 []"),
+  methods: z.array(z.enum(METHODS)).default([]).describe("원하는 조리법. 없으면 []"),
+  courses: z.array(z.enum(COURSES)).default([]).describe("원하는 종류(디저트·간식·음료 …). 없으면 []"),
+  ingredients: z.array(z.string()).default([]).describe("원하는 재료, 한국어 (예: 감자, 코코넛). 없으면 []"),
+  avoid_ingredients: z.array(z.string()).default([]).describe("빼 달라는 재료, 한국어. 없으면 []"),
 });
 export type IntentOutput = z.infer<typeof IntentOutput>;
 

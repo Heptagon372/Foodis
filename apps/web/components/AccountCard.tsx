@@ -50,7 +50,7 @@ export function AccountCard() {
           <IconTile icon="user" />
           <div className="min-w-0 space-y-1">
             <p className="font-semibold text-ink">로그인 없이 쓰는 중</p>
-            <p className="text-sm text-ink-soft">기록이 이 브라우저에만 있어요. 로그인하면 계정에 저장되고 다른 기기에서도 이어져요.</p>
+            <p className="text-sm text-ink-soft">로그인하면 기록이 다른 기기에서도 이어져요.</p>
           </div>
         </div>
         <Link href="/login?next=/passport" className={`${btn("primary")} w-full`}>

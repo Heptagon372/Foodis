@@ -63,7 +63,7 @@ export function FoodCard({ food, size = "M", reason, action, fluid = false, badg
   }
   if (size === "M") {
     return (
-      <Link food={food} src={src} href={href} className={`card block rounded-[24px] p-1.5 transition active:scale-[0.98] ${fluid ? "w-full" : "w-40"} ${ring}`}>
+      <Link food={food} src={src} href={href} className={`card block rounded-[24px] p-1.5 transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.98] ${fluid ? "w-full" : "w-40"} ${ring}`}>
         <div className={`relative flex items-end justify-between overflow-hidden rounded-[18px] p-2.5 ${food.image_url ? (fluid ? "h-32" : "h-28") : "h-24"}`} style={accentBg(food.accent, food.image_url)}>
           <span className="text-[1.75rem] leading-none drop-shadow-sm" aria-hidden>
             {food.flag}

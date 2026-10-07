@@ -151,6 +151,9 @@ describe("슬롯 추출·한국어", () => {
     expect(findUnknownPlace("비건으로 먹을 수 있는 음식 추천해줘", vocab)).toBeNull();
     expect(findUnknownPlace("아프리카 음식", vocab)).toBeNull();
     expect(findUnknownPlace("할랄 음식만 보여줘", vocab)).toBeNull();
+    // 맛 말은 지도 밖 이름이 아니다 (Food DNA 유도 질문)
+    expect(findUnknownPlace("매운맛 음식 다른 나라 거 추천해줘", vocab)).toBeNull();
+    expect(findUnknownPlace("발효 음식 추천해줘", vocab)).toBeNull();
   });
   it("'알려줘'만으로는 음식 추천이 아니다", () => {
     expect(ruleClassify("내일 날씨 알려줘", undefined, vocab).intent).toBeNull();

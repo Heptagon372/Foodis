@@ -25,7 +25,7 @@ export function QuestBoard() {
               ))}
             </ul>
             <p className="text-caption text-muted">
-              매주 월요일(한국 시간)에 새 퀘스트가 열려요. 3개를 모두 끝내면 연속 기록이 이어져요
+              매주 월요일 새 퀘스트 · 3개 완료하면 연속 기록
               {q.streak > 0 && (
                 <b className="font-semibold text-leaf">
                   {" · "}
@@ -113,57 +113,46 @@ export function QuestHomeCard() {
   );
 }
 
-/** 홈 오른쪽 '이번 주 챌린지' 패널 (레퍼런스 Daily Challenge) — 아직 안 끝난 퀘스트 하나 + 진행률 + 보상 + CTA */
+/** 홈 오른쪽 '이번 주 챌린지' 패널 (레퍼런스 Daily Challenge) — 아직 안 끝난 퀘스트 하나 + 진행 바 + 보상 한 줄 + CTA.
+ *  라벨 글자('진행'·'보상'·퍼센트)는 두지 않는다 — 바와 아이콘이 말하고, 자세한 건 /quests 에서 */
 export function QuestChallengeCard({ className = "" }: { className?: string }) {
   const q = useQuest();
-  if (!q.ready || !q.quests.length) return <div className={`panel min-h-72 rounded-[28px] ${className}`} aria-hidden />;
+  if (!q.ready || !q.quests.length) return <div className={`panel min-h-56 rounded-[28px] ${className}`} aria-hidden />;
   const cur = q.quests.find((x) => !x.done) ?? q.quests[q.quests.length - 1];
-  const pct = Math.round((cur.value / Math.max(1, cur.target)) * 100);
   return (
-    <section className={`panel flex flex-col gap-4 rounded-[28px] p-5 ${className}`} aria-labelledby="challenge-title">
+    <section className={`panel flex flex-col gap-3 rounded-[28px] p-4 ${className}`} aria-labelledby="challenge-title">
       <div className="flex items-center justify-between">
         <h2 id="challenge-title" className="text-title font-bold text-ink">
           이번 주 챌린지
         </h2>
-        <Icon name="calendar" className="size-5 text-ink-soft" />
+        <span className="inline-flex items-center gap-1 text-caption font-semibold tabular-nums text-leaf">
+          <Icon name="quest" className="size-4" />
+          {q.doneCount}/{q.quests.length}
+          {q.streak > 0 && (
+            <>
+              <span className="text-muted">·</span>
+              <Icon name="flame" className="size-4" />
+              {q.streak}주
+            </>
+          )}
+        </span>
       </div>
-      <div className="flex items-center gap-3 rounded-2xl border border-line bg-sunken/60 p-3">
+      <div className="flex items-center gap-3">
         <IconTile icon={cur.done ? "check" : cur.icon} tone="soft" size="lg" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-ink">{cur.title}</p>
-          <p className="line-clamp-2 text-caption text-ink-soft">{cur.done ? "이번 주 퀘스트를 모두 끝냈어요" : `다음: ${cur.next}`}</p>
+          <p className="truncate text-caption text-ink-soft">{cur.done ? "모두 완료했어요" : `다음: ${cur.next}`}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <ProgressBar value={cur.value} max={cur.target} label={`${cur.title} 진행`} className="h-1.5" />
+            <span className="shrink-0 text-caption font-semibold tabular-nums text-ink">
+              {cur.value}/{cur.target}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="space-y-2">
-        <p className="flex items-baseline justify-between text-caption text-ink-soft">
-          진행
-          <span className="font-semibold tabular-nums text-ink">
-            {cur.value}/{cur.target} · {pct}%
-          </span>
-        </p>
-        <ProgressBar value={cur.value} max={cur.target} label={`${cur.title} 진행`} className="h-2" />
-      </div>
-      <div className="space-y-2">
-        <p className="text-caption text-ink-soft">보상</p>
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-ink">
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="stamp" className="size-4 text-leaf" />
-            {cur.reward}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="quest" className="size-4 text-leaf" />
-            이번 주 {q.doneCount}/{q.quests.length}
-          </span>
-          {q.streak > 0 && (
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="flame" className="size-4 text-leaf" />
-              {q.streak}주 연속
-            </span>
-          )}
-        </p>
-      </div>
       <Link href="/quests" className={`${btn("lime", "md")} mt-auto w-full`}>
-        {cur.done ? "배지 보러 가기" : "챌린지 시작"}
+        <Icon name="stamp" className="size-4" />
+        {cur.done ? "배지 보러 가기" : `${cur.reward} 받기`}
       </Link>
     </section>
   );

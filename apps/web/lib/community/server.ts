@@ -42,7 +42,10 @@ export async function communityStatus(): Promise<{ live: boolean; reason: string
 export async function getStore(): Promise<CommunityStore> {
   if ((await communityStatus()).live) return supabaseStore(supabaseAdmin());
   if (!mem.store) {
-    const foods = await (await getContent()).listFoods();
+    // 샘플 글이 쓰는 음식 사진만 조회한다: 한 번 돌려 slug 를 모은 뒤 그 음식들만 가져온다
+    const slugs = new Set<string>();
+    previewSeed((slug) => (slugs.add(slug), null));
+    const foods = await (await getContent()).foodsByKeys([...slugs]);
     const img = new Map(foods.filter((f) => f.image_url).map((f) => [f.slug, { url: f.image_url!, credit: f.image_credit }]));
     mem.store = memoryStore({
       seed: previewSeed((slug) => img.get(slug) ?? null),
@@ -83,7 +86,8 @@ let vocab: { at: number; v: TagVocab; names: Map<string, string> } | null = null
 export async function tagVocab(): Promise<{ v: TagVocab; names: Map<string, string> }> {
   if (vocab && Date.now() - vocab.at < 300_000) return vocab;
   const content = await getContent();
-  const [foods, countries] = await Promise.all([content.listFoods(), content.listCountries()]);
+  // 이름만 (slug · 한국어 · 영어) — 소개·사진까지 1만 개를 받지 않는다
+  const [foods, countries] = await Promise.all([content.foodNames(), content.listCountries()]);
   const v: TagVocab = { foods: foods.map((f) => ({ slug: f.slug, name_ko: f.name_ko, name_en: f.name_en })), countries: countries.map((c) => ({ code: c.code, name_ko: c.name_ko })) };
   vocab = { at: Date.now(), v, names: new Map(foods.map((f) => [f.slug, f.name_ko])) };
   return vocab;

@@ -16,6 +16,9 @@ export const CHANNELS = {
 export type ChannelId = keyof typeof CHANNELS;
 export const isChannel = (v: string | null): v is ChannelId => !!v && v in CHANNELS;
 
+/** 편성 후보: 나라마다 유명도 상위 몇 개까지 */
+const RADIO_PER_COUNTRY = 20;
+
 /** 이야기가 자연스럽게 이어지는 순서 */
 const PRIORITY: RelationType[] = ["historical_link", "regional_variant", "shares_ingredient", "same_technique", "similar_taste"];
 
@@ -52,10 +55,9 @@ export async function buildRadio(
   const count = Math.min(Math.max(opts.count ?? 5, 1), 8);
   const explored = new Set(opts.explored ?? []);
   const ch = CHANNELS[opts.channel];
-  const [foods, countries] = await Promise.all([content.listFoods(), ch.continent ? content.listCountries() : Promise.resolve([])]);
-  const inChannel = ch.continent ? new Set(countries.filter((c) => c.continent_group === ch.continent).map((c) => c.code)) : null;
-  // 라디오는 검수된 이야기가 있는 음식만 (이름·사진만 있는 카탈로그 음식은 들려줄 내용이 없다)
-  const pool = foods.filter((f) => f.summary && (!inChannel || inChannel.has(f.country_code)));
+  // 후보: 채널 대륙(오늘의 라디오는 전체)에서 나라마다 대표 음식 상위 몇 개 — 1만 개 전부가 아니라 들려줄 만한 이야기부터.
+  // 그중 검수된 이야기가 있는 음식만 (이름·사진만 있는 카탈로그 음식은 들려줄 내용이 없다)
+  const pool = (await content.topFoods({ perCountry: RADIO_PER_COUNTRY, continent: ch.continent })).filter((f) => f.summary);
   const rand = seeded(`${opts.day ?? new Date().toISOString().slice(0, 10)}:${opts.channel}`);
 
   // 안 가본 나라 우선, 그 안에서 날짜 시드

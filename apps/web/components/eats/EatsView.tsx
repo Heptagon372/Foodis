@@ -44,21 +44,23 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
   const needle = q.trim().toLowerCase();
   // 서버 검색: 화면이 받은 목록은 나라별 대표 음식뿐이라, 검색어가 있으면 전체 음식에서 더 찾아 뒤에 붙인다 (로컬 결과는 즉시, 서버 결과는 잠시 뒤)
   const [remote, setRemote] = useState<{ q: string; foods: ExploreFood[] } | null>(null);
+  // 지금 검색어 — 늦게 도착한 지난 검색어의 응답은 버린다. 요청 자체는 끊지 않는다: cleanup 에서 abort 하면
+  // 개발 모드의 Fast Refresh(처음 API 라우트를 컴파일할 때도 일어난다)가 effect 를 다시 돌릴 때 진행 중이던 검색이 사라져 "맞는 음식이 없어요"가 떴다
+  const latest = useRef(needle);
+  latest.current = needle;
   useEffect(() => {
     if (!needle) return;
-    const ctrl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/foods/explore?q=${encodeURIComponent(needle)}`, { signal: ctrl.signal })
+      fetch(`/api/foods/explore?q=${encodeURIComponent(needle)}`)
         .then((r) => (r.ok ? (r.json() as Promise<ExploreFood[]>) : []))
-        .then((list) => setRemote({ q: needle, foods: list }))
+        .then((list) => {
+          if (latest.current === needle) setRemote({ q: needle, foods: list });
+        })
         .catch(() => {
           /* 서버 검색 실패 → 로컬 결과만 */
         });
     }, 150);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
+    return () => clearTimeout(t);
   }, [needle]);
   const matches = useMemo(() => {
     const byCat = (f: ExploreFood) => cat === "all" || f.cats.includes(cat);

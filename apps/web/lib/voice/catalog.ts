@@ -96,7 +96,8 @@ export const isVoiceId = (id: unknown): id is string => typeof id === "string" &
 export const DEFAULT_VOICE: Record<TTSProviderId, string> = {
   google: "google-wavenet-a",
   openai: "openai-coral",
-  gemini: "gemini-sulafat",
+  // 라이트 모델: 같은 목소리, 실측 3~5초 (Flash TTS 는 6초대, 둘 다 스트리밍 없음 — 2026-10-07 localhost 측정)
+  gemini: "gemini-sulafat-lite",
   elevenlabs: "eleven-talia-flash",
   clova: "clova-vara",
 };
@@ -104,10 +105,10 @@ export const DEFAULT_VOICE: Record<TTSProviderId, string> = {
 // ── 라디오 2인 진행 (11 문서 §4): 이야기(요약·유래·역사·문화) = 진행자 A, 오프닝·연결·클로징 = 진행자 B
 export type HostRole = "host-a" | "host-b";
 export const HOST_ROLES: HostRole[] = ["host-a", "host-b"];
-/** 자동 짝: 준비된 제공자 중 앞에서부터. A 는 차분한 이야기꾼(남성), B 는 밝은 진행자(여성) — 성별·톤이 갈리게 */
+/** 자동 짝: 준비된 제공자 중 앞에서부터 (Gemini 먼저 — 2026-10-07 말하기 기본). A 는 차분한 이야기꾼(남성), B 는 밝은 진행자(여성) — 성별·톤이 갈리게 */
 export const HOST_PREFS: Record<HostRole, string[]> = {
-  "host-a": ["openai-cedar", "eleven-darian-flash", "google-chirp3-charon", "clova-vian", "google-neural2-c", "gemini-sadaltager"],
-  "host-b": ["openai-marin", "eleven-talia-flash", "google-chirp3-aoede", "clova-vara", "google-neural2-a", "gemini-sulafat", "google-wavenet-a"],
+  "host-a": ["gemini-sadaltager", "openai-cedar", "eleven-darian-flash", "google-chirp3-charon", "clova-vian", "google-neural2-c"],
+  "host-b": ["gemini-sulafat", "openai-marin", "eleven-talia-flash", "google-chirp3-aoede", "clova-vara", "google-neural2-a", "google-wavenet-a"],
 };
 export const HOST_LABEL: Record<HostRole, string> = { "host-a": "이야기꾼", "host-b": "진행자" };
 

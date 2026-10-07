@@ -9,6 +9,8 @@ export const INTENTS = [
   "filter_by_diet",
   "compare_similar",
   "passport_status",
+  /** 인사·감사·작별·안부·"너 누구야" 같은 가벼운 대화 — LLM 없이 페르소나 문장으로 (social.ts, docs/design/24 §K) */
+  "social",
   "out_of_scope",
 ] as const;
 export type Intent = (typeof INTENTS)[number];

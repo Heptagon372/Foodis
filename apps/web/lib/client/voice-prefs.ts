@@ -1,10 +1,11 @@
 "use client";
 // 음성 설정 (브라우저 저장): 푸디 목소리(TTS) · 음성 인식 방식(STT). 서버 라우트에 요청할 때 함께 보낸다.
 // 목소리 값은 lib/voice/catalog 의 id, 인식 방식은 registry/stt 가 아는 값 — 서버가 다시 검증한다.
+// v2 (2026-10-07): 듣기·말하기 기본을 Gemini 로 — 인식은 서버(Gemini 엔진), 목소리는 자동(서버 기본 체인 = TTS_PROVIDER gemini).
 import { useRef, useSyncExternalStore } from "react";
 
 export type VoicePrefs = {
-  v: 1;
+  v: 2;
   /** 푸디 목소리 id (null = 자동: 서버 기본 체인) */
   ttsVoice: string | null;
   /** 라디오 진행자 목소리 id 두 개 (null = 자동 짝) */
@@ -18,17 +19,33 @@ export type VoicePrefs = {
 };
 
 const KEY = "foodis:voice";
-const INITIAL: VoicePrefs = { v: 1, ttsVoice: null, radioHosts: null, sttMode: "auto", sttLang: "ko", sttEngine: null };
+const INITIAL: VoicePrefs = { v: 2, ttsVoice: null, radioHosts: null, sttMode: "server", sttLang: "ko", sttEngine: "gemini" };
 let state: VoicePrefs = INITIAL;
 let loaded = false;
 const listeners = new Set<() => void>();
+
+/** 저장된 값 → 지금 판. v1(브라우저 인식·목소리 자유)은 Gemini 기본으로 옮긴다: 인식은 서버 Gemini, Gemini 가 아닌 목소리는 자동(=Gemini)으로 */
+export function migrateVoicePrefs(raw: unknown): VoicePrefs {
+  const p = (raw && typeof raw === "object" ? raw : {}) as Partial<VoicePrefs> & { v?: number };
+  const merged: VoicePrefs = { ...INITIAL, ...p, v: 2 };
+  if ((p.v ?? 1) < 2) {
+    merged.sttMode = "server";
+    merged.sttEngine = "gemini";
+    if (merged.ttsVoice && !merged.ttsVoice.startsWith("gemini-")) merged.ttsVoice = null;
+  }
+  return merged;
+}
 
 function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) state = { ...INITIAL, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw) as { v?: number };
+      state = migrateVoicePrefs(parsed);
+      if ((parsed.v ?? 1) < 2) window.localStorage.setItem(KEY, JSON.stringify(state));
+    }
   } catch {
     /* 저장소 사용 불가 → 기본값 */
   }
@@ -41,7 +58,7 @@ export function getVoicePrefs(): VoicePrefs {
 
 export function setVoicePrefs(patch: Partial<VoicePrefs>) {
   load();
-  state = { ...state, ...patch };
+  state = { ...state, ...patch, v: 2 };
   try {
     window.localStorage.setItem(KEY, JSON.stringify(state));
   } catch {

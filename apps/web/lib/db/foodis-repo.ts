@@ -39,6 +39,13 @@ let hasV2: boolean | null = null;
 let coverageCache: { at: number; value: number } | null = null;
 export const EMBED_COVERAGE_MIN = 0.95;
 
+/** 어드민이 음식·나라를 고친 뒤 (lib/content/cache invalidateContent) — 다음 질문이 새 색인을 받는다 */
+export function invalidateFoodIndex() {
+  indexCache = null;
+  countryCache = null;
+  coverageCache = null;
+}
+
 /** PostgREST 는 한 번에 최대 1,000행 — 쪽으로 나눠 동시에 몇 개씩 받는다 */
 async function pages<T>(db: SupabaseClient, build: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>, total: number, size = 1000, parallel = 6): Promise<T[]> {
   const starts = Array.from({ length: Math.ceil(total / size) }, (_, i) => i * size);

@@ -13,7 +13,7 @@ export default async function EatsPage() {
   const [countries, foods] = await Promise.all([content.listCountries(), content.listFoods()]);
   // 지도 키는 브라우저에 노출되는 공개 키(도메인 등록으로 보호) — 서버 전용 키는 넘기지 않는다
   const mapKey = (env.mapProvider === "naver" ? env.naverMapClientId : env.kakaoMapJsKey) ?? null;
-  // 고를 수 있는 음식: 나라마다 유명도 상위 20개 — 한국에서 파는 곳을 찾는 화면이라 1만 개 전부(3MB)는 필요 없다 (docs/design/20)
-  const pickable = foods.filter((f) => f.fame_rank == null || f.fame_rank <= 20);
-  return <EatsView foods={toExploreFoods(pickable, countries)} setup={placesSetup()} mapKey={mapKey} />;
+  // 처음엔 나라별 유명도 상위 10개(약 1,400개)만 — 검색어를 치면 화면이 /api/foods/explore 로 10,000개 전체를 뒤진다. 순위가 없는 음식(미리보기)은 모두 보낸다
+  const browse = foods.filter((f) => (f.fame_rank ?? 0) <= 10);
+  return <EatsView foods={toExploreFoods(browse, countries)} setup={placesSetup()} mapKey={mapKey} />;
 }

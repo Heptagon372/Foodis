@@ -2,6 +2,7 @@
 import { requireApi } from "@/lib/admin/auth";
 import { apiError, db, replaceDietSources, toRow } from "@/lib/admin/data";
 import { dietProblems, FoodEdit } from "@/lib/admin/rules";
+import { invalidateContent } from "@/lib/content";
 import { z } from "zod";
 
 const Body = FoodEdit.extend({ slug: z.string().regex(/^[a-z0-9-]{2,60}$/, "slug 는 영소문자·숫자·하이픈") });
@@ -17,5 +18,6 @@ export async function POST(req: Request) {
   const { data, error } = await db().from("foods").insert({ slug, ...toRow(edit, s.userId) }).select("id, slug").single();
   if (error) return apiError(error.code === "23505" ? 409 : 500, error.code === "23505" ? "같은 slug 가 이미 있어요" : error.message);
   await replaceDietSources(data.id, edit.diet_sources);
+  invalidateContent();
   return Response.json(data, { status: 201 });
 }

@@ -43,7 +43,7 @@ async function main() {
   const apis: Check[] = [
     "/api/health", "/api/foodi/models", "/api/foodi/voices", "/api/countries/KR", "/api/foods/kimchi", "/api/foods/kimchi/relations",
     "/api/news", "/api/radio", "/api/trending", "/api/community/posts", "/api/community/clubs", "/api/community/briefing",
-    "/api/foods/table?slugs=kimchi,sushi", "/api/places/nearby?food=kimchi&lat=37.5665&lng=126.978",
+    "/api/foods/table?keys=kimchi,sushi", "/api/foods/explore?q=%EA%B9%80%EC%B9%98", "/api/places/nearby?food=kimchi&lat=37.5665&lng=126.978",
   ].map((path) => ({ path, kind: "api" }));
   // /api/community/signals · /api/community/buddy/chats 는 POST 전용, /api/demo/pack 은 DEMO_MODE 일 때만(아니면 403)
   const authApis: Check[] = ["/api/me", "/api/community/buddy", "/api/demo/pack"].map((path) => ({ path, kind: "api", expect: [200, 401, 403] }));

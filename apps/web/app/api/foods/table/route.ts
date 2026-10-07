@@ -1,19 +1,16 @@
-// GET /api/foods/table?ids=a,b&slugs=x,y — My Table 접시 조회표 (사진·국가색). 탐험 기록은 브라우저에만 있어서
-// 예전에는 서버가 1만 개 조회표(약 4MB)를 화면에 통째로 넣었다 → 지금은 기록에 있는 음식만 (최대 120개) 묻는다 (docs/design/20).
-// 목록은 서버 캐시(lib/content listFoods, 5분)에서 찾는다 — 미리보기·실DB 둘 다.
+// GET /api/foods/table?keys=<id|slug>,… — My Table 접시의 사진·국가색 조회표 (F-REC-04).
+// Passport 기록은 브라우저에만 있어 서버가 미리 알 수 없다 → 식탁에 올라갈 최근 기록만 받아 간다 (음식 10,000개 전체를 HTML 에 싣지 않게)
 import { NextResponse } from "next/server";
 import { getContent } from "@/lib/content";
-import { toTableFood } from "@/lib/table/my-table";
+import { MAX_PLATES, toTableFood } from "@/lib/table/my-table";
 
-const MAX = 120;
-const list = (v: string | null) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, MAX);
+const KEY = /^[A-Za-z0-9-]{1,80}$/;
 
 export async function GET(req: Request) {
-  const q = new URL(req.url).searchParams;
-  const ids = new Set(list(q.get("ids")));
-  const slugs = new Set(list(q.get("slugs")));
-  if (!ids.size && !slugs.size) return NextResponse.json([]);
+  const raw = new URL(req.url).searchParams.get("keys") ?? "";
+  const keys = new Set(raw.split(",").filter((k) => KEY.test(k)).slice(0, MAX_PLATES * 2));
+  if (!keys.size) return NextResponse.json([]);
   const foods = await (await getContent()).listFoods();
-  const hit = foods.filter((f) => ids.has(f.id) || slugs.has(f.slug)).map(toTableFood);
-  return NextResponse.json(hit, { headers: { "Cache-Control": "private, max-age=300" } });
+  const hit = foods.filter((f) => keys.has(f.id) || keys.has(f.slug)).map(toTableFood);
+  return NextResponse.json(hit, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
 }

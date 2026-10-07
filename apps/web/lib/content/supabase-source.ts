@@ -30,65 +30,30 @@ const toSummary = (r: Row): FoodSummary => {
   };
 };
 
-// 목록 캐시 (서버 프로세스 하나에 하나): 홈·지도·맛집·라디오가 요청마다 1만 행(11쪽)을 다시 받느라 3~4초씩 걸렸다 (docs/design/20).
-// 5분 동안은 그대로 쓰고, 지나면 옛 목록으로 답하면서 뒤에서 새로 받는다. 상세 화면(getFood)은 캐시하지 않는다 — 어드민에서 고친 내용은 상세에 바로 보인다
-const LIST_TTL_MS = 5 * 60_000;
-type Cached<T> = { at: number; value: T } | null;
-let foodsCache: Cached<FoodSummary[]> = null;
-let countriesCache: Cached<Country[]> = null;
-const inflight = new Map<string, Promise<unknown>>();
-function cached<T>(key: string, get: () => Cached<T>, set: (v: Cached<T>) => void, load: () => Promise<T>): Promise<T> {
-  const cur = get();
-  const fresh = cur && Date.now() - cur.at < LIST_TTL_MS;
-  if (!fresh && !inflight.has(key)) {
-    inflight.set(
-      key,
-      load()
-        .then((value) => (set({ at: Date.now(), value }), value))
-        .finally(() => inflight.delete(key)),
-    );
-  }
-  return cur ? Promise.resolve(cur.value) : (inflight.get(key) as Promise<T>);
-}
-
 /** anon 키 + RLS: 검수된(verified) 콘텐츠만 보인다 */
 export function supabaseContent(db: SupabaseClient): ContentSource {
   return {
     mode: "live",
-    listCountries: () =>
-      cached(
-        "countries",
-        () => countriesCache,
-        (v) => (countriesCache = v),
-        async () => {
-          const { data, error } = await db.from("countries").select("code, name_ko, name_en, region, continent_group, flag_emoji, accent_color").order("code");
-          if (error) throw error;
-          return data as Country[];
-        },
-      ),
-    listFoods: () =>
-      cached(
-        "foods",
-        () => foodsCache,
-        (v) => (foodsCache = v),
-        async () => {
-          // PostgREST 는 한 번에 최대 1,000행 → 개수를 먼저 세고 쪽들을 동시에 받는다 (차례로 11번 → 한 번에)
-          const { count, error: e1 } = await db.from("foods").select("id", { count: "exact", head: true });
-          if (e1) throw e1;
-          const pages = Array.from({ length: Math.ceil(((count ?? 0) + 1) / 1000) }, (_, i) => i * 1000);
-          const got = await Promise.all(
-            pages.map(async (from) => {
-              const { data, error } = await db.from("foods").select(SUMMARY_COLS).order("id").range(from, from + 999);
-              if (error) throw error;
-              return data as unknown as Row[];
-            }),
-          );
-          return got.flat().map(toSummary);
-        },
-      ),
+    async listCountries() {
+      const { data, error } = await db.from("countries").select("code, name_ko, name_en, region, continent_group, flag_emoji, accent_color").order("code");
+      if (error) throw error;
+      return data as Country[];
+    },
+    async listFoods() {
+      // PostgREST 는 한 번에 최대 1,000행 → 첫 페이지에서 전체 개수를 받고 나머지 페이지는 한꺼번에 받는다 (10,000행 = 11회 왕복 → 2회)
+      const PAGE = 1000;
+      const page = (from: number, count?: "exact") => db.from("foods").select(SUMMARY_COLS, count ? { count } : undefined).order("id").range(from, from + PAGE - 1);
+      const first = await page(0, "exact");
+      if (first.error) throw first.error;
+      const total = first.count ?? first.data.length;
+      const rest = await Promise.all(Array.from({ length: Math.max(0, Math.ceil(total / PAGE) - 1) }, (_, i) => page((i + 1) * PAGE)));
+      const rows = [first, ...rest].flatMap((r) => {
+        if (r.error) throw r.error;
+        return r.data as unknown as Row[];
+      });
+      return rows.map(toSummary);
+    },
     async countFoods() {
-      // 목록을 이미 받아 뒀으면 그 길이 (홈이 목록과 개수를 함께 부른다)
-      if (foodsCache) return foodsCache.value.length;
       const { count, error } = await db.from("foods").select("id", { count: "exact", head: true });
       if (error) throw error;
       return count ?? 0;
@@ -112,7 +77,6 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
         db.from("food_photos").select("url, thumb, title, source, license, credit_url, author, fit").eq("food_id", r.id as string).order("rank"),
         db.from("food_youtube").select("video_id, url, title, channel, duration_sec, view_count, fit").eq("food_id", r.id as string).maybeSingle(),
       ]);
-      const ingredients = ((r.food_ingredients as Row[]) ?? []).map((fi) => ({ ...(fi.ingredients as { slug: string; name_ko: string }), role: fi.role as string }));
       const detail: FoodDetail = {
         ...toSummary(r),
         name_local: r.name_local as string | null,
@@ -124,7 +88,7 @@ export function supabaseContent(db: SupabaseClient): ContentSource {
         cooking_method: r.cooking_method as string | null,
         course_type: r.course_type as string | null,
         diet_note: r.diet_note as string | null,
-        ingredients,
+        ingredients: ((r.food_ingredients as Row[]) ?? []).map((fi) => ({ ...(fi.ingredients as { slug: string; name_ko: string }), role: fi.role as string })),
         sources: (r.sources as FoodDetail["sources"]) ?? [],
         relations: ((rels.data as unknown as Row[]) ?? [])
           .filter((x) => x.to)

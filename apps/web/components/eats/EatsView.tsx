@@ -41,10 +41,31 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
   const [q, setQ] = useState("");
   const [food, setFood] = useState<ExploreFood | null>(null);
   const needle = q.trim().toLowerCase();
-  const matches = useMemo(
-    () => foods.filter((f) => (cat === "all" || f.cats.includes(cat)) && (!needle || f.name_ko.toLowerCase().includes(needle) || f.name_en.toLowerCase().includes(needle))),
-    [foods, cat, needle],
-  );
+  // 서버 검색: 화면이 받은 목록은 나라별 대표 음식뿐이라, 검색어가 있으면 전체 음식에서 더 찾아 뒤에 붙인다 (로컬 결과는 즉시, 서버 결과는 잠시 뒤)
+  const [remote, setRemote] = useState<{ q: string; foods: ExploreFood[] } | null>(null);
+  useEffect(() => {
+    if (!needle) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/foods/explore?q=${encodeURIComponent(needle)}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? (r.json() as Promise<ExploreFood[]>) : []))
+        .then((list) => setRemote({ q: needle, foods: list }))
+        .catch(() => {
+          /* 서버 검색 실패 → 로컬 결과만 */
+        });
+    }, 150);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [needle]);
+  const matches = useMemo(() => {
+    const byCat = (f: ExploreFood) => cat === "all" || f.cats.includes(cat);
+    const local = foods.filter((f) => byCat(f) && (!needle || f.name_ko.toLowerCase().includes(needle) || f.name_en.toLowerCase().includes(needle)));
+    if (!needle || remote?.q !== needle) return local;
+    const seen = new Set(local.map((f) => f.slug));
+    return [...local, ...remote.foods.filter((f) => byCat(f) && !seen.has(f.slug))];
+  }, [foods, cat, needle, remote]);
 
   // ── 기준 위치·반경
   const [mode, setMode] = useState<Mode>("near");

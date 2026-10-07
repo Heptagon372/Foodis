@@ -18,7 +18,7 @@ export function FollowUpChip({ children, onClick }: { children: ReactNode; onCli
 
 export function Section({ title, children, more }: { title: string; children: ReactNode; more?: ReactNode }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-2.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-title font-bold text-ink">{title}</h2>
         {more}
@@ -86,7 +86,7 @@ export function PreviewBanner() {
   return (
     <p className="flex items-start gap-2 rounded-2xl border border-diet-warn/25 bg-diet-warn/10 px-3.5 py-2.5 text-caption text-diet-warn-ink">
       <Icon name="info" className="mt-px size-4 shrink-0" />
-      미리보기 모드 — 검수 전 샘플 데이터예요. Supabase·API 키를 넣으면 실제 DB로 바뀌어요.
+      미리보기 모드 · 샘플 데이터예요 (키를 넣으면 실제 DB)
     </p>
   );
 }

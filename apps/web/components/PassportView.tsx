@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import type { Country } from "@/lib/content/types";
-import { TASTE_LABEL } from "@/lib/content/types";
+import type { Country, FoodSummary } from "@/lib/content/types";
 import { exploredCountries, foodDna, useLocal, type PassportStatus } from "@/lib/client/passport";
 import { useFoodi } from "./FoodiSheet";
 import { PreviewBanner, Section } from "./bits";
@@ -13,6 +12,7 @@ import { TopBar } from "./TopBar";
 import { Icon, type IconName } from "./icons";
 import { btn, Eyebrow, IconTile, ProgressBar } from "./ui";
 import { TasteCard } from "./TasteCard";
+import { FoodDna } from "./FoodDna";
 
 const CONTINENTS: Record<string, string> = { asia: "아시아", europe: "유럽", mena_africa: "중동·아프리카", americas: "아메리카", oceania: "오세아니아" };
 const STATUS_HEAD: Record<"liked" | "saved" | "tried", { title: string; icon: IconName }> = {
@@ -21,7 +21,7 @@ const STATUS_HEAD: Record<"liked" | "saved" | "tried", { title: string; icon: Ic
   tried: { title: "먹어봤어요", icon: "stamp" },
 };
 
-export function PassportView({ countries, preview }: { countries: Country[]; preview: boolean }) {
+export function PassportView({ countries, foods, preview }: { countries: Country[]; foods: FoodSummary[]; preview: boolean }) {
   const { open } = useFoodi();
   const explored = useLocal(exploredCountries);
   const entries = useLocal((s) => Object.entries(s.entries));
@@ -133,7 +133,7 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
       {/* 데스크톱: Food DNA | 취향 분석 */}
       <div className="space-y-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <Section title="Food DNA">
-          <DnaRadar weights={dna} />
+          <FoodDna foods={foods} countries={countries} />
         </Section>
         <Section title="내 취향 분석">
           <TasteCard countries={countries} />
@@ -177,48 +177,3 @@ export function PassportView({ countries, preview }: { countries: Country[]; pre
   );
 }
 
-/** Food DNA 레이더: 가중치 상위 6개 태그. 데이터가 없으면 빈 축 + 안내 */
-function DnaRadar({ weights }: { weights: Record<string, number> }) {
-  const top = Object.entries(weights)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
-  if (top.length < 3) return <p className="text-sm text-muted">맛이 다른 음식을 몇 가지 더 탐험하면 나의 맛 지도가 그려져요.</p>;
-  const max = top[0][1];
-  const R = 80;
-  const C = 110;
-  const pt = (i: number, r: number) => {
-    const a = (Math.PI * 2 * i) / top.length - Math.PI / 2;
-    return [C + Math.cos(a) * r, C + Math.sin(a) * r] as const;
-  };
-  const poly = top.map(([, w], i) => pt(i, (w / max) * R).join(",")).join(" ");
-  // 색은 모두 CSS 변수 → 테마가 바뀌면 같이 바뀐다
-  return (
-    <figure className="card space-y-2 rounded-3xl p-4">
-      <svg viewBox="0 0 220 220" className="mx-auto w-full max-w-64" role="img" aria-label={`Food DNA: ${top.map(([t]) => TASTE_LABEL[t] ?? t).join(", ")}`}>
-        {[0.33, 0.66, 1].map((k) => (
-          <polygon key={k} points={top.map((_, i) => pt(i, R * k).join(",")).join(" ")} fill="none" stroke="var(--color-line)" />
-        ))}
-        {top.map((_, i) => {
-          const [x, y] = pt(i, R);
-          return <line key={i} x1={C} y1={C} x2={x} y2={y} stroke="var(--color-line)" />;
-        })}
-        <polygon points={poly} fill="var(--color-lime)" fillOpacity="0.5" stroke="var(--color-brand)" strokeWidth="2" strokeLinejoin="round" />
-        {top.map(([t, w], i) => {
-          const [x, y] = pt(i, (w / max) * R);
-          return <circle key={t} cx={x} cy={y} r="3" fill="var(--color-brand)" />;
-        })}
-        {top.map(([t], i) => {
-          const [x, y] = pt(i, R + 18);
-          return (
-            <text key={t} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="500" fill="var(--color-ink-soft)">
-              {TASTE_LABEL[t] ?? t}
-            </text>
-          );
-        })}
-      </svg>
-      <figcaption className="text-center text-sm text-ink-soft">
-        <b className="font-semibold text-leaf">{TASTE_LABEL[top[0][0]] ?? top[0][0]}</b>·<b className="font-semibold text-leaf">{TASTE_LABEL[top[1][0]] ?? top[1][0]}</b> 쪽으로 끌리는 탐험가예요.
-      </figcaption>
-    </figure>
-  );
-}

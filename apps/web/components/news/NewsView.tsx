@@ -67,7 +67,7 @@ export function NewsView() {
       <div className="space-y-1">
         <Eyebrow>World Table · 함께</Eyebrow>
         <h1 className="text-h1 font-bold text-ink">음식 뉴스</h1>
-        <p className="text-sm text-ink-soft">음식·식문화 소식을 30분마다 자동으로 모아요. 어떤 음식이 뜨는지 한눈에.</p>
+        <p className="text-sm text-ink-soft">30분마다 모은 음식 소식, 뜨는 음식을 한눈에</p>
       </div>
 
       <SegTabs tabs={TABS} value={tab} onChange={(t) => go(t, null)} label="뉴스 카테고리" labels={labels} />

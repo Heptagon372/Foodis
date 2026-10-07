@@ -78,7 +78,7 @@ export function GuardTable({ food }: { food: GuardFood }) {
     return (
       <Link href="/settings#diet" className="card flex items-center gap-3 rounded-3xl px-4 py-3.5 text-sm text-ink-soft">
         <Icon name="salad" className="size-5 shrink-0 text-leaf" />
-        <span className="flex-1">종교·채식 단계·다이어트·건강 조건을 고르면, 맞지 않는 음식에 빨간 라인으로 알려드려요.</span>
+        <span className="flex-1">식단 조건을 고르면 안 맞는 음식에 빨간 라인이 떠요.</span>
         <Icon name="next" className="size-4 shrink-0" />
       </Link>
     );

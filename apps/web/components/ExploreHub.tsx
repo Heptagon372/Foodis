@@ -50,7 +50,7 @@ export function ExploreHub(p: {
           </div>
         </div>
       </header>
-      <div className="space-y-5 px-5 pb-8 pt-5 lg:px-0 lg:pt-6">
+      <div className="space-y-4 px-5 pb-8 pt-4 lg:px-0 lg:pt-6">
         {p.preview && <PreviewBanner />}
         {p.foods.length > 0 && (
           <div className="flex items-center gap-3">

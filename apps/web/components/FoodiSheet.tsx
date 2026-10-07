@@ -3,11 +3,11 @@
 // 채팅 UI 가 아니라 "말하는 카드 피드": 인식 텍스트(탭해서 수정) → 자막 → 카드 1~3 → 추천 질문 → 마이크로 재질문
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AskResponse, PassportSummary } from "@/lib/foodi/schema";
 import { answerFromPack, cachedAudio, isDemoMode } from "@/lib/client/demo";
 import { getAiPrefs } from "@/lib/client/ai-prefs";
-import { getState, guestProfile, record } from "@/lib/client/passport";
+import { foodDna, getState, guestProfile, record, useLocal } from "@/lib/client/passport";
 import { listen, speak, stopSpeaking, type ListenHandle } from "@/lib/client/voice";
 import { pauseRadio } from "@/lib/client/radio";
 import { questEvent } from "@/lib/client/quest";
@@ -21,7 +21,10 @@ import { VoiceButton, type VoiceState } from "./VoiceButton";
 import { InAppNotice, MicHelp } from "./MicHelp";
 import { PhotoAskButton, PhotoTurnView, type PhotoTurn } from "./PhotoAsk";
 import { ScrollRow } from "./ScrollRow";
-import { noteFeature } from "@/lib/client/taste";
+import { noteFeature, useTaste } from "@/lib/client/taste";
+import { buildProfile } from "@/lib/taste/engine";
+import { dnaStrands, foodiNudge } from "@/lib/taste/dna";
+import { CONTINENT_OF } from "@/lib/quest/continents";
 
 type OpenOpts = { contextFoodId?: string; contextName?: string; listen?: boolean; question?: string };
 type Turn = { id: number; q: string; mode: "voice" | "text"; res?: AskResponse; error?: string; contextFoodId?: string; offline?: boolean; photo?: PhotoTurn; heard?: string };
@@ -40,6 +43,29 @@ const ERRORS: Record<string, string> = {
   unsupported: "이 브라우저는 음성 입력을 지원하지 않아요. 글로 물어봐 주세요.",
 };
 
+/** 나라 이름: 나라 목록을 받지 않는 시트라 브라우저 내장 이름표를 쓴다 ("KR" → "대한민국") */
+const regionName = (() => {
+  try {
+    const dn = new Intl.DisplayNames(["ko"], { type: "region" });
+    return (cc: string) => dn.of(cc);
+  } catch {
+    return () => undefined;
+  }
+})();
+
+/** 내 취향 알고리즘으로 만든 푸디의 먼저 건네는 말 (lib/taste/dna.ts). 시트가 열려 있을 때만 계산 */
+function useNudge(on: boolean) {
+  const passportDna = useLocal(foodDna);
+  const tastes = useLocal((s) => s.tastes);
+  const signals = useTaste((s) => s.signals);
+  const features = useTaste((s) => s.features);
+  return useMemo(() => {
+    if (!on) return null;
+    const profile = buildProfile(signals, features, (cc) => CONTINENT_OF[cc], Date.now(), { tastes });
+    return foodiNudge(dnaStrands(passportDna, profile.tags), profile, { country: regionName });
+  }, [on, passportDna, tastes, signals, features]);
+}
+
 const STARTERS = ["오늘은 어디로 떠나볼까?", "비건으로 먹을 수 있는 음식 추천해줘", "만두 같은 음식 다른 나라에도 있어?"];
 
 export function FoodiProvider({ children }: { children: ReactNode }) {
@@ -54,6 +80,7 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [typeFirst, setTypeFirst] = useState(false);
   const listenRef = useRef<ListenHandle | null>(null);
+  const nudge = useNudge(isOpen);
   // 이번 대화에서 카드로 보여준 음식 — "다른 거 추천"이 같은 음식을 반복하지 않게 서버에 알려준다. 시트를 닫으면 새 대화
   const seen = useRef<string[]>([]);
   const router = useRouter();
@@ -239,10 +266,20 @@ export function FoodiProvider({ children }: { children: ReactNode }) {
             <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-1">
               {turns.length === 0 && voice !== "listening" && (
                 <div className="space-y-4 pt-2">
-                  <h2 className="text-h2 font-bold text-ink">무엇이든 물어보세요</h2>
+                  {/* 보던 음식이 없고 취향 DNA 가 있으면 푸디가 먼저 말을 건다 — 내 DNA 로 만든 질문으로 유도 */}
+                  {!context.id && nudge ? (
+                    <div className="space-y-1.5">
+                      <p className="inline-flex items-center gap-1.5 rounded-full bg-lime-soft px-2.5 py-1 text-caption font-semibold text-leaf">
+                        <Icon name="sparkle" className="size-3.5" />내 Food DNA 맞춤
+                      </p>
+                      <h2 className="text-h2 font-bold text-ink">{nudge.greeting}</h2>
+                    </div>
+                  ) : (
+                    <h2 className="text-h2 font-bold text-ink">무엇이든 물어보세요</h2>
+                  )}
                   {!micHelp && <InAppNotice />}
                   <div className="flex flex-wrap gap-2">
-                    {(context.id ? ["문화 이야기 들려줘", "비슷한 음식 있어?", "비건으로 먹을 수 있어?"] : STARTERS).map((s) => (
+                    {(context.id ? ["문화 이야기 들려줘", "비슷한 음식 있어?", "비건으로 먹을 수 있어?"] : (nudge?.questions ?? STARTERS)).map((s) => (
                       <FollowUpChip key={s} onClick={() => void ask(s, "text", context.id)}>
                         {s}
                       </FollowUpChip>

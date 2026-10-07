@@ -7,7 +7,10 @@ import { emptySpec, hasSlots, hasSoft, mergeSpec, parseQuery, type QuerySpec } f
 import type { CountryRow, FoodName } from "./repo";
 import { DIET_KEYS, IntentOutput, type DietKey, type Intent } from "./schema";
 import { detectSocial } from "./social";
-import { CATEGORY_NOUNS, COURSES, METHODS, TASTE_TAGS, type Course, type Method, type TasteTag } from "./vocab";
+import { CATEGORY_NOUNS, COURSE_WORDS, COURSES, METHOD_WORDS, METHODS, TASTE_TAGS, TASTE_WORDS, type Course, type Method, type TasteTag } from "./vocab";
+
+/** 맛·조리법·코스 말인가 ("매운맛", "발효", "국물") — vocab.ts 의 같은 표 */
+const isTasteWord = (w: string) => [...TASTE_WORDS, ...METHOD_WORDS, ...COURSE_WORDS].some(([re]) => re.test(w));
 
 /** index 가 있으면(실서비스·1만 개) 재료 사전까지 써서 질문을 해석한다. 테스트처럼 이름 목록만 있어도 동작 */
 export type Vocab = { countries: CountryRow[]; foods: FoodName[]; index?: FoodIndex };
@@ -147,7 +150,8 @@ export function findUnknownPlace(text: string, vocab: Vocab): string | null {
     if (PLACE_STOP.has(w) || /(는|은|이|가|을|를|도|만|로|에서|인데|한|할|된|있는|없는|먹는|좋은)$/.test(w)) continue;
     // 'ㄴ' 받침으로 끝나는 꾸미는 말 ("들어간 요리" · "튀긴 요리" · "시원한 음식")은 이름이 아니다
     if ((w.charCodeAt(w.length - 1) - 0xac00) % 28 === 4) continue;
-    if (CONTINENT_WORDS.some(([re]) => re.test(w)) || extractDiet(w).length) continue;
+    // 맛·재료 말("매운맛 음식", "발효 요리")은 지도 밖 이름이 아니라 취향 — Food DNA 질문이 "지도에 없어요"로 빠지지 않게
+    if (CONTINENT_WORDS.some(([re]) => re.test(w)) || extractDiet(w).length || isTasteWord(w)) continue;
     if (findCountry(w, vocab.countries) || findFood(w, vocab.foods)) continue;
     return w;
   }

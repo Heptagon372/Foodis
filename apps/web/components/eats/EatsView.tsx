@@ -276,7 +276,7 @@ export function EatsView({ foods, setup, mapKey }: { foods: ExploreFood[]; setup
             </span>
             맛집탐방
           </h1>
-          <p className="text-caption text-muted">먹고 싶은 음식을 고르면, 고른 반경 안에서 그 음식을 파는 곳을 지도에 띄워 드려요.</p>
+          <p className="text-caption text-muted">음식을 고르면 근처에서 파는 곳을 지도에 띄워요.</p>
         </div>
       </header>
 

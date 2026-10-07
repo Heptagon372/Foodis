@@ -9,6 +9,7 @@ import { norm } from "@/lib/trends/keywords";
 import { timeAgo } from "../community/parts";
 import { Icon } from "../icons";
 import { TopBar } from "../TopBar";
+import { ScrollRow } from "../ScrollRow";
 import { TrendingFoods } from "../trending/TrendingFoods";
 import { btn, Eyebrow, SegTabs } from "../ui";
 
@@ -92,7 +93,7 @@ export function NewsView() {
 
         <section className="space-y-3" aria-label="기사 목록">
           {hotTerms.length > 0 && (
-            <div className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="급상승 키워드로 보기">
+            <ScrollRow label="키워드" className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="급상승 키워드로 보기">
               {hotTerms.map((r) => {
                 const on = term != null && norm(term) === norm(r.term);
                 return (
@@ -103,7 +104,7 @@ export function NewsView() {
                   </button>
                 );
               })}
-            </div>
+            </ScrollRow>
           )}
           {term && (
             <p className="flex items-center gap-2 text-sm text-ink-soft">

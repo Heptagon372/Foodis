@@ -9,6 +9,7 @@ import type { Confidence, VisionResponse } from "@/lib/foodi/vision";
 import { FoodCard } from "./FoodCard";
 import { FollowUpChip } from "./bits";
 import { Icon, type IconName } from "./icons";
+import { ScrollRow } from "./ScrollRow";
 import { btn } from "./ui";
 
 export type PhotoTurn = { key: number; thumb: string; status: "pending" | "done" | "error"; res?: VisionResponse; error?: string };
@@ -141,7 +142,7 @@ export function PhotoTurnView({ p, onFollowUp }: { p: PhotoTurn; onFollowUp: (q:
         <>
           <p className="text-subtitle font-medium text-ink">{p.res.speech}</p>
           {p.res.cards.length > 0 && (
-            <div className="snap-row -mx-5 px-5">
+            <ScrollRow label="추천" className="snap-row -mx-5 px-5">
               {p.res.cards.map((c) => {
                 const [label, tone, icon] = CONFIDENCE[c.confidence];
                 return (
@@ -166,7 +167,7 @@ export function PhotoTurnView({ p, onFollowUp }: { p: PhotoTurn; onFollowUp: (q:
                   </div>
                 );
               })}
-            </div>
+            </ScrollRow>
           )}
           <div className="flex flex-wrap gap-2">
             {p.res.follow_ups.map((f) => (

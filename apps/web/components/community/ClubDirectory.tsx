@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { bump, fetchClubs, type ClubsPage } from "@/lib/client/community";
 import { CATEGORIES, CATEGORY, type CategoryKey } from "@/lib/community/categories";
 import { Icon } from "../icons";
+import { ScrollRow } from "../ScrollRow";
 import { btn, chip } from "../ui";
 import { ClubCard, ClubChip } from "./ClubCard";
 
@@ -46,11 +47,11 @@ export function ClubDirectory() {
       {data && data.mine.length > 0 && (
         <section className="space-y-2.5">
           <h2 className="text-title font-bold text-ink">내 모임</h2>
-          <div className="snap-row -mx-5 flex gap-2.5 px-5 pb-1 lg:mx-0 lg:px-0">
+          <ScrollRow label="모임" className="snap-row -mx-5 flex gap-2.5 px-5 pb-1 lg:mx-0 lg:px-0">
             {data.mine.map((c) => (
               <ClubChip key={c.id} club={c} />
             ))}
-          </div>
+          </ScrollRow>
         </section>
       )}
 
@@ -61,16 +62,16 @@ export function ClubDirectory() {
             급상승 모임
             <span className="text-caption font-normal text-muted">최근 48시간 가입·글이 평소보다 2배 넘게</span>
           </h2>
-          <div className="snap-row -mx-5 flex gap-2.5 px-5 pb-1 lg:mx-0 lg:px-0">
+          <ScrollRow label="모임" className="snap-row -mx-5 flex gap-2.5 px-5 pb-1 lg:mx-0 lg:px-0">
             {rising.map((c) => (
               <ClubChip key={c.id} club={c} />
             ))}
-          </div>
+          </ScrollRow>
         </section>
       )}
 
       <section className="space-y-3">
-        <div className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="모임 주제">
+        <ScrollRow label="주제" className="snap-row -mx-5 flex gap-2 px-5 pb-1 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="모임 주제">
           <button type="button" className={chip(topic === null)} onClick={() => setTopic(null)} aria-pressed={topic === null}>
             전체 모임
           </button>
@@ -89,7 +90,7 @@ export function ClubDirectory() {
               {c.label}
             </button>
           ))}
-        </div>
+        </ScrollRow>
 
         {error ? (
           <p className="card rounded-3xl p-5 text-center text-sm text-ink-soft">{error}</p>
